@@ -1,23 +1,27 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-
-import { JournalScreen, ActionItemsScreen, ExpensesScreen } from './src/screens';
-import { TabParamList } from './src/types';
-
-const Tab = createBottomTabNavigator<TabParamList>();
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <StatusBar style="dark" />
-      <NavigationContainer>
-        <Tab.Navigator
-          screenOptions={({ route }) => ({
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        backgroundColor: '#fff' 
+      }}>
+        <Text style={{ 
+          fontSize: 24,
+          color: '#000' 
+        }}>
+          Testing Initial Render
+        </Text>
+      </View>
+    </SafeAreaProvider>
+  );
             tabBarIcon: ({ focused, color, size }) => {
               let iconName: keyof typeof Ionicons.glyphMap;
 
@@ -41,33 +45,39 @@ export default function App() {
               borderTopColor: '#e0e0e0',
               paddingBottom: 5,
               paddingTop: 5,
-              height: 60
+              height: 60,
             },
-            headerShown: false
+            headerShown: true,
+            headerStyle: {
+              backgroundColor: '#fff',
+            },
+            headerTitleStyle: {
+              color: '#000',
+            },
           })}
-        >
-          <Tab.Screen
-            name="Journal"
-            component={JournalScreen}
-            options={{
-              tabBarLabel: 'Journal'
-            }}
-          />
-          <Tab.Screen
-            name="ActionItems"
-            component={ActionItemsScreen}
-            options={{
-              tabBarLabel: 'Tasks'
-            }}
-          />
-          <Tab.Screen
-            name="Expenses"
-            component={ExpensesScreen}
-            options={{
-              tabBarLabel: 'Expenses'
-            }}
-          />
-        </Tab.Navigator>
+      >
+        <Tab.Screen
+          name="Journal"
+          component={JournalScreen}
+          options={{
+            tabBarLabel: 'Journal',
+          }}
+        />
+        <Tab.Screen
+          name="ActionItems"
+          component={ActionItemsScreen}
+          options={{
+            tabBarLabel: 'Tasks',
+          }}
+        />
+        <Tab.Screen
+          name="Expenses"
+          component={ExpensesScreen}
+          options={{
+            tabBarLabel: 'Expenses',
+          }}
+        />
+      </Tab.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
   );

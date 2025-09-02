@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
 import { Expense } from '../types';
@@ -213,13 +214,23 @@ export const ExpensesScreen: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const loadExpenses = useCallback(async () => {
+    console.log('Loading expenses...');
     const expenseList = await StorageService.getExpenses();
+    console.log('Loaded expenses:', expenseList);
     setExpenses(expenseList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
   }, []);
 
+  // Load expenses on initial mount
   useEffect(() => {
     loadExpenses();
   }, [loadExpenses]);
+
+  // Refresh expenses when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadExpenses();
+    }, [loadExpenses])
+  );
 
   const filteredExpenses = expenses.filter(expense => {
     if (filter === 'thisMonth') {
@@ -231,16 +242,30 @@ export const ExpensesScreen: React.FC = () => {
     return true;
   });
 
-  const getTotalAmount = (expenseList: Expense[]) => {
-    const totals: { [currency: string]: number } = {};
+  interface TotalAmount {
+    currency: string;
+    amount: number;
+    formatted: string;
+  }
+
+  const getTotalAmount = (expenseList: Expense[]): TotalAmount[] => {
+    if (expenseList.length === 0) {
+      return [];
+    }
+
+    const totals: Record<string, number> = {};
     
+    // Group expenses by currency and sum amounts
     expenseList.forEach(expense => {
       totals[expense.currency] = (totals[expense.currency] || 0) + expense.amount;
     });
 
-    return Object.entries(totals).map(([currency, amount]) => 
-      formatCurrency(amount, currency)
-    ).join(' • ');
+    // Convert totals to array of TotalAmount objects
+    return Object.keys(totals).map((currency): TotalAmount => ({
+      currency,
+      amount: totals[currency],
+      formatted: formatCurrency(totals[currency], currency)
+    }));
   };
 
   const handleEdit = (expense: Expense) => {
@@ -304,11 +329,20 @@ export const ExpensesScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Expenses</Text>
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalLabel}>Total:</Text>
-          <Text style={styles.totalAmount}>
-            {getTotalAmount(filteredExpenses) || '$0.00'}
-          </Text>
+        <View style={styles.totalsContainer}>
+          {filteredExpenses.length === 0 ? (
+            <View style={styles.totalContainer}>
+              <Text style={styles.totalLabel}>Total:</Text>
+              <Text style={styles.totalAmount}>$0.00</Text>
+            </View>
+          ) : (
+            getTotalAmount(filteredExpenses).map((total) => (
+              <View key={total.currency} style={styles.totalContainer}>
+                <Text style={styles.totalLabel}>{total.currency} Total:</Text>
+                <Text style={styles.totalAmount}>{total.formatted}</Text>
+              </View>
+            ))
+          )}
         </View>
       </View>
 
@@ -378,9 +412,14 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
   },
+  totalsContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
   totalContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
   },
   totalLabel: {
     fontSize: 14,

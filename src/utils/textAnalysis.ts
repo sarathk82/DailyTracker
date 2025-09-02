@@ -3,12 +3,17 @@ import uuid from "react-native-uuid";
 
 // Currency symbols and patterns
 const CURRENCY_PATTERNS = [
-  /\$\s*\d+(\.\d{1,2})?/gi, // Dollar amounts like $50, $50.00, $ 50
-  /₹\s*\d+(\.\d{1,2})?/gi, // Rupee amounts
-  /€\s*\d+(\.\d{1,2})?/gi, // Euro amounts
-  /£\s*\d+(\.\d{1,2})?/gi, // Pound amounts
-  /\d+(\.\d{1,2})?\s*(dollars?|USD|rupees?|INR|euros?|EUR|pounds?|GBP)/gi, // Text amounts
-  /\d+(\.\d{1,2})?\s*bucks?/gi, // Slang like "10 bucks"
+  // Text patterns with explicit currency words first
+  /\d+(\.\d{1,2})?\s*(dollars?|USD|bucks?)/gi, // USD text
+  /\d+(\.\d{1,2})?\s*(rupees?|INR|rs\.?)/gi,   // INR text
+  /\d+(\.\d{1,2})?\s*(euros?|EUR)/gi,          // EUR text
+  /\d+(\.\d{1,2})?\s*(pounds?|GBP)/gi,         // GBP text
+  // Symbol patterns second
+  /\$\s*\d+(\.\d{1,2})?/gi,                    // USD symbol
+  /₹\s*\d+(\.\d{1,2})?/gi,                     // INR symbol
+  /(?:Rs\.?|rs\.?)\s*\d+(\.\d{1,2})?/gi,       // INR with Rs prefix
+  /€\s*\d+(\.\d{1,2})?/gi,                     // EUR symbol
+  /£\s*\d+(\.\d{1,2})?/gi                      // GBP symbol
 ];
 
 // Expense keywords - expanded list
@@ -98,16 +103,94 @@ const ACTION_KEYWORDS = [
 
 // Action item patterns
 const ACTION_PATTERNS = [
-  /[-*]\s*\[\s*\]\s*.+$/gm, // Markdown checklist format (both - and *)
-  /TODO:?\s*.+$/gim, // TODO format
-  /REMINDER:?\s*.+$/gim, // Reminder format
-  /\b(need to|must|should|have to|remember to|don't forget to)\s+.+/gim, // Action phrases
+  /[-*]\s*\[\s*\]\s*(.+)$/gm, // Markdown checklist format (both - and *)
+  /TODO:?\s*(.+)$/gim, // TODO format
+  /REMINDER:?\s*(.+)$/gim, // Reminder format
+  /\b(need to|must|should|have to|remember to|don't forget to)\s+(.+)/gim, // Action phrases
 ];
 
+// Currency formatting function
+export function formatCurrency(amount: number, currency: string): string {
+  // Format without thousands separators
+  const formatted = amount.toFixed(2);
+
+  switch (currency) {
+    case 'USD':
+      return `$${formatted}`;
+    case 'EUR':
+      return `€${formatted}`;
+    case 'GBP':
+      return `£${formatted}`;
+    case 'INR':
+      return `₹${formatted}`;
+    default:
+      return `${currency}${formatted}`;
+  }
+}
+
+export function extractActionItem(text: string, entryId: string): ActionItem | null {
+  // First try checklist pattern
+  const checklistMatch = /[-*]\s*\[\s*\]\s*(.+)$/gm.exec(text);
+  if (checklistMatch) {
+    return {
+      id: uuid.v4() as string,
+      entryId,
+      title: checklistMatch[1].trim(),
+      description: text.trim(),
+      completed: false,
+      createdAt: new Date(),
+    };
+  }
+
+  // Then try TODO/REMINDER pattern
+  const todoMatch = /(?:TODO|REMINDER):?\s*(.+)$/gim.exec(text);
+  if (todoMatch) {
+    return {
+      id: uuid.v4() as string,
+      entryId,
+      title: todoMatch[1].trim(),
+      description: text.trim(),
+      completed: false,
+      createdAt: new Date(),
+    };
+  }
+
+  // Then try action phrases
+  const actionMatch = /\b(?:need to|must|should|have to|remember to|don't forget to)\s+(.+)/gim.exec(text);
+  if (actionMatch) {
+    return {
+      id: uuid.v4() as string,
+      entryId,
+      title: actionMatch[1].trim(),
+      description: text.trim(),
+      completed: false,
+      createdAt: new Date(),
+    };
+  }
+
+  // If no pattern matches but it contains an action keyword, use the full text
+  const lowerText = text.toLowerCase();
+  if (ACTION_KEYWORDS.some(keyword => lowerText.includes(keyword))) {
+    return {
+      id: uuid.v4() as string,
+      entryId,
+      title: text.trim(),
+      description: text.trim(),
+      completed: false,
+      createdAt: new Date(),
+    };
+  }
+
+  return null;
+}
+
 export function detectExpense(text: string): boolean {
+  console.log('Checking for expense in text:', text);
   // Check for currency patterns
   for (const pattern of CURRENCY_PATTERNS) {
+    pattern.lastIndex = 0; // Reset pattern
     if (pattern.test(text)) {
+      console.log('Found expense pattern:', pattern);
       return true;
     }
   }
@@ -134,64 +217,51 @@ export function extractExpenseInfo(
   text: string,
   entryId: string
 ): Expense | null {
+  console.log('Extracting expense info from:', text);
   let amount = 0;
-  let currency = "USD";
-
+  let currency = "USD";  // Default to USD
+  
   // Try to extract amount and currency from currency patterns
   for (const pattern of CURRENCY_PATTERNS) {
-    // Reset pattern lastIndex to avoid issues with global flags
-    pattern.lastIndex = 0;
+    pattern.lastIndex = 0;  // Reset pattern
     const matches = text.match(pattern);
     if (matches) {
       const match = matches[0];
-
-      if (match.includes("$")) {
-        currency = "USD";
-        amount = parseFloat(match.replace(/[$\s]/g, ""));
-      } else if (match.includes("₹")) {
-        currency = "INR";
-        amount = parseFloat(match.replace(/[₹\s]/g, ""));
-      } else if (match.includes("€")) {
-        currency = "EUR";
-        amount = parseFloat(match.replace(/[€\s]/g, ""));
-      } else if (match.includes("£")) {
-        currency = "GBP";
-        amount = parseFloat(match.replace(/[£\s]/g, ""));
-      } else {
-        // For text-based amounts like "50 dollars"
-        const numMatch = match.match(/(\d+(?:\.\d{1,2})?)/);
-        if (numMatch) {
-          amount = parseFloat(numMatch[1]);
-          const currencyText = match.toLowerCase();
-          if (
-            currencyText.includes("dollar") ||
-            currencyText.includes("usd") ||
-            currencyText.includes("buck")
-          ) {
-            currency = "USD";
-          } else if (
-            currencyText.includes("rupee") ||
-            currencyText.includes("inr")
-          ) {
-            currency = "INR";
-          } else if (
-            currencyText.includes("euro") ||
-            currencyText.includes("eur")
-          ) {
-            currency = "EUR";
-          } else if (
-            currencyText.includes("pound") ||
-            currencyText.includes("gbp")
-          ) {
-            currency = "GBP";
-          }
+      console.log('Processing match:', match);
+      
+      const numMatch = match.match(/(\d+(?:\.\d{1,2})?)/);
+      if (numMatch) {
+        amount = parseFloat(numMatch[1]);
+        
+        // First check for text-based currency names
+        if (match.toLowerCase().includes("dollar") || 
+            match.toLowerCase().includes("usd") || 
+            match.toLowerCase().includes("buck") ||
+            match.includes("$")) {
+          currency = "USD";
+        } else if (match.toLowerCase().includes("rupee") || 
+                   match.toLowerCase().includes("inr") || 
+                   match.toLowerCase().includes("rs.") || 
+                   match.toLowerCase().includes("rs ") || 
+                   match.includes("₹")) {
+          currency = "INR";
+        } else if (match.toLowerCase().includes("euro") || 
+                   match.toLowerCase().includes("eur") || 
+                   match.includes("€")) {
+          currency = "EUR";
+        } else if (match.toLowerCase().includes("pound") || 
+                   match.toLowerCase().includes("gbp") || 
+                   match.includes("£")) {
+          currency = "GBP";
+        } else if (/rs\.?|Rs\.?/.test(match)) {
+          currency = "INR";
         }
+        break;  // Stop after first valid match
       }
-      break;
     }
   }
 
-  // If no specific currency pattern found, try to extract just numbers for common expense contexts
+  // If no amount found from currency patterns, try finding numbers in expense context
   if (amount === 0) {
     const lowerText = text.toLowerCase();
     const hasExpenseContext = EXPENSE_KEYWORDS.some((keyword) =>
@@ -206,6 +276,7 @@ export function extractExpenseInfo(
         // Only consider reasonable amounts (between 0.01 and 100000)
         if (potentialAmount >= 0.01 && potentialAmount <= 100000) {
           amount = potentialAmount;
+          currency = "USD"; // Default to USD when no currency is specified
         }
       }
     }
@@ -223,61 +294,4 @@ export function extractExpenseInfo(
   }
 
   return null;
-}
-
-export function extractActionItem(
-  text: string,
-  entryId: string
-): ActionItem | null {
-  let title = text.trim();
-
-  // Extract title from checklist format
-  const checklistMatch = text.match(/[-*]\s*\[\s*\]\s*(.+)$/m);
-  if (checklistMatch) {
-    title = checklistMatch[1].trim();
-  }
-
-  // Extract title from TODO format
-  const todoMatch = text.match(/TODO:?\s*(.+)$/im);
-  if (todoMatch) {
-    title = todoMatch[1].trim();
-  }
-
-  // Extract title from REMINDER format
-  const reminderMatch = text.match(/REMINDER:?\s*(.+)$/im);
-  if (reminderMatch) {
-    title = reminderMatch[1].trim();
-  }
-
-  // If it's a general action item, try to extract the main action
-  if (title === text.trim()) {
-    // Look for action patterns and extract the main part
-    const actionMatch = text.match(
-      /(need to|must|should|have to|remember to|don't forget to)\s+(.+)/i
-    );
-    if (actionMatch) {
-      title = actionMatch[2].trim();
-    }
-  }
-
-  return {
-    id: uuid.v4() as string,
-    entryId,
-    title,
-    description: text.trim(),
-    completed: false,
-    createdAt: new Date(),
-  };
-}
-
-export function formatCurrency(amount: number, currency: string): string {
-  const currencySymbols: { [key: string]: string } = {
-    USD: "$",
-    INR: "₹",
-    EUR: "€",
-    GBP: "£",
-  };
-
-  const symbol = currencySymbols[currency] || currency;
-  return `${symbol}${amount.toFixed(2)}`;
 }

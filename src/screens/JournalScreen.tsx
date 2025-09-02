@@ -9,8 +9,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ToastAndroid,
 } from "react-native";
+// @ts-ignore
+console.log('JournalScreen is being rendered');
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Markdown from "react-native-markdown-display";
@@ -110,11 +111,7 @@ export const JournalScreen: React.FC = () => {
   }, [loadEntries]);
 
   const showToast = (message: string) => {
-    if (Platform.OS === "android") {
-      ToastAndroid.show(message, ToastAndroid.SHORT);
-    } else {
-      Alert.alert("", message, [{ text: "OK" }]);
-    }
+    alert(message);
   };
 
   const handleSendMessage = async () => {
