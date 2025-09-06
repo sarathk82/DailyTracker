@@ -16,7 +16,7 @@ import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
 import { Expense } from '../types';
 import { StorageService } from '../utils/storage';
-import { formatCurrency } from '../utils/textAnalysis';
+import { TextAnalyzer } from '../utils/textAnalysis';
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -30,7 +30,7 @@ const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onEdit, onDelete }) 
       <View style={styles.expenseHeader}>
         <View style={styles.expenseAmount}>
           <Text style={styles.amountText}>
-            {formatCurrency(expense.amount, expense.currency)}
+            {TextAnalyzer.formatCurrency(expense.amount, expense.currency)}
           </Text>
           {expense.category && (
             <Text style={styles.categoryText}>{expense.category}</Text>
@@ -214,9 +214,7 @@ export const ExpensesScreen: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const loadExpenses = useCallback(async () => {
-    console.log('Loading expenses...');
     const expenseList = await StorageService.getExpenses();
-    console.log('Loaded expenses:', expenseList);
     setExpenses(expenseList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
   }, []);
 
@@ -264,7 +262,7 @@ export const ExpensesScreen: React.FC = () => {
     return Object.keys(totals).map((currency): TotalAmount => ({
       currency,
       amount: totals[currency],
-      formatted: formatCurrency(totals[currency], currency)
+      formatted: TextAnalyzer.formatCurrency(totals[currency], currency)
     }));
   };
 

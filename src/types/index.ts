@@ -2,7 +2,7 @@ export interface Entry {
   id: string;
   text: string;
   timestamp: Date;
-  type: 'log' | 'action' | 'expense';
+  type: 'log' | 'action' | 'expense' | 'system';
   isMarkdown?: boolean;
 }
 

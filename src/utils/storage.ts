@@ -109,14 +109,12 @@ export class StorageService {
   static async getExpenses(): Promise<Expense[]> {
     try {
       const jsonValue = await AsyncStorage.getItem(EXPENSES_KEY);
-      console.log('Retrieved expenses from storage:', jsonValue);
       if (jsonValue != null) {
         const expenses = JSON.parse(jsonValue);
         const mappedExpenses = expenses.map((expense: any) => ({
           ...expense,
           createdAt: new Date(expense.createdAt),
         }));
-        console.log('Parsed expenses:', mappedExpenses);
         return mappedExpenses;
       }
       return [];
@@ -137,10 +135,8 @@ export class StorageService {
 
   static async addExpense(expense: Expense): Promise<void> {
     try {
-      console.log('Adding new expense:', expense);
       const expenses = await this.getExpenses();
       expenses.push(expense);
-      console.log('Updated expenses list:', expenses);
       await this.saveExpenses(expenses);
     } catch (e) {
       console.error('Error adding expense:', e);

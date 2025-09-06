@@ -1,297 +1,126 @@
 import { Entry, ActionItem, Expense } from "../types";
 import uuid from "react-native-uuid";
 
-// Currency symbols and patterns
-const CURRENCY_PATTERNS = [
-  // Text patterns with explicit currency words first
-  /\d+(\.\d{1,2})?\s*(dollars?|USD|bucks?)/gi, // USD text
-  /\d+(\.\d{1,2})?\s*(rupees?|INR|rs\.?)/gi,   // INR text
-  /\d+(\.\d{1,2})?\s*(euros?|EUR)/gi,          // EUR text
-  /\d+(\.\d{1,2})?\s*(pounds?|GBP)/gi,         // GBP text
-  // Symbol patterns second
-  /\$\s*\d+(\.\d{1,2})?/gi,                    // USD symbol
-  /₹\s*\d+(\.\d{1,2})?/gi,                     // INR symbol
-  /(?:Rs\.?|rs\.?)\s*\d+(\.\d{1,2})?/gi,       // INR with Rs prefix
-  /€\s*\d+(\.\d{1,2})?/gi,                     // EUR symbol
-  /£\s*\d+(\.\d{1,2})?/gi                      // GBP symbol
-];
+export class TextAnalyzer {
+  // Currency patterns
+  private static readonly CURRENCY_PATTERNS = [
+    /\d+(\.\d{1,2})?\s*(dollars?|USD|bucks?)/gi,  // USD text
+    /\d+(\.\d{1,2})?\s*(rupees?|INR|rs\.?)/gi,    // INR text
+    /\d+(\.\d{1,2})?\s*(euros?|EUR)/gi,           // EUR text
+    /\d+(\.\d{1,2})?\s*(pounds?|GBP)/gi,          // GBP text
+    /\$\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*\$/gi, // USD symbol before or after
+    /₹\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*₹/gi,   // INR symbol before or after
+    /(?:Rs\.?|rs\.?)\s*\d+(\.\d{1,2})?/gi,        // INR with Rs prefix
+    /€\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*€/gi,   // EUR symbol before or after
+    /£\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*£/gi    // GBP symbol before or after
+  ];
 
-// Expense keywords - expanded list
-const EXPENSE_KEYWORDS = [
-  "bought",
-  "paid",
-  "cost",
-  "expense",
-  "spent",
-  "purchase",
-  "bill",
-  "invoice",
-  "receipt",
-  "fee",
-  "charge",
-  "price",
-  "money",
-  "cash",
-  "payment",
-  "transaction",
-  "shopping",
-  "store",
-  "restaurant",
-  "buy",
-  "sold",
-  "sale",
-  "refund",
-  "withdraw",
-  "deposit",
-  "transfer",
-  "food",
-  "lunch",
-  "dinner",
-  "breakfast",
-  "coffee",
-  "gas",
-  "fuel",
-  "groceries",
-  "uber",
-  "taxi",
-  "rent",
-  "mortgage",
-  "utilities",
-  "subscription",
-  "membership",
-  "tip",
-  "tipped",
-  "ordered",
-];
+  // Keywords for expenses
+  private static readonly EXPENSE_KEYWORDS: string[] = [
+    "spent", "bought", "purchased", "paid", "cost",
+    "expense", "payment", "buy", "pay", "shopping",
+    "store", "bill", "receipt"
+  ];
 
-// Action item keywords - expanded list
-const ACTION_KEYWORDS = [
-  "need to",
-  "must",
-  "todo",
-  "reminder",
-  "remember",
-  "task",
-  "should",
-  "have to",
-  "required",
-  "deadline",
-  "due",
-  "schedule",
-  "appointment",
-  "meeting",
-  "call",
-  "email",
-  "follow up",
-  "buy",
-  "get",
-  "pick up",
-  "finish",
-  "complete",
-  "start",
-  "contact",
-  "reach out",
-  "check",
-  "review",
-  "submit",
-  "apply",
-  "book",
-  "reserve",
-  "cancel",
-  "confirm",
-];
+  // Keywords for action items
+  private static readonly ACTION_KEYWORDS: string[] = [
+    "todo", "to-do", "task", "need to", "should",
+    "must", "have to", "action", "plan", "schedule",
+    "remind", "remember", "don't forget", "important",
+    "deadline", "due", "appointment", "meeting", "call",
+    "email", "follow up", "buy", "get", "pick up",
+    "finish", "complete", "start", "contact", "reach out",
+    "check", "review", "submit", "apply", "book", "reserve"
+  ];
 
-// Action item patterns
-const ACTION_PATTERNS = [
-  /[-*]\s*\[\s*\]\s*(.+)$/gm, // Markdown checklist format (both - and *)
-  /TODO:?\s*(.+)$/gim, // TODO format
-  /REMINDER:?\s*(.+)$/gim, // Reminder format
-  /\b(need to|must|should|have to|remember to|don't forget to)\s+(.+)/gim, // Action phrases
-];
+  // Regular expressions for action items
+  private static readonly ACTION_PATTERNS: RegExp[] = [
+    /\bto-?do:?\s*([^.!?\n]+)/gi,
+    /\btask:?\s*([^.!?\n]+)/gi,
+    /\baction:?\s*([^.!?\n]+)/gi,
+    /\bremind(?:er)?:?\s*([^.!?\n]+)/gi,
+    /\bneed to:?\s*([^.!?\n]+)/gi,
+    /\bshould:?\s*([^.!?\n]+)/gi,
+    /\bmust:?\s*([^.!?\n]+)/gi,
+    /\bhave to:?\s*([^.!?\n]+)/gi
+  ];
 
-// Currency formatting function
-export function formatCurrency(amount: number, currency: string): string {
-  // Format without thousands separators
-  const formatted = amount.toFixed(2);
-
-  switch (currency) {
-    case 'USD':
-      return `$${formatted}`;
-    case 'EUR':
-      return `€${formatted}`;
-    case 'GBP':
-      return `£${formatted}`;
-    case 'INR':
-      return `₹${formatted}`;
-    default:
-      return `${currency}${formatted}`;
-  }
-}
-
-export function extractActionItem(text: string, entryId: string): ActionItem | null {
-  // First try checklist pattern
-  const checklistMatch = /[-*]\s*\[\s*\]\s*(.+)$/gm.exec(text);
-  if (checklistMatch) {
-    return {
-      id: uuid.v4() as string,
-      entryId,
-      title: checklistMatch[1].trim(),
-      description: text.trim(),
-      completed: false,
-      createdAt: new Date(),
-    };
-  }
-
-  // Then try TODO/REMINDER pattern
-  const todoMatch = /(?:TODO|REMINDER):?\s*(.+)$/gim.exec(text);
-  if (todoMatch) {
-    return {
-      id: uuid.v4() as string,
-      entryId,
-      title: todoMatch[1].trim(),
-      description: text.trim(),
-      completed: false,
-      createdAt: new Date(),
-    };
-  }
-
-  // Then try action phrases
-  const actionMatch = /\b(?:need to|must|should|have to|remember to|don't forget to)\s+(.+)/gim.exec(text);
-  if (actionMatch) {
-    return {
-      id: uuid.v4() as string,
-      entryId,
-      title: actionMatch[1].trim(),
-      description: text.trim(),
-      completed: false,
-      createdAt: new Date(),
-    };
-  }
-
-  // If no pattern matches but it contains an action keyword, use the full text
-  const lowerText = text.toLowerCase();
-  if (ACTION_KEYWORDS.some(keyword => lowerText.includes(keyword))) {
-    return {
-      id: uuid.v4() as string,
-      entryId,
-      title: text.trim(),
-      description: text.trim(),
-      completed: false,
-      createdAt: new Date(),
-    };
-  }
-
-  return null;
-}
-
-export function detectExpense(text: string): boolean {
-  console.log('Checking for expense in text:', text);
-  // Check for currency patterns
-  for (const pattern of CURRENCY_PATTERNS) {
-    pattern.lastIndex = 0; // Reset pattern
-    if (pattern.test(text)) {
-      console.log('Found expense pattern:', pattern);
-      return true;
-    }
-  }
-
-  // Check for expense keywords
-  const lowerText = text.toLowerCase();
-  return EXPENSE_KEYWORDS.some((keyword) => lowerText.includes(keyword));
-}
-
-export function detectActionItem(text: string): boolean {
-  // Check for action patterns
-  for (const pattern of ACTION_PATTERNS) {
-    if (pattern.test(text)) {
-      return true;
-    }
-  }
-
-  // Check for action keywords
-  const lowerText = text.toLowerCase();
-  return ACTION_KEYWORDS.some((keyword) => lowerText.includes(keyword));
-}
-
-export function extractExpenseInfo(
-  text: string,
-  entryId: string
-): Expense | null {
-  console.log('Extracting expense info from:', text);
-  let amount = 0;
-  let currency = "USD";  // Default to USD
-  
-  // Try to extract amount and currency from currency patterns
-  for (const pattern of CURRENCY_PATTERNS) {
-    pattern.lastIndex = 0;  // Reset pattern
-    const matches = text.match(pattern);
-    if (matches) {
-      const match = matches[0];
-      console.log('Processing match:', match);
-      
-      const numMatch = match.match(/(\d+(?:\.\d{1,2})?)/);
-      if (numMatch) {
-        amount = parseFloat(numMatch[1]);
-        
-        // First check for text-based currency names
-        if (match.toLowerCase().includes("dollar") || 
-            match.toLowerCase().includes("usd") || 
-            match.toLowerCase().includes("buck") ||
-            match.includes("$")) {
-          currency = "USD";
-        } else if (match.toLowerCase().includes("rupee") || 
-                   match.toLowerCase().includes("inr") || 
-                   match.toLowerCase().includes("rs.") || 
-                   match.toLowerCase().includes("rs ") || 
-                   match.includes("₹")) {
-          currency = "INR";
-        } else if (match.toLowerCase().includes("euro") || 
-                   match.toLowerCase().includes("eur") || 
-                   match.includes("€")) {
-          currency = "EUR";
-        } else if (match.toLowerCase().includes("pound") || 
-                   match.toLowerCase().includes("gbp") || 
-                   match.includes("£")) {
-          currency = "GBP";
-        } else if (/rs\.?|Rs\.?/.test(match)) {
-          currency = "INR";
-        }
-        break;  // Stop after first valid match
-      }
-    }
-  }
-
-  // If no amount found from currency patterns, try finding numbers in expense context
-  if (amount === 0) {
+  static detectActionItem(text: string): boolean {
     const lowerText = text.toLowerCase();
-    const hasExpenseContext = EXPENSE_KEYWORDS.some((keyword) =>
-      lowerText.includes(keyword)
-    );
-
-    if (hasExpenseContext) {
-      // Look for standalone numbers that might be amounts
-      const numberMatch = text.match(/\b(\d+(?:\.\d{1,2})?)\b/);
-      if (numberMatch) {
-        const potentialAmount = parseFloat(numberMatch[1]);
-        // Only consider reasonable amounts (between 0.01 and 100000)
-        if (potentialAmount >= 0.01 && potentialAmount <= 100000) {
-          amount = potentialAmount;
-          currency = "USD"; // Default to USD when no currency is specified
-        }
-      }
-    }
+    return this.ACTION_KEYWORDS.some(keyword => lowerText.includes(keyword));
   }
 
-  if (amount > 0) {
+  static detectExpense(text: string): boolean {
+    const lowerText = text.toLowerCase();
+    return this.EXPENSE_KEYWORDS.some(keyword => lowerText.includes(keyword)) ||
+           this.CURRENCY_PATTERNS.some(pattern => pattern.test(text));
+  }
+
+  static extractActionItem(text: string, entryId: string): ActionItem | null {
+    if (this.detectActionItem(text)) {
+      return {
+        id: uuid.v4() as string,
+        entryId,
+        title: text,
+        completed: false,
+        createdAt: new Date()
+      };
+    }
+    return null;
+  }
+
+  static extractExpenseInfo(text: string, entryId: string): Expense | null {
+    const amount = this.extractAmount(text);
+    if (!amount) return null;
+
     return {
       id: uuid.v4() as string,
       entryId,
-      amount,
-      currency,
-      description: text.trim(),
-      createdAt: new Date(),
+      amount: amount.value,
+      currency: amount.currency,
+      description: text,
+      createdAt: new Date()
     };
   }
 
-  return null;
+  private static extractAmount(text: string): { value: number; currency: string } | null {
+    for (const pattern of this.CURRENCY_PATTERNS) {
+      const match = text.match(pattern);
+      if (match) {
+        const matchedText = match[0].trim();
+        const numericPart = matchedText.replace(/[^\d.]/g, '');
+        const value = parseFloat(numericPart);
+        if (!isNaN(value)) {
+          return {
+            value,
+            currency: this.determineCurrency(matchedText)
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  private static determineCurrency(text: string): string {
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('₹') || lowerText.includes('rs.') || lowerText.includes('rupee')) return 'INR';
+    if (lowerText.includes('€') || lowerText.includes('eur')) return 'EUR';
+    if (lowerText.includes('£') || lowerText.includes('gbp')) return 'GBP';
+    return 'USD'; // Default to USD for $ or unspecified currency
+  }
+
+  static formatCurrency(amount: number, currency: string): string {
+    const formatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return formatter.format(amount);
+  }
+
+  static isExpenseRelated(text: string): boolean {
+    const lowerText = text.toLowerCase();
+    return this.EXPENSE_KEYWORDS.some((keyword: string) => lowerText.includes(keyword));
+  }
 }

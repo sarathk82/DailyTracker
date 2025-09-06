@@ -9,9 +9,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Clipboard,
 } from "react-native";
-// @ts-ignore
-console.log('JournalScreen is being rendered');
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Markdown from "react-native-markdown-display";
@@ -20,28 +19,22 @@ import uuid from "react-native-uuid";
 
 import { Entry } from "../types";
 import { StorageService } from "../utils/storage";
-import {
-  detectExpense,
-  detectActionItem,
-  extractExpenseInfo,
-  extractActionItem,
-} from "../utils/textAnalysis";
+import { TextAnalyzer } from "../utils/textAnalysis";
 
 interface MessageBubbleProps {
   entry: Entry;
   onLongPress: (entry: Entry) => void;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({
-  entry,
-  onLongPress,
-}) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ entry, onLongPress }) => {
   const getBubbleStyle = () => {
     switch (entry.type) {
       case "expense":
         return [styles.messageBubble, styles.expenseBubble];
       case "action":
         return [styles.messageBubble, styles.actionBubble];
+      case "system":
+        return [styles.messageBubble, styles.systemBubble];
       default:
         return [styles.messageBubble, styles.defaultBubble];
     }
@@ -70,29 +63,32 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   return (
-    <TouchableOpacity
-      style={styles.messageContainer}
-      onLongPress={() => onLongPress(entry)}
+    <TouchableOpacity 
+      style={getBubbleStyle()}
+      activeOpacity={0.7}
+      onLongPress={() => entry.type !== 'system' && onLongPress(entry)}
     >
-      <View style={getBubbleStyle()}>
-        <View style={styles.messageHeader}>
-          {getIcon()}
-          <Text style={styles.timestamp}>
-            {format(entry.timestamp, "HH:mm")}
-          </Text>
-        </View>
-        {entry.isMarkdown ? (
-          <Markdown style={markdownStyles}>{entry.text}</Markdown>
-        ) : (
-          <Text style={styles.messageText}>{entry.text}</Text>
-        )}
-        {entry.type !== "log" && (
-          <Text style={styles.categoryLabel}>{getCategoryLabel()}</Text>
-        )}
+      <View style={styles.messageHeader}>
+        {getIcon()}
+        <Text style={styles.timestamp}>
+          {format(entry.timestamp, "HH:mm")}
+        </Text>
       </View>
+      {entry.isMarkdown ? (
+        <Markdown>{entry.text}</Markdown>
+      ) : (
+        <Text style={styles.messageText}>
+          {entry.text}
+        </Text>
+      )}
+      {entry.type !== "log" && entry.type !== "system" && (
+        <Text style={styles.categoryLabel}>{getCategoryLabel()}</Text>
+      )}
     </TouchableOpacity>
   );
 };
+
+// MessageBubble component...
 
 export const JournalScreen: React.FC = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -114,6 +110,18 @@ export const JournalScreen: React.FC = () => {
     alert(message);
   };
 
+  const addSystemMessage = (message: string) => {
+    const systemEntry: Entry = {
+      id: uuid.v4() as string,
+      text: message,
+      timestamp: new Date(),
+      type: "system",
+      isMarkdown: false,
+    };
+    StorageService.addEntry(systemEntry);
+    setEntries((prev) => [...prev, systemEntry]);
+  };
+
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
@@ -126,33 +134,36 @@ export const JournalScreen: React.FC = () => {
     };
 
     // Analyze text for expense or action item
-    const isExpense = detectExpense(inputText);
-    const isActionItem = detectActionItem(inputText);
+    const isExpense = TextAnalyzer.detectExpense(inputText);
+    const isActionItem = TextAnalyzer.detectActionItem(inputText);
 
+    // First add the user's message
+    await StorageService.addEntry(entry);
+    setEntries((prev) => [...prev, entry]);
+
+    // Then process and add any system messages
     if (isExpense) {
       entry.type = "expense";
-      const expenseInfo = extractExpenseInfo(inputText, entry.id);
+      const expenseInfo = TextAnalyzer.extractExpenseInfo(inputText, entry.id);
       if (expenseInfo) {
         await StorageService.addExpense(expenseInfo);
-        showToast(
-          `💰 Added expense: ${expenseInfo.amount} ${expenseInfo.currency}`
+        addSystemMessage(
+          `💰 Added expense: ${TextAnalyzer.formatCurrency(expenseInfo.amount, expenseInfo.currency)}`
         );
       } else {
-        showToast("💰 Detected as expense but couldn't extract amount");
+        addSystemMessage("💰 Detected as expense but couldn't extract amount");
       }
     } else if (isActionItem) {
       entry.type = "action";
-      const actionItem = extractActionItem(inputText, entry.id);
+      const actionItem = TextAnalyzer.extractActionItem(inputText, entry.id);
       if (actionItem) {
         await StorageService.addActionItem(actionItem);
-        showToast(`✅ Added action item: ${actionItem.title}`);
+        addSystemMessage(`✅ Added action item: ${actionItem.title}`);
       } else {
-        showToast("✅ Detected as action item but couldn't extract details");
+        addSystemMessage("✅ Detected as action item but couldn't extract details");
       }
     }
 
-    await StorageService.addEntry(entry);
-    setEntries((prev) => [...prev, entry]);
     setInputText("");
   };
 
@@ -178,12 +189,13 @@ export const JournalScreen: React.FC = () => {
   const markAsExpense = async (entry: Entry) => {
     if (entry.type === "expense") return;
 
-    const expenseInfo = extractExpenseInfo(entry.text, entry.id);
+    const expenseInfo = TextAnalyzer.extractExpenseInfo(entry.text, entry.id);
     if (expenseInfo) {
       await StorageService.addExpense(expenseInfo);
-      updateEntryType(entry.id, "expense");
-      showToast(
-        `💰 Manually categorized as expense: ${expenseInfo.amount} ${expenseInfo.currency}`
+      await updateEntryType(entry.id, "expense");
+      // Add system message after the entry is updated
+      addSystemMessage(
+        `💰 Manually categorized as expense: ${TextAnalyzer.formatCurrency(expenseInfo.amount, expenseInfo.currency)}`
       );
     } else {
       Alert.alert(
@@ -196,11 +208,12 @@ export const JournalScreen: React.FC = () => {
   const markAsActionItem = async (entry: Entry) => {
     if (entry.type === "action") return;
 
-    const actionItem = extractActionItem(entry.text, entry.id);
+    const actionItem = TextAnalyzer.extractActionItem(entry.text, entry.id);
     if (actionItem) {
       await StorageService.addActionItem(actionItem);
-      updateEntryType(entry.id, "action");
-      showToast(`✅ Manually categorized as action item: ${actionItem.title}`);
+      await updateEntryType(entry.id, "action");
+      // Add system message after the entry is updated
+      addSystemMessage(`✅ Manually categorized as action item: ${actionItem.title}`);
     }
   };
 
@@ -317,20 +330,39 @@ const styles = StyleSheet.create({
   messagesList: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   messageContainer: {
     marginVertical: 4,
+    alignSelf: "flex-start",
+    maxWidth: "80%",
+    flexDirection: "row",
+    justifyContent: "flex-start",
+  },
+  systemMessageContainer: {
+    marginVertical: 4,
     alignSelf: "flex-end",
     maxWidth: "80%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
   messageBubble: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 18,
     minWidth: 60,
+    maxWidth: "100%",
+    ...(Platform.OS === 'web' ? {
+      cursor: "text",
+      WebkitTouchCallout: "default",
+      WebkitUserSelect: "text",
+      MozUserSelect: "text",
+      msUserSelect: "text",
+      userSelect: "text",
+    } : {}),
   },
   defaultBubble: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#f0f0f0",  // Light gray for user messages
   },
   expenseBubble: {
     backgroundColor: "#e8f5e8",
@@ -341,6 +373,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#e3f2fd",
     borderColor: "#2196f3",
     borderWidth: 1,
+  },
+  systemBubble: {
+    backgroundColor: "#e3f2fd", // Light blue for system messages
+    borderColor: "#2196f3",
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  systemMessageText: {
+    color: "#1565c0", // Darker blue for contrast on light background
+    fontSize: 14,
+    textAlign: "left",
+    fontWeight: "500", // Slightly bolder for better readability
   },
   messageHeader: {
     flexDirection: "row",
@@ -355,8 +399,17 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 16,
-    color: "#333",
     lineHeight: 20,
+    ...(Platform.OS === 'web' ? {
+      userSelect: 'text',
+      WebkitUserSelect: 'text',
+    } as any : {}),
+  },
+  userMessageText: {
+    color: "#333", // Dark text for user messages on light background
+  },
+  nonUserMessageText: {
+    color: "#333",  // Dark text for action/expense messages
   },
   categoryLabel: {
     fontSize: 12,
