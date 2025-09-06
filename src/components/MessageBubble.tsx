@@ -35,9 +35,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const getIcon = () => {
     switch (entry.type) {
       case "expense":
-        return <Ionicons name="cash-outline" size={16} color="#2e7d32" />;
+        return <Ionicons testID="expense-icon" name="cash-outline" size={16} color="#2e7d32" />;
       case "action":
-        return <Ionicons name="checkbox-outline" size={16} color="#1565c0" />;
+        return <Ionicons testID="action-icon" name="checkbox-outline" size={16} color="#1565c0" />;
       default:
         return null;
     }
@@ -110,7 +110,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   );
 
   return (
-    <View style={entry.type === 'system' ? styles.systemMessageContainer : styles.messageContainer}>
+    <View 
+      testID="message-container"
+      style={entry.type === 'system' ? styles.systemMessageContainer : styles.messageContainer}
+    >
       {Platform.OS === 'web' ? (
         <View 
           style={getBubbleStyle()}
@@ -128,6 +131,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           style={getBubbleStyle()}
           activeOpacity={0.7}
           onLongPress={handleNativeLongPress}
+          testID="message-touchable"
         >
           <MessageContent />
         </TouchableOpacity>
