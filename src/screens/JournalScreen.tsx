@@ -20,76 +20,7 @@ import uuid from "react-native-uuid";
 import { Entry } from "../types";
 import { StorageService } from "../utils/storage";
 import { TextAnalyzer } from "../utils/textAnalysis";
-
-interface MessageBubbleProps {
-  entry: Entry;
-  onLongPress: (entry: Entry) => void;
-}
-
-const MessageBubble: React.FC<MessageBubbleProps> = ({ entry, onLongPress }) => {
-  const getBubbleStyle = () => {
-    switch (entry.type) {
-      case "expense":
-        return [styles.messageBubble, styles.expenseBubble];
-      case "action":
-        return [styles.messageBubble, styles.actionBubble];
-      case "system":
-        return [styles.messageBubble, styles.systemBubble];
-      default:
-        return [styles.messageBubble, styles.defaultBubble];
-    }
-  };
-
-  const getIcon = () => {
-    switch (entry.type) {
-      case "expense":
-        return <Ionicons name="cash-outline" size={16} color="#2e7d32" />;
-      case "action":
-        return <Ionicons name="checkbox-outline" size={16} color="#1565c0" />;
-      default:
-        return null;
-    }
-  };
-
-  const getCategoryLabel = () => {
-    switch (entry.type) {
-      case "expense":
-        return "Auto-categorized as Expense";
-      case "action":
-        return "Auto-categorized as Action Item";
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <TouchableOpacity 
-      style={getBubbleStyle()}
-      activeOpacity={0.7}
-      onLongPress={() => entry.type !== 'system' && onLongPress(entry)}
-    >
-      <View style={styles.messageHeader}>
-        {getIcon()}
-        <Text style={styles.timestamp}>
-          {format(entry.timestamp, "HH:mm")}
-        </Text>
-      </View>
-      {entry.isMarkdown ? (
-        <Markdown>{entry.text}</Markdown>
-      ) : (
-        <Text style={styles.messageText}>
-          {entry.text}
-        </Text>
-      )}
-      {entry.type !== "log" && entry.type !== "system" && (
-        <Text style={styles.categoryLabel}>{getCategoryLabel()}</Text>
-      )}
-    </TouchableOpacity>
-  );
-};
-
-// MessageBubble component...
-
+import { MessageBubble } from "../components/MessageBubble";
 export const JournalScreen: React.FC = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [inputText, setInputText] = useState("");
@@ -97,8 +28,19 @@ export const JournalScreen: React.FC = () => {
 
   const loadEntries = useCallback(async () => {
     const savedEntries = await StorageService.getEntries();
+    // Sort entries by timestamp to maintain chronological order
     setEntries(
-      savedEntries.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+      savedEntries.sort((a, b) => {
+        // If timestamps are within 2 seconds of each other, maintain user-system alternation
+        const timeDiff = Math.abs(a.timestamp.getTime() - b.timestamp.getTime());
+        if (timeDiff < 2000) {
+          // If one is a system message and the other isn't, maintain the conversation flow
+          if (a.type === 'system' && b.type !== 'system') return 1;
+          if (a.type !== 'system' && b.type === 'system') return -1;
+        }
+        // Otherwise, sort by timestamp
+        return a.timestamp.getTime() - b.timestamp.getTime();
+      })
     );
   }, []);
 
@@ -110,15 +52,14 @@ export const JournalScreen: React.FC = () => {
     alert(message);
   };
 
-  const addSystemMessage = (message: string) => {
+    const addSystemMessage = (message: string) => {
     const systemEntry: Entry = {
       id: uuid.v4() as string,
       text: message,
-      timestamp: new Date(),
+      // Add a small delay to the timestamp to ensure it appears after the user message
+      timestamp: new Date(Date.now() + 100),
       type: "system",
-      isMarkdown: false,
     };
-    StorageService.addEntry(systemEntry);
     setEntries((prev) => [...prev, systemEntry]);
   };
 
@@ -226,7 +167,11 @@ export const JournalScreen: React.FC = () => {
   };
 
   const renderEntry = ({ item }: { item: Entry }) => (
-    <MessageBubble entry={item} onLongPress={handleLongPress} />
+    <MessageBubble 
+      entry={item} 
+      onLongPress={handleLongPress}
+      markdownStyles={markdownStyles}
+    />
   );
 
   return (
@@ -331,91 +276,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  messageContainer: {
-    marginVertical: 4,
-    alignSelf: "flex-start",
-    maxWidth: "80%",
-    flexDirection: "row",
-    justifyContent: "flex-start",
-  },
-  systemMessageContainer: {
-    marginVertical: 4,
-    alignSelf: "flex-end",
-    maxWidth: "80%",
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  messageBubble: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 18,
-    minWidth: 60,
-    maxWidth: "100%",
-    ...(Platform.OS === 'web' ? {
-      cursor: "text",
-      WebkitTouchCallout: "default",
-      WebkitUserSelect: "text",
-      MozUserSelect: "text",
-      msUserSelect: "text",
-      userSelect: "text",
-    } : {}),
-  },
-  defaultBubble: {
-    backgroundColor: "#f0f0f0",  // Light gray for user messages
-  },
-  expenseBubble: {
-    backgroundColor: "#e8f5e8",
-    borderColor: "#4caf50",
-    borderWidth: 1,
-  },
-  actionBubble: {
-    backgroundColor: "#e3f2fd",
-    borderColor: "#2196f3",
-    borderWidth: 1,
-  },
-  systemBubble: {
-    backgroundColor: "#e3f2fd", // Light blue for system messages
-    borderColor: "#2196f3",
-    borderWidth: 1,
-    borderRadius: 12,
-  },
-  systemMessageText: {
-    color: "#1565c0", // Darker blue for contrast on light background
-    fontSize: 14,
-    textAlign: "left",
-    fontWeight: "500", // Slightly bolder for better readability
-  },
-  messageHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  timestamp: {
-    fontSize: 11,
-    color: "#666",
-    marginLeft: 8,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-    ...(Platform.OS === 'web' ? {
-      userSelect: 'text',
-      WebkitUserSelect: 'text',
-    } as any : {}),
-  },
-  userMessageText: {
-    color: "#333", // Dark text for user messages on light background
-  },
-  nonUserMessageText: {
-    color: "#333",  // Dark text for action/expense messages
-  },
-  categoryLabel: {
-    fontSize: 12,
-    color: "#666",
-    fontStyle: "italic",
-    marginTop: 4,
   },
   inputContainer: {
     flexDirection: "row",

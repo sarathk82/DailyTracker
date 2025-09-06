@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform, Alert, Clipboard } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, Alert, Clipboard, StyleSheet } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import Markdown from "react-native-markdown-display";
@@ -8,26 +8,27 @@ import { Entry } from '../types';
 interface MessageBubbleProps {
   entry: Entry;
   onLongPress: (entry: Entry) => void;
-  styles: any;
   markdownStyles: any;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   entry,
   onLongPress,
-  styles,
   markdownStyles,
 }) => {
   const getBubbleStyle = () => {
+    const baseStyles = [styles.messageBubble];
+    const alignmentStyle = entry.type === 'system' ? styles.systemMessage : styles.userMessage;
+    
     switch (entry.type) {
       case "expense":
-        return [styles.messageBubble, styles.expenseBubble];
+        return [...baseStyles, styles.expenseBubble, alignmentStyle];
       case "action":
-        return [styles.messageBubble, styles.actionBubble];
+        return [...baseStyles, styles.actionBubble, alignmentStyle];
       case "system":
-        return [styles.messageBubble, styles.systemBubble];
+        return [...baseStyles, styles.systemBubble, alignmentStyle];
       default:
-        return [styles.messageBubble, styles.defaultBubble];
+        return [...baseStyles, styles.defaultBubble, alignmentStyle];
     }
   };
 
@@ -134,3 +135,118 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  userMessageContainer: {
+    marginVertical: 4,
+    alignSelf: 'flex-start',
+    maxWidth: '85%',
+  },
+  systemMessageContainer: {
+    marginVertical: 4,
+    alignSelf: 'flex-end',
+    maxWidth: '85%',
+  },
+  messageContainer: {
+    marginVertical: 4,
+    alignSelf: "flex-start",
+    maxWidth: "80%",
+  },
+  messageBubble: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 60,
+    maxWidth: "100%",
+    borderRadius: 18,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 1.0,
+    elevation: 1,
+    ...(Platform.OS === 'web' ? {
+      cursor: "text",
+      WebkitTouchCallout: "default",
+      WebkitUserSelect: "text",
+      MozUserSelect: "text",
+      msUserSelect: "text",
+      userSelect: "text",
+    } : {}),
+  },
+  defaultBubble: {
+    backgroundColor: "#f0f0f0", // Light gray for user messages
+  },
+  expenseBubble: {
+    backgroundColor: "#e8f5e8",
+    borderColor: "#4caf50",
+    borderWidth: 1,
+  },
+  actionBubble: {
+    backgroundColor: "#e3f2fd",
+    borderColor: "#2196f3",
+    borderWidth: 1,
+  },
+  systemBubble: {
+    backgroundColor: "#e3f2fd", // Light blue for system messages
+    borderColor: "#2196f3",
+    borderWidth: 1,
+    borderRadius: 12,
+  },
+  systemMessage: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#fff',
+    marginLeft: '15%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 5,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 5,
+  },
+  userMessage: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fff',
+    marginRight: '15%',
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 20,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 20,
+  },
+  messageHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  timestamp: {
+    fontSize: 11,
+    color: "#666",
+    marginLeft: 8,
+  },
+  messageText: {
+    fontSize: 16,
+    lineHeight: 20,
+    ...(Platform.OS === 'web' ? {
+      userSelect: 'text',
+      WebkitUserSelect: 'text',
+    } as any : {}),
+  },
+  userMessageText: {
+    color: "#333", // Dark text for user messages on light background
+  },
+  systemMessageText: {
+    color: "#1565c0", // Darker blue for contrast on light background
+    fontSize: 14,
+    textAlign: "left",
+    fontWeight: "500", // Slightly bolder for better readability
+  },
+  nonUserMessageText: {
+    color: "#333",  // Dark text for action/expense messages
+  },
+  categoryLabel: {
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
+    marginTop: 4,
+  },
+});
