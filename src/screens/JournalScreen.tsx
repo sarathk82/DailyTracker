@@ -9,18 +9,26 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Clipboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import Markdown from "react-native-markdown-display";
+// import { Ionicons } from "@expo/vector-icons";
+// import Markdown from "react-native-markdown-display";
 import { format } from "date-fns";
-import uuid from "react-native-uuid";
 
 import { Entry } from "../types";
 import { StorageService } from "../utils/storage";
 import { TextAnalyzer } from "../utils/textAnalysis";
 import { MessageBubble } from "../components/MessageBubble";
+
+// Custom UUID function since react-native-uuid causes crashes
+const uuid = {
+  v4: () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+};
 export const JournalScreen: React.FC<{}> = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [inputText, setInputText] = useState("");
@@ -78,9 +86,8 @@ export const JournalScreen: React.FC<{}> = () => {
   };
 
     const addSystemMessage = async (message: string) => {
-    console.log('Adding system message:', message);
     const systemEntry: Entry = {
-      id: uuid.v4() as string,
+      id: uuid.v4(),
       text: message,
       // Add a small delay to ensure it appears after the user message
       timestamp: new Date(Date.now() + 100),
@@ -90,11 +97,9 @@ export const JournalScreen: React.FC<{}> = () => {
     try {
       // Save to storage first
       await StorageService.addEntry(systemEntry);
-      console.log('System message saved to storage');
       
       // Reload entries to refresh UI
       await loadEntries();
-      console.log('Entries reloaded after system message');
     } catch (error) {
       console.error('Error adding system message:', error);
       showToast('Failed to add system message');
@@ -105,26 +110,20 @@ export const JournalScreen: React.FC<{}> = () => {
     const trimmedInput = inputText.trim();
     if (!trimmedInput) return;
 
-    console.log('Sending message:', trimmedInput);
-
     try {
       const entry: Entry = {
-        id: uuid.v4() as string,
+        id: uuid.v4(),
         text: trimmedInput,
         timestamp: new Date(),
         type: 'log',
         isMarkdown,
       };
 
-      console.log('Created entry:', entry);
-
       // Save the entry first
       await StorageService.addEntry(entry);
-      console.log('Entry saved to storage');
       
       // Reload entries from storage to ensure UI is in sync
       await loadEntries();
-      console.log('Entries reloaded from storage');
 
       // Check for expense
       if (TextAnalyzer.detectExpense(trimmedInput)) {
@@ -218,22 +217,17 @@ export const JournalScreen: React.FC<{}> = () => {
 
   const updateEntryType = async (entryId: string, newType: Entry["type"]) => {
     try {
-      console.log('Updating entry type for:', entryId, 'to:', newType);
       // Get the latest entries from storage instead of using state
       const currentEntries = await StorageService.getEntries();
-      console.log('Current entries from storage:', currentEntries.length);
       
       const updatedEntries = currentEntries.map((entry: Entry) =>
         entry.id === entryId ? { ...entry, type: newType } : entry
       );
-      console.log('Updated entries:', updatedEntries.length);
       
       await StorageService.saveEntries(updatedEntries);
-      console.log('Entries saved to storage');
       
       // Reload entries to refresh the UI
       await loadEntries();
-      console.log('Entries reloaded from storage');
     } catch (error) {
       console.error('Error updating entry type:', error);
       showToast('Failed to update entry type');
@@ -267,7 +261,7 @@ export const JournalScreen: React.FC<{}> = () => {
               // Auto-send after a short delay so you can see it being typed
               setTimeout(async () => {
                 const entry: Entry = {
-                  id: uuid.v4() as string,
+                  id: uuid.v4(),
                   text: testMessage,
                   timestamp: new Date(),
                   type: 'log',
@@ -342,7 +336,6 @@ export const JournalScreen: React.FC<{}> = () => {
         style={styles.messagesList}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={() => {
-          console.log('FlatList is empty, entries.length:', entries.length);
           return (
             <View style={{ padding: 20, alignItems: 'center' }}>
               <Text style={{ color: '#666', fontSize: 16 }}>
@@ -377,7 +370,7 @@ export const JournalScreen: React.FC<{}> = () => {
           onPress={handleSendMessage}
           disabled={!inputText.trim()}
         >
-          <Ionicons name="send" size={24} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 16 }}>→</Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
     </SafeAreaView>

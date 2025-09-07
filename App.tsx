@@ -3,13 +3,11 @@ import { View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { JournalScreen, ActionItemsScreen, ExpensesScreen } from './src/screens';
-import { TabParamList } from './src/types';
 
-const Tab = createBottomTabNavigator<TabParamList>();
+const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
@@ -19,19 +17,19 @@ export default function App() {
         <Tab.Navigator
           screenOptions={({ route }) => ({
             tabBarIcon: ({ focused, color, size }) => {
-              let iconName: keyof typeof Ionicons.glyphMap;
+              let iconText;
 
               if (route.name === 'Journal') {
-                iconName = focused ? 'journal' : 'journal-outline';
+                iconText = '📝';
               } else if (route.name === 'ActionItems') {
-                iconName = focused ? 'checkbox' : 'checkbox-outline';
+                iconText = '✅';
               } else if (route.name === 'Expenses') {
-                iconName = focused ? 'receipt' : 'receipt-outline';
+                iconText = '💰';
               } else {
-                iconName = 'help-outline';
+                iconText = '❓';
               }
 
-              return <Ionicons name={iconName} size={size} color={color} />;
+              return <Text style={{ fontSize: size, color }}>{iconText}</Text>;
             },
             tabBarActiveTintColor: '#007AFF',
             tabBarInactiveTintColor: 'gray',

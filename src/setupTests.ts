@@ -9,11 +9,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   clear: jest.fn(() => Promise.resolve()),
 }));
 
-// Mock react-native-uuid
-jest.mock('react-native-uuid', () => ({
-  v4: () => 'test-uuid'
-}));
-
 // Mock Expo StatusBar
 jest.mock('expo-status-bar', () => ({
   StatusBar: () => 'StatusBar'

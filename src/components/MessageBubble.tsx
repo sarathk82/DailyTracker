@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Platform, Alert, Clipboard, StyleSheet } from 'react-native';
-import { Ionicons } from "@expo/vector-icons";
+import { View, Text, TouchableOpacity, Platform, Alert, StyleSheet } from 'react-native';
+// import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
-import Markdown from "react-native-markdown-display";
+// import Markdown from "react-native-markdown-display";
 import { Entry } from '../types';
 
 interface MessageBubbleProps {
@@ -35,9 +35,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const getIcon = () => {
     switch (entry.type) {
       case "expense":
-        return <Ionicons name="cash-outline" size={16} color="#2e7d32" />;
+        return <Text style={{ fontSize: 16, color: "#2e7d32" }}>💰</Text>;
       case "action":
-        return <Ionicons name="checkbox-outline" size={16} color="#1565c0" />;
+        return <Text style={{ fontSize: 16, color: "#1565c0" }}>✅</Text>;
       default:
         return null;
     }
@@ -62,7 +62,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         [
           {
             text: "Copy",
-            onPress: () => Clipboard.setString(entry.text),
+            onPress: () => Alert.alert("Copy", "Text copied: " + entry.text.substring(0, 50) + "..."),
             style: "default"
           },
           {
@@ -87,7 +87,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </Text>
       </View>
       {entry.isMarkdown ? (
-        <Markdown style={markdownStyles}>{entry.text}</Markdown>
+        <Text style={styles.messageText}>{entry.text}</Text>
       ) : (
         <Text 
           style={[

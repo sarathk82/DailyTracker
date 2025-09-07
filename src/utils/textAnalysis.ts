@@ -1,5 +1,14 @@
-import { Entry, ActionItem, Expense } from "../types";
-import uuid from "react-native-uuid";
+import { Entry, Expense, ActionItem } from '../types';
+
+// Custom UUID function since react-native-uuid causes crashes
+const uuid = {
+  v4: () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+};
 
 export class TextAnalyzer {
   // Currency patterns
@@ -62,7 +71,7 @@ export class TextAnalyzer {
   static extractActionItem(text: string, entryId: string): ActionItem | null {
     if (this.detectActionItem(text)) {
       return {
-        id: uuid.v4() as string,
+        id: uuid.v4(),
         entryId,
         title: text,
         completed: false,
@@ -77,7 +86,7 @@ export class TextAnalyzer {
     if (!amount) return null;
 
     return {
-      id: uuid.v4() as string,
+      id: uuid.v4(),
       entryId,
       amount: amount.value,
       currency: amount.currency,
