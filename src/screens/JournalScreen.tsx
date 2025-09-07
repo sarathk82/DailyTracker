@@ -21,7 +21,7 @@ import { Entry } from "../types";
 import { StorageService } from "../utils/storage";
 import { TextAnalyzer } from "../utils/textAnalysis";
 import { MessageBubble } from "../components/MessageBubble";
-export const JournalScreen: React.FC = () => {
+export const JournalScreen: React.FC<{}> = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [inputText, setInputText] = useState("");
   const [isMarkdown, setIsMarkdown] = useState(false);
@@ -52,60 +52,88 @@ export const JournalScreen: React.FC = () => {
     alert(message);
   };
 
-    const addSystemMessage = (message: string) => {
+    const addSystemMessage = async (message: string) => {
     const systemEntry: Entry = {
       id: uuid.v4() as string,
       text: message,
-      // Add a small delay to the timestamp to ensure it appears after the user message
+      // Add a small delay to ensure it appears after the user message
       timestamp: new Date(Date.now() + 100),
       type: "system",
     };
-    setEntries((prev) => [...prev, systemEntry]);
+    
+    try {
+      // Save to storage first
+      await StorageService.addEntry(systemEntry);
+      // Then update state and sort
+      setEntries((prev) => {
+        const newEntries = [...prev, systemEntry];
+        return newEntries.sort((a, b) => {
+          // If timestamps are within 2 seconds, maintain user-system alternation
+          const timeDiff = Math.abs(a.timestamp.getTime() - b.timestamp.getTime());
+          if (timeDiff < 2000) {
+            if (a.type === 'system' && b.type !== 'system') return 1;
+            if (a.type !== 'system' && b.type === 'system') return -1;
+          }
+          return a.timestamp.getTime() - b.timestamp.getTime();
+        });
+      });
+    } catch (error) {
+      console.error('Error adding system message:', error);
+      showToast('Failed to add system message');
+    }
   };
 
-  const handleSendMessage = async () => {
-    if (!inputText.trim()) return;
+    const handleSendMessage = async () => {
+    const trimmedInput = inputText.trim();
+    if (!trimmedInput) return;
 
-    const entry: Entry = {
-      id: uuid.v4() as string,
-      text: inputText.trim(),
-      timestamp: new Date(),
-      type: "log",
-      isMarkdown,
-    };
+    try {
+      const entry: Entry = {
+        id: uuid.v4() as string,
+        text: trimmedInput,
+        timestamp: new Date(),
+        type: 'log',
+        isMarkdown,
+      };
 
-    // Analyze text for expense or action item
-    const isExpense = TextAnalyzer.detectExpense(inputText);
-    const isActionItem = TextAnalyzer.detectActionItem(inputText);
+      // Save the entry first
+      await StorageService.addEntry(entry);
+      setEntries(prev => [...prev, entry]);
 
-    // First add the user's message
-    await StorageService.addEntry(entry);
-    setEntries((prev) => [...prev, entry]);
-
-    // Then process and add any system messages
-    if (isExpense) {
-      entry.type = "expense";
-      const expenseInfo = TextAnalyzer.extractExpenseInfo(inputText, entry.id);
-      if (expenseInfo) {
-        await StorageService.addExpense(expenseInfo);
-        addSystemMessage(
-          `💰 Added expense: ${TextAnalyzer.formatCurrency(expenseInfo.amount, expenseInfo.currency)}`
-        );
-      } else {
-        addSystemMessage("💰 Detected as expense but couldn't extract amount");
+      // Check for expense
+      if (TextAnalyzer.detectExpense(trimmedInput)) {
+        const expenseInfo = TextAnalyzer.extractExpenseInfo(trimmedInput, entry.id);
+        if (expenseInfo) {
+          await StorageService.addExpense(expenseInfo);
+          await updateEntryType(entry.id, 'expense');
+          await addSystemMessage(
+            `💰 Added expense: ${TextAnalyzer.formatCurrency(expenseInfo.amount, expenseInfo.currency)}`
+          );
+        } else {
+          await addSystemMessage("💰 Detected as expense but couldn't extract amount");
+        }
+        setInputText("");
+        return;
       }
-    } else if (isActionItem) {
-      entry.type = "action";
-      const actionItem = TextAnalyzer.extractActionItem(inputText, entry.id);
-      if (actionItem) {
-        await StorageService.addActionItem(actionItem);
-        addSystemMessage(`✅ Added action item: ${actionItem.title}`);
-      } else {
-        addSystemMessage("✅ Detected as action item but couldn't extract details");
+
+      // Check for action item
+      if (TextAnalyzer.detectActionItem(trimmedInput)) {
+        const actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
+        if (actionItem) {
+          await StorageService.addActionItem(actionItem);
+          await updateEntryType(entry.id, 'action');
+          await addSystemMessage(`✅ Added action item: ${actionItem.title}`);
+        } else {
+          await addSystemMessage("✅ Detected as action item but couldn't extract details");
+        }
       }
+
+      // Clear input after successful processing
+      setInputText("");
+    } catch (error) {
+      console.error('Error processing message:', error);
+      showToast('Failed to process message');
     }
-
-    setInputText("");
   };
 
   const handleLongPress = (entry: Entry) => {
@@ -135,7 +163,7 @@ export const JournalScreen: React.FC = () => {
       await StorageService.addExpense(expenseInfo);
       await updateEntryType(entry.id, "expense");
       // Add system message after the entry is updated
-      addSystemMessage(
+      await addSystemMessage(
         `💰 Manually categorized as expense: ${TextAnalyzer.formatCurrency(expenseInfo.amount, expenseInfo.currency)}`
       );
     } else {
@@ -154,16 +182,22 @@ export const JournalScreen: React.FC = () => {
       await StorageService.addActionItem(actionItem);
       await updateEntryType(entry.id, "action");
       // Add system message after the entry is updated
-      addSystemMessage(`✅ Manually categorized as action item: ${actionItem.title}`);
+      await addSystemMessage(`✅ Manually categorized as action item: ${actionItem.title}`);
     }
   };
 
   const updateEntryType = async (entryId: string, newType: Entry["type"]) => {
-    const updatedEntries = entries.map((entry) =>
-      entry.id === entryId ? { ...entry, type: newType } : entry
-    );
-    setEntries(updatedEntries);
-    await StorageService.saveEntries(updatedEntries);
+    try {
+      const updatedEntries = entries.map((entry: Entry) =>
+        entry.id === entryId ? { ...entry, type: newType } : entry
+      );
+      setEntries(updatedEntries);
+      await StorageService.saveEntries(updatedEntries);
+      await loadEntries(); // Reload entries to ensure proper ordering
+    } catch (error) {
+      console.error('Error updating entry type:', error);
+      showToast('Failed to update entry type');
+    }
   };
 
   const renderEntry = ({ item }: { item: Entry }) => (

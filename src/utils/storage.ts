@@ -12,11 +12,27 @@ export class StorageService {
       const jsonValue = await AsyncStorage.getItem(ENTRIES_KEY);
       if (jsonValue != null) {
         const entries = JSON.parse(jsonValue);
-        // Convert timestamp strings back to Date objects
-        return entries.map((entry: any) => ({
+        // Convert timestamp strings back to Date objects and ensure type preservation
+        const restoredEntries = entries.map((entry: any) => ({
           ...entry,
           timestamp: new Date(entry.timestamp),
+          // Ensure type is preserved as literal type
+          type: entry.type as 'log' | 'action' | 'expense' | 'system',
+          // Preserve markdown flag if it exists
+          isMarkdown: entry.isMarkdown || false
         }));
+        
+        // Sort entries to maintain conversation flow
+        return restoredEntries.sort((a: Entry, b: Entry) => {
+          // If timestamps are within 2 seconds of each other, maintain user-system alternation
+          const timeDiff = Math.abs(a.timestamp.getTime() - b.timestamp.getTime());
+          if (timeDiff < 2000) {
+            // If one is a system message and the other isn't, maintain the conversation flow
+            if (a.type === 'system' && b.type !== 'system') return 1;
+            if (a.type !== 'system' && b.type === 'system') return -1;
+          }
+          return a.timestamp.getTime() - b.timestamp.getTime();
+        });
       }
       return [];
     } catch (e) {

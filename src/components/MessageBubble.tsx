@@ -109,11 +109,23 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     </View>
   );
 
+  const webStyles = Platform.OS === 'web' ? {
+    style: {
+      cursor: 'text',
+      WebkitTouchCallout: 'none',
+      WebkitUserSelect: 'text',
+      MozUserSelect: 'text',
+      msUserSelect: 'text',
+      userSelect: 'text',
+    } as any
+  } : {};
+
   return (
     <View style={entry.type === 'system' ? styles.systemMessageContainer : styles.messageContainer}>
       {Platform.OS === 'web' ? (
         <View 
-          style={getBubbleStyle()}
+          {...webStyles}
+          style={[getBubbleStyle(), webStyles.style]}
           onTouchEnd={(e) => {
             const selection = window.getSelection();
             if (selection?.toString().length === 0 && entry.type !== 'system') {
@@ -166,14 +178,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 1.0,
     elevation: 1,
-    ...(Platform.OS === 'web' ? {
-      cursor: "text",
-      WebkitTouchCallout: "default",
-      WebkitUserSelect: "text",
-      MozUserSelect: "text",
-      msUserSelect: "text",
-      userSelect: "text",
-    } : {}),
   },
   defaultBubble: {
     backgroundColor: "#f0f0f0", // Light gray for user messages

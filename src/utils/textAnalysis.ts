@@ -4,14 +4,17 @@ import uuid from "react-native-uuid";
 export class TextAnalyzer {
   // Currency patterns
   private static readonly CURRENCY_PATTERNS = [
-    /\d+(\.\d{1,2})?\s*(dollars?|USD|bucks?)/gi,  // USD text
-    /\d+(\.\d{1,2})?\s*(rupees?|INR|rs\.?)/gi,    // INR text
-    /\d+(\.\d{1,2})?\s*(euros?|EUR)/gi,           // EUR text
-    /\d+(\.\d{1,2})?\s*(pounds?|GBP)/gi,          // GBP text
-    /\$\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*\$/gi, // USD symbol before or after
+    // INR patterns (listed first for priority)
+    /(?:Rs\.?|rs\.?|RS\.?)\s*\d+(\.\d{1,2})?/gi,        // INR with Rs prefix
+    /\d+(\.\d{1,2})?\s*(rupees?|INR|rs\.?|RS\.?)/gi,    // INR text
     /₹\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*₹/gi,   // INR symbol before or after
-    /(?:Rs\.?|rs\.?)\s*\d+(\.\d{1,2})?/gi,        // INR with Rs prefix
+    
+    // Other currencies
+    /\d+(\.\d{1,2})?\s*(dollars?|USD|bucks?)/gi,  // USD text
+    /\$\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*\$/gi, // USD symbol before or after
+    /\d+(\.\d{1,2})?\s*(euros?|EUR)/gi,           // EUR text
     /€\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*€/gi,   // EUR symbol before or after
+    /\d+(\.\d{1,2})?\s*(pounds?|GBP)/gi,          // GBP text
     /£\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*£/gi    // GBP symbol before or after
   ];
 
@@ -103,10 +106,33 @@ export class TextAnalyzer {
 
   private static determineCurrency(text: string): string {
     const lowerText = text.toLowerCase();
-    if (lowerText.includes('₹') || lowerText.includes('rs.') || lowerText.includes('rupee')) return 'INR';
+    // Check for INR first (including 'rs' without dot)
+    if (lowerText.includes('₹') || 
+        /\b(rs\.?|RS\.?)\b/.test(text) || 
+        lowerText.includes('rupee') || 
+        lowerText.includes('inr')) {
+      return 'INR';
+    }
     if (lowerText.includes('€') || lowerText.includes('eur')) return 'EUR';
     if (lowerText.includes('£') || lowerText.includes('gbp')) return 'GBP';
-    return 'USD'; // Default to USD for $ or unspecified currency
+    if (lowerText.includes('$') || lowerText.includes('usd') || lowerText.includes('dollar')) return 'USD';
+    
+    // Look for numeric patterns with Rs prefix
+    if (/(?:Rs\.?|rs\.?|RS\.?)\s*\d+/.test(text)) {
+      return 'INR';
+    }
+    
+    // If no specific currency symbol/text is found, look for context
+    if (lowerText.includes('spent') || lowerText.includes('cost')) {
+      // Check if there's any hint of Indian location/context
+      if (lowerText.includes('india') || lowerText.includes('indian')) {
+        return 'INR';
+      }
+    }
+    
+    // Default to INR if no other currency is clearly specified
+    // This assumes the app is primarily used in India
+    return 'INR';
   }
 
   static formatCurrency(amount: number, currency: string): string {
