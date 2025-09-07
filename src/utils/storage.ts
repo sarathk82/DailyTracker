@@ -23,7 +23,7 @@ export class StorageService {
         }));
         
         // Sort entries to maintain conversation flow
-        return restoredEntries.sort((a: Entry, b: Entry) => {
+        const sortedEntries = restoredEntries.sort((a: Entry, b: Entry) => {
           // If timestamps are within 2 seconds of each other, maintain user-system alternation
           const timeDiff = Math.abs(a.timestamp.getTime() - b.timestamp.getTime());
           if (timeDiff < 2000) {
@@ -33,6 +33,7 @@ export class StorageService {
           }
           return a.timestamp.getTime() - b.timestamp.getTime();
         });
+        return sortedEntries;
       }
       return [];
     } catch (e) {

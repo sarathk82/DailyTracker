@@ -25,6 +25,31 @@ export const JournalScreen: React.FC<{}> = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [inputText, setInputText] = useState("");
   const [isMarkdown, setIsMarkdown] = useState(false);
+  const [testIndex, setTestIndex] = useState(0);
+
+  // Test entries for different scenarios
+  const testEntries = [
+    // Expense entries
+    "spent Rs150 on coffee",
+    "bought groceries for $45.50",
+    "paid ₹2500 for electricity bill",
+    "lunch cost $12.99",
+    "purchased fuel Rs3200",
+    
+    // Action item entries
+    "need to call mom tomorrow",
+    "todo: finish the quarterly report",
+    "must submit tax documents by Friday",
+    "reminder: doctor appointment at 3pm",
+    "should book flight tickets",
+    
+    // Regular entries
+    "had a great meeting today",
+    "weather is lovely",
+    "feeling productive this morning",
+    "learned something new about React Native",
+    "grateful for a good day"
+  ];
 
   const loadEntries = useCallback(async () => {
     const savedEntries = await StorageService.getEntries();
@@ -53,6 +78,7 @@ export const JournalScreen: React.FC<{}> = () => {
   };
 
     const addSystemMessage = async (message: string) => {
+    console.log('Adding system message:', message);
     const systemEntry: Entry = {
       id: uuid.v4() as string,
       text: message,
@@ -64,19 +90,11 @@ export const JournalScreen: React.FC<{}> = () => {
     try {
       // Save to storage first
       await StorageService.addEntry(systemEntry);
-      // Then update state and sort
-      setEntries((prev) => {
-        const newEntries = [...prev, systemEntry];
-        return newEntries.sort((a, b) => {
-          // If timestamps are within 2 seconds, maintain user-system alternation
-          const timeDiff = Math.abs(a.timestamp.getTime() - b.timestamp.getTime());
-          if (timeDiff < 2000) {
-            if (a.type === 'system' && b.type !== 'system') return 1;
-            if (a.type !== 'system' && b.type === 'system') return -1;
-          }
-          return a.timestamp.getTime() - b.timestamp.getTime();
-        });
-      });
+      console.log('System message saved to storage');
+      
+      // Reload entries to refresh UI
+      await loadEntries();
+      console.log('Entries reloaded after system message');
     } catch (error) {
       console.error('Error adding system message:', error);
       showToast('Failed to add system message');
@@ -87,6 +105,8 @@ export const JournalScreen: React.FC<{}> = () => {
     const trimmedInput = inputText.trim();
     if (!trimmedInput) return;
 
+    console.log('Sending message:', trimmedInput);
+
     try {
       const entry: Entry = {
         id: uuid.v4() as string,
@@ -96,9 +116,15 @@ export const JournalScreen: React.FC<{}> = () => {
         isMarkdown,
       };
 
+      console.log('Created entry:', entry);
+
       // Save the entry first
       await StorageService.addEntry(entry);
-      setEntries(prev => [...prev, entry]);
+      console.log('Entry saved to storage');
+      
+      // Reload entries from storage to ensure UI is in sync
+      await loadEntries();
+      console.log('Entries reloaded from storage');
 
       // Check for expense
       if (TextAnalyzer.detectExpense(trimmedInput)) {
@@ -113,6 +139,8 @@ export const JournalScreen: React.FC<{}> = () => {
           await addSystemMessage("💰 Detected as expense but couldn't extract amount");
         }
         setInputText("");
+        // Reload entries after expense processing to show updated entry
+        await loadEntries();
         return;
       }
 
@@ -126,6 +154,8 @@ export const JournalScreen: React.FC<{}> = () => {
         } else {
           await addSystemMessage("✅ Detected as action item but couldn't extract details");
         }
+        // Reload entries after action item processing to show updated entry
+        await loadEntries();
       }
 
       // Clear input after successful processing
@@ -188,46 +218,121 @@ export const JournalScreen: React.FC<{}> = () => {
 
   const updateEntryType = async (entryId: string, newType: Entry["type"]) => {
     try {
-      const updatedEntries = entries.map((entry: Entry) =>
+      console.log('Updating entry type for:', entryId, 'to:', newType);
+      // Get the latest entries from storage instead of using state
+      const currentEntries = await StorageService.getEntries();
+      console.log('Current entries from storage:', currentEntries.length);
+      
+      const updatedEntries = currentEntries.map((entry: Entry) =>
         entry.id === entryId ? { ...entry, type: newType } : entry
       );
-      setEntries(updatedEntries);
+      console.log('Updated entries:', updatedEntries.length);
+      
       await StorageService.saveEntries(updatedEntries);
-      await loadEntries(); // Reload entries to ensure proper ordering
+      console.log('Entries saved to storage');
+      
+      // Reload entries to refresh the UI
+      await loadEntries();
+      console.log('Entries reloaded from storage');
     } catch (error) {
       console.error('Error updating entry type:', error);
       showToast('Failed to update entry type');
     }
   };
 
-  const renderEntry = ({ item }: { item: Entry }) => (
-    <MessageBubble 
-      entry={item} 
-      onLongPress={handleLongPress}
-      markdownStyles={markdownStyles}
-    />
-  );
+  const renderEntry = ({ item }: { item: Entry }) => {
+    return (
+      <MessageBubble 
+        entry={item} 
+        onLongPress={handleLongPress}
+        markdownStyles={markdownStyles}
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Daily Journal</Text>
-        <TouchableOpacity
-          style={[
-            styles.markdownToggle,
-            isMarkdown && styles.markdownToggleActive,
-          ]}
-          onPress={() => setIsMarkdown(!isMarkdown)}
-        >
-          <Text
-            style={[
-              styles.markdownToggleText,
-              isMarkdown && styles.markdownToggleTextActive,
-            ]}
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            style={{ backgroundColor: '#4caf50', padding: 8, borderRadius: 4, marginRight: 8 }}
+            onPress={async () => {
+              const testMessage = testEntries[testIndex];
+              setTestIndex((prev) => (prev + 1) % testEntries.length);
+              
+              // Simulate typing the test message
+              setInputText(testMessage);
+              
+              // Auto-send after a short delay so you can see it being typed
+              setTimeout(async () => {
+                const entry: Entry = {
+                  id: uuid.v4() as string,
+                  text: testMessage,
+                  timestamp: new Date(),
+                  type: 'log',
+                  isMarkdown: false,
+                };
+
+                // Save the entry first
+                await StorageService.addEntry(entry);
+                
+                // Reload entries from storage to ensure UI is in sync
+                await loadEntries();
+
+                // Check for expense
+                if (TextAnalyzer.detectExpense(testMessage)) {
+                  const expenseInfo = TextAnalyzer.extractExpenseInfo(testMessage, entry.id);
+                  if (expenseInfo) {
+                    await StorageService.addExpense(expenseInfo);
+                    await updateEntryType(entry.id, 'expense');
+                    await addSystemMessage(
+                      `💰 Added expense: ${TextAnalyzer.formatCurrency(expenseInfo.amount, expenseInfo.currency)}`
+                    );
+                  } else {
+                    await addSystemMessage("💰 Detected as expense but couldn't extract amount");
+                  }
+                  setInputText("");
+                  await loadEntries();
+                  return;
+                }
+
+                // Check for action item
+                if (TextAnalyzer.detectActionItem(testMessage)) {
+                  const actionItem = TextAnalyzer.extractActionItem(testMessage, entry.id);
+                  if (actionItem) {
+                    await StorageService.addActionItem(actionItem);
+                    await updateEntryType(entry.id, 'action');
+                    await addSystemMessage(`✅ Added action item: ${actionItem.title}`);
+                  } else {
+                    await addSystemMessage("✅ Detected as action item but couldn't extract details");
+                  }
+                  await loadEntries();
+                }
+
+                setInputText("");
+              }, 500);
+            }}
           >
-            MD
-          </Text>
-        </TouchableOpacity>
+            <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>TEST</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.markdownToggle,
+              isMarkdown && styles.markdownToggleActive,
+            ]}
+            onPress={() => setIsMarkdown(!isMarkdown)}
+          >
+            <Text
+              style={[
+                styles.markdownToggleText,
+                isMarkdown && styles.markdownToggleTextActive,
+              ]}
+            >
+              MD
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -236,6 +341,16 @@ export const JournalScreen: React.FC<{}> = () => {
         keyExtractor={(item) => item.id}
         style={styles.messagesList}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={() => {
+          console.log('FlatList is empty, entries.length:', entries.length);
+          return (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#666', fontSize: 16 }}>
+                No messages yet. Type a message below to get started!
+              </Text>
+            </View>
+          );
+        }}
       />
 
       <KeyboardAvoidingView
