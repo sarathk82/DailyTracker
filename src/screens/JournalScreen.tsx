@@ -87,6 +87,9 @@ export const JournalScreen: React.FC<{}> = () => {
     });
     
     setEntries(sortedEntries);
+    console.log(`📚 Loaded ${sortedEntries.length} entries`);
+    console.log('📚 Entry types:', sortedEntries.map(e => ({ id: e.id, text: e.text.substring(0, 30), type: e.type })));
+    
     
     // Scroll to bottom after entries are loaded (with small delay to ensure render)
     setTimeout(() => {
@@ -141,6 +144,8 @@ export const JournalScreen: React.FC<{}> = () => {
       ]);
       setExpenses(savedExpenses);
       setActionItems(savedActionItems);
+      console.log(`📊 Loaded ${savedExpenses.length} expenses and ${savedActionItems.length} action items`);
+      console.log('📊 Action items loaded:', savedActionItems);
     } catch (error) {
       console.error('Error loading expenses and action items:', error);
     }
@@ -183,11 +188,18 @@ export const JournalScreen: React.FC<{}> = () => {
 
       // Check for action item
       if (TextAnalyzer.detectActionItem(trimmedInput)) {
+        console.log('✅ Action item detected:', trimmedInput);
         const actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
         if (actionItem) {
+          console.log('✅ Action item extracted:', actionItem);
           await StorageService.addActionItem(actionItem);
           await updateEntryType(entry.id, 'action');
+          console.log('✅ Action item saved and entry type updated');
+        } else {
+          console.log('❌ Action item extraction failed');
         }
+      } else {
+        console.log('❌ Action item not detected for:', trimmedInput);
       }
 
       // Reload all data to show updated entries with categorization
@@ -412,6 +424,12 @@ export const JournalScreen: React.FC<{}> = () => {
     // Find associated expense or action item for this entry
     const expense = item.type === 'expense' ? expenses.find(e => e.entryId === item.id) : undefined;
     const actionItem = item.type === 'action' ? actionItems.find(a => a.entryId === item.id) : undefined;
+    
+    // Debug logging
+    if (item.type === 'action') {
+      console.log(`🔍 Action entry found: "${item.text}" (type: ${item.type}, id: ${item.id})`);
+      console.log(`🔍 Action item object:`, actionItem);
+    }
     
     switch (layoutStyle) {
       case 'cards':
