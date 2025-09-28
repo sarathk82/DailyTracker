@@ -8,6 +8,7 @@ import {
   Alert,
   Modal,
   TextInput,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -212,6 +213,7 @@ export const ExpensesScreen: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'thisMonth'>('all');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'analytics'>('list');
 
   const loadExpenses = useCallback(async () => {
     const expenseList = await StorageService.getExpenses();
@@ -264,6 +266,51 @@ export const ExpensesScreen: React.FC = () => {
       amount: totals[currency],
       formatted: TextAnalyzer.formatCurrency(totals[currency], currency)
     }));
+  };
+
+  // Category analytics
+  const getCategoryBreakdown = (expenseList: Expense[]) => {
+    const categoryTotals: Record<string, { amount: number; count: number; currency: string }> = {};
+    
+    expenseList.forEach(expense => {
+      const category = expense.category || 'Other';
+      if (!categoryTotals[category]) {
+        categoryTotals[category] = { amount: 0, count: 0, currency: expense.currency };
+      }
+      categoryTotals[category].amount += expense.amount;
+      categoryTotals[category].count += 1;
+    });
+
+    return Object.entries(categoryTotals)
+      .map(([category, data]) => ({
+        category,
+        amount: data.amount,
+        count: data.count,
+        currency: data.currency,
+        formatted: TextAnalyzer.formatCurrency(data.amount, data.currency)
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  };
+
+  const getMonthlyTrend = () => {
+    const monthlyData: Record<string, { amount: number; count: number }> = {};
+    
+    expenses.forEach(expense => {
+      const monthKey = format(expense.createdAt, 'MMM yyyy');
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { amount: 0, count: 0 };
+      }
+      monthlyData[monthKey].amount += expense.amount;
+      monthlyData[monthKey].count += 1;
+    });
+
+    return Object.entries(monthlyData)
+      .map(([month, data]) => ({
+        month,
+        amount: data.amount,
+        count: data.count
+      }))
+      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
   };
 
   const handleEdit = (expense: Expense) => {
@@ -359,6 +406,22 @@ export const ExpensesScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
+      {/* View Mode Toggle */}
+      <View style={styles.viewToggleContainer}>
+        <TouchableOpacity
+          style={[styles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
+          onPress={() => setViewMode('list')}
+        >
+          <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>List</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.viewToggleButton, viewMode === 'analytics' && styles.viewToggleButtonActive]}
+          onPress={() => setViewMode('analytics')}
+        >
+          <Text style={[styles.viewToggleText, viewMode === 'analytics' && styles.viewToggleTextActive]}>Analytics</Text>
+        </TouchableOpacity>
+      </View>
+
       {filteredExpenses.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="receipt-outline" size={64} color="#ccc" />
@@ -370,13 +433,80 @@ export const ExpensesScreen: React.FC = () => {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={filteredExpenses}
-          renderItem={renderExpense}
-          keyExtractor={(item) => item.id}
-          style={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
+        viewMode === 'list' ? (
+          <FlatList
+            data={filteredExpenses}
+            renderItem={renderExpense}
+            keyExtractor={(item) => item.id}
+            style={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <ScrollView style={styles.analyticsContainer} showsVerticalScrollIndicator={false}>
+            {/* Category Breakdown */}
+            <View style={styles.analyticsSection}>
+              <Text style={styles.analyticsSectionTitle}>📊 Category Breakdown</Text>
+              {getCategoryBreakdown(filteredExpenses).map((category, index) => (
+                <View key={category.category} style={styles.categoryAnalyticsItem}>
+                  <View style={styles.categoryAnalyticsInfo}>
+                    <Text style={styles.categoryAnalyticsName}>{category.category}</Text>
+                    <Text style={styles.categoryAnalyticsCount}>
+                      {category.count} {category.count === 1 ? 'expense' : 'expenses'}
+                    </Text>
+                  </View>
+                  <Text style={styles.categoryAnalyticsAmount}>{category.formatted}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Monthly Trends */}
+            <View style={styles.analyticsSection}>
+              <Text style={styles.analyticsSectionTitle}>📈 Monthly Trends</Text>
+              {getMonthlyTrend().map((trend, index) => (
+                <View key={trend.month} style={styles.trendItem}>
+                  <Text style={styles.trendMonth}>{trend.month}</Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.trendAmount}>
+                      {TextAnalyzer.formatCurrency(trend.amount, 'USD')}
+                    </Text>
+                    <Text style={styles.categoryAnalyticsCount}>
+                      {trend.count} {trend.count === 1 ? 'expense' : 'expenses'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/* Quick Stats */}
+            <View style={styles.analyticsSection}>
+              <Text style={styles.analyticsSectionTitle}>📋 Quick Stats</Text>
+              <View style={styles.trendItem}>
+                <Text style={styles.trendMonth}>Average per expense</Text>
+                <Text style={styles.trendAmount}>
+                  {filteredExpenses.length > 0
+                    ? TextAnalyzer.formatCurrency(
+                        filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0) / filteredExpenses.length,
+                        filteredExpenses[0].currency
+                      )
+                    : '$0.00'
+                  }
+                </Text>
+              </View>
+              <View style={styles.trendItem}>
+                <Text style={styles.trendMonth}>Most expensive category</Text>
+                <Text style={styles.trendAmount}>
+                  {getCategoryBreakdown(filteredExpenses)[0]?.category || 'None'}
+                </Text>
+              </View>
+              <View style={styles.trendItem}>
+                <Text style={styles.trendMonth}>Total categories</Text>
+                <Text style={styles.trendAmount}>
+                  {getCategoryBreakdown(filteredExpenses).length}
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+        )
       )}
 
       <EditExpenseModal
@@ -651,5 +781,93 @@ const styles = StyleSheet.create({
   },
   modalButtonTextPrimary: {
     color: '#fff',
+  },
+  viewToggleContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  viewToggleButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 4,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+  },
+  viewToggleButtonActive: {
+    backgroundColor: '#007AFF',
+  },
+  viewToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  viewToggleTextActive: {
+    color: '#fff',
+  },
+  analyticsContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  analyticsSection: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 8,
+  },
+  analyticsSectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  categoryAnalyticsItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  categoryAnalyticsInfo: {
+    flex: 1,
+  },
+  categoryAnalyticsName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  categoryAnalyticsCount: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  categoryAnalyticsAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2e7d32',
+  },
+  trendItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  trendMonth: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  trendAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2e7d32',
   },
 });

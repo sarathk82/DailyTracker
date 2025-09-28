@@ -5,7 +5,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { JournalScreen, ActionItemsScreen, ExpensesScreen } from './src/screens';
+import { JournalScreen, ActionItemsScreen, ExpensesScreen, AnalyticsScreen } from './src/screens';
 
 const Tab = createBottomTabNavigator();
 
@@ -25,6 +25,8 @@ export default function App() {
                 iconText = '✅';
               } else if (route.name === 'Expenses') {
                 iconText = '💰';
+              } else if (route.name === 'Analytics') {
+                iconText = '📊';
               } else {
                 iconText = '❓';
               }
@@ -63,6 +65,13 @@ export default function App() {
             component={ExpensesScreen}
             options={{
               tabBarLabel: 'Expenses'
+            }}
+          />
+          <Tab.Screen
+            name="Analytics"
+            component={AnalyticsScreen}
+            options={{
+              tabBarLabel: 'Analytics'
             }}
           />
         </Tab.Navigator>

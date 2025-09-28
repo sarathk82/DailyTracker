@@ -43,6 +43,11 @@ export const JournalScreen: React.FC<{}> = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [layoutStyle, setLayoutStyle] = useState('chat');
   
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [filteredEntries, setFilteredEntries] = useState<Entry[]>([]);
+  
   // Data for enhanced messages
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
@@ -87,6 +92,7 @@ export const JournalScreen: React.FC<{}> = () => {
     });
     
     setEntries(sortedEntries);
+    setFilteredEntries(sortedEntries); // Initialize filtered entries
     
     // Scroll to bottom after entries are loaded (with small delay to ensure render)
     
@@ -98,6 +104,42 @@ export const JournalScreen: React.FC<{}> = () => {
       }
     }, 100);
   }, []);
+
+  // Filter entries based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredEntries(entries);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = entries.filter(entry => {
+      // Search in entry text
+      if (entry.text.toLowerCase().includes(query)) {
+        return true;
+      }
+      
+      // Search in date (various formats)
+      const entryDate = format(entry.timestamp, 'yyyy-MM-dd');
+      const entryDateLong = format(entry.timestamp, 'MMMM dd, yyyy');
+      const entryDateShort = format(entry.timestamp, 'MMM dd');
+      
+      if (entryDate.includes(query) || 
+          entryDateLong.toLowerCase().includes(query) || 
+          entryDateShort.toLowerCase().includes(query)) {
+        return true;
+      }
+      
+      // Search by entry type
+      if (entry.type.toLowerCase().includes(query)) {
+        return true;
+      }
+      
+      return false;
+    });
+    
+    setFilteredEntries(filtered);
+  }, [searchQuery, entries]);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -439,6 +481,12 @@ export const JournalScreen: React.FC<{}> = () => {
         <Text style={styles.headerTitle}>Daily Journal</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity
+            style={[styles.settingsButton, { marginRight: 8 }]}
+            onPress={() => setShowSearch(!showSearch)}
+          >
+            <Text style={styles.settingsButtonText}>🔍</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={{ backgroundColor: '#4caf50', padding: 8, borderRadius: 4, marginRight: 8 }}
             onPress={async () => {
               const testMessage = testEntries[testIndex];
@@ -497,18 +545,44 @@ export const JournalScreen: React.FC<{}> = () => {
         </View>
       </View>
 
+      {showSearch && (
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search entries by text, date, or type..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => setSearchQuery("")}
+            >
+              <Text style={styles.clearButtonText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       <FlatList
         ref={flatListRef}
-        data={entries}
+        data={showSearch ? filteredEntries : entries}
         renderItem={renderEntry}
         keyExtractor={(item) => item.id}
         style={[styles.messagesList, getListStyle(layoutStyle)]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={() => {
+          const isEmpty = showSearch ? filteredEntries.length === 0 : entries.length === 0;
+          const message = showSearch && searchQuery.trim() 
+            ? `No entries found matching "${searchQuery}"` 
+            : "No messages yet. Type a message below to get started!";
+          
           return (
             <View style={{ padding: 20, alignItems: 'center' }}>
               <Text style={{ color: '#666', fontSize: 16 }}>
-                No messages yet. Type a message below to get started!
+                {message}
               </Text>
             </View>
           );
@@ -582,6 +656,38 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: "#333",
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  searchInput: {
+    flex: 1,
+    height: 36,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 18,
+    fontSize: 16,
+    color: '#333',
+  },
+  clearButton: {
+    marginLeft: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearButtonText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: 'bold',
   },
   settingsButton: {
     paddingHorizontal: 8,

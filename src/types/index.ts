@@ -37,4 +37,5 @@ export type TabParamList = {
   Journal: undefined;
   ActionItems: undefined;
   Expenses: undefined;
+  Analytics: undefined;
 };
