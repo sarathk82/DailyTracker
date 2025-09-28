@@ -71,6 +71,7 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
 
   const showCurrencyPicker = () => {
     console.log('Currency picker tapped'); // Debug log
+    console.log('Setting showCurrencyModal to true');
     setShowCurrencyModal(true);
   };
 
@@ -85,6 +86,7 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
 
   const showLayoutPicker = () => {
     console.log('Layout picker tapped'); // Debug log
+    console.log('Setting showLayoutModal to true');
     setShowLayoutModal(true);
   };
 
@@ -191,30 +193,34 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
             <Text style={modalStyles.title}>Select Currency</Text>
             <Text style={modalStyles.subtitle}>Choose your preferred currency:</Text>
             
-            <ScrollView style={modalStyles.optionsList}>
-              {CURRENCIES.map((currency) => (
-                <TouchableOpacity
-                  key={currency.code}
-                  style={[
-                    modalStyles.option,
-                    settings.systemCurrency === currency.code && modalStyles.selectedOption
-                  ]}
-                  onPress={() => {
-                    updateSetting('systemCurrency', currency.code);
-                    setShowCurrencyModal(false);
-                  }}
-                >
-                  <Text style={[
-                    modalStyles.optionText,
-                    settings.systemCurrency === currency.code && modalStyles.selectedOptionText
-                  ]}>
-                    {currency.symbol} {currency.name}
-                  </Text>
-                  {settings.systemCurrency === currency.code && (
-                    <Text style={modalStyles.checkmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
+            <ScrollView style={modalStyles.optionsList} showsVerticalScrollIndicator={true}>
+              {CURRENCIES.map((currency) => {
+                console.log(`Rendering currency option: ${currency.name}`);
+                return (
+                  <TouchableOpacity
+                    key={currency.code}
+                    style={[
+                      modalStyles.option,
+                      settings.systemCurrency === currency.code && modalStyles.selectedOption
+                    ]}
+                    onPress={() => {
+                      console.log(`Selected currency: ${currency.name}`);
+                      updateSetting('systemCurrency', currency.code);
+                      setShowCurrencyModal(false);
+                    }}
+                  >
+                    <Text style={[
+                      modalStyles.optionText,
+                      settings.systemCurrency === currency.code && modalStyles.selectedOptionText
+                    ]}>
+                      {currency.symbol} {currency.name}
+                    </Text>
+                    {settings.systemCurrency === currency.code && (
+                      <Text style={modalStyles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
             
             <TouchableOpacity
@@ -239,30 +245,34 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
             <Text style={modalStyles.title}>Select Layout Style</Text>
             <Text style={modalStyles.subtitle}>Choose how your journal entries are displayed:</Text>
             
-            <ScrollView style={modalStyles.optionsList}>
-              {LAYOUT_OPTIONS.map((layout) => (
-                <TouchableOpacity
-                  key={layout.id}
-                  style={[
-                    modalStyles.option,
-                    settings.layoutStyle === layout.id && modalStyles.selectedOption
-                  ]}
-                  onPress={() => {
-                    updateSetting('layoutStyle', layout.id);
-                    setShowLayoutModal(false);
-                  }}
-                >
-                  <Text style={[
-                    modalStyles.optionText,
-                    settings.layoutStyle === layout.id && modalStyles.selectedOptionText
-                  ]}>
-                    {layout.icon} {layout.name}
-                  </Text>
-                  {settings.layoutStyle === layout.id && (
-                    <Text style={modalStyles.checkmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
+            <ScrollView style={modalStyles.optionsList} showsVerticalScrollIndicator={true}>
+              {LAYOUT_OPTIONS.map((layout) => {
+                console.log(`Rendering layout option: ${layout.name}`);
+                return (
+                  <TouchableOpacity
+                    key={layout.id}
+                    style={[
+                      modalStyles.option,
+                      settings.layoutStyle === layout.id && modalStyles.selectedOption
+                    ]}
+                    onPress={() => {
+                      console.log(`Selected layout: ${layout.name}`);
+                      updateSetting('layoutStyle', layout.id);
+                      setShowLayoutModal(false);
+                    }}
+                  >
+                    <Text style={[
+                      modalStyles.optionText,
+                      settings.layoutStyle === layout.id && modalStyles.selectedOptionText
+                    ]}>
+                      {layout.icon} {layout.name}
+                    </Text>
+                    {settings.layoutStyle === layout.id && (
+                      <Text style={modalStyles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
             
             <TouchableOpacity
@@ -371,6 +381,7 @@ const modalStyles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     maxWidth: 400,
+    minHeight: 300,
     maxHeight: '80%',
     paddingVertical: 20,
   },
@@ -389,7 +400,8 @@ const modalStyles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   optionsList: {
-    flex: 1,
+    flexGrow: 1,
+    minHeight: 200,
   },
   option: {
     flexDirection: 'row',
@@ -399,6 +411,7 @@ const modalStyles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    minHeight: 50,
   },
   selectedOption: {
     backgroundColor: '#e3f2fd',
