@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Platform, Alert, StyleSheet } from 'react-native';
 // import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
-// import Markdown from "react-native-markdown-display";
+import Markdown from "react-native-markdown-display";
 import { Entry } from '../types';
 
 interface MessageBubbleProps {
@@ -87,7 +87,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         </Text>
       </View>
       {entry.isMarkdown ? (
-        <Text style={styles.messageText}>{entry.text}</Text>
+        <Markdown style={markdownStyles}>{entry.text}</Markdown>
       ) : (
         <Text 
           style={[

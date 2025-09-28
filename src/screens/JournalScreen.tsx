@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 // import { Ionicons } from "@expo/vector-icons";
-// import Markdown from "react-native-markdown-display";
+import Markdown from "react-native-markdown-display";
 import { format } from "date-fns";
 
 import { Entry } from "../types";
@@ -32,7 +32,7 @@ const uuid = {
 export const JournalScreen: React.FC<{}> = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [inputText, setInputText] = useState("");
-  const [isMarkdown, setIsMarkdown] = useState(false);
+  const [isMarkdown, setIsMarkdown] = useState(true);
   const [testIndex, setTestIndex] = useState(0);
 
   // Test entries for different scenarios
@@ -265,7 +265,7 @@ export const JournalScreen: React.FC<{}> = () => {
                   text: testMessage,
                   timestamp: new Date(),
                   type: 'log',
-                  isMarkdown: false,
+                  isMarkdown,
                 };
 
                 // Save the entry first
