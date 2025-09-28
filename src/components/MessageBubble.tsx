@@ -3,18 +3,23 @@ import { View, Text, TouchableOpacity, Platform, Alert, StyleSheet } from 'react
 // import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import Markdown from "react-native-markdown-display";
-import { Entry } from '../types';
+import { Entry, Expense, ActionItem } from '../types';
+import { TextAnalyzer } from '../utils/textAnalysis';
 
 interface MessageBubbleProps {
   entry: Entry;
   onLongPress: (entry: Entry) => void;
   markdownStyles: any;
+  expense?: Expense;
+  actionItem?: ActionItem;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   entry,
   onLongPress,
   markdownStyles,
+  expense,
+  actionItem,
 }) => {
   const getBubbleStyle = () => {
     const baseStyles = [styles.messageBubble];
@@ -46,9 +51,15 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const getCategoryLabel = () => {
     switch (entry.type) {
       case "expense":
-        return "Auto-categorized as Expense";
+        if (expense) {
+          return `💰 Auto-categorized as Expense: ${TextAnalyzer.formatCurrency(expense.amount, expense.currency)}`;
+        }
+        return "💰 Auto-categorized as Expense";
       case "action":
-        return "Auto-categorized as Action Item";
+        if (actionItem) {
+          return `✅ Auto-categorized as Action Item: ${actionItem.title}`;
+        }
+        return "✅ Auto-categorized as Action Item";
       default:
         return null;
     }

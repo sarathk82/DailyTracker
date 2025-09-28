@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Entry, ActionItem, Expense } from '../types';
+import { Entry, ActionItem, Expense, SettingsData } from '../types';
 
 const ENTRIES_KEY = '@daily_tracker_entries';
 const ACTION_ITEMS_KEY = '@daily_tracker_action_items';
 const EXPENSES_KEY = '@daily_tracker_expenses';
+const SETTINGS_KEY = '@daily_tracker_settings';
 
 export class StorageService {
   // Entries
@@ -180,6 +181,26 @@ export class StorageService {
       await this.saveExpenses(filteredExpenses);
     } catch (e) {
       console.error('Error deleting expense:', e);
+    }
+  }
+
+  // Settings
+  static async getSettings(): Promise<SettingsData | null> {
+    try {
+      const jsonValue = await AsyncStorage.getItem(SETTINGS_KEY);
+      return jsonValue != null ? JSON.parse(jsonValue) : null;
+    } catch (e) {
+      console.error('Error getting settings:', e);
+      return null;
+    }
+  }
+
+  static async saveSettings(settings: SettingsData): Promise<void> {
+    try {
+      const jsonValue = JSON.stringify(settings);
+      await AsyncStorage.setItem(SETTINGS_KEY, jsonValue);
+    } catch (e) {
+      console.error('Error saving settings:', e);
     }
   }
 }

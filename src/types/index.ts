@@ -26,6 +26,13 @@ export interface Expense {
   createdAt: Date;
 }
 
+export interface SettingsData {
+  isMarkdownEnabled: boolean;
+  enterToSend: boolean;
+  systemCurrency: string;
+  layoutStyle: string;
+}
+
 export type TabParamList = {
   Journal: undefined;
   ActionItems: undefined;
