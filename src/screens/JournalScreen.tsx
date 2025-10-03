@@ -67,6 +67,9 @@ export const JournalScreen: React.FC<{}> = () => {
     "must submit tax documents by Friday",
     "reminder: doctor appointment at 3pm",
     "should book flight tickets",
+    ". pick up dry cleaning",
+    ". schedule dentist appointment",
+    ". buy birthday gift for Sarah",
     
     // Regular entries
     "had a great meeting today",

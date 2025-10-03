@@ -78,6 +78,7 @@ export class TextAnalyzer {
 
   // Regular expressions for action items
   private static readonly ACTION_PATTERNS: RegExp[] = [
+    /^\s*\.\s*([^.!?\n]+)/gi, // Dot-prefixed action items (e.g., ". call mom")
     /\bto-?do:?\s*([^.!?\n]+)/gi,
     /\btask:?\s*([^.!?\n]+)/gi,
     /\baction:?\s*([^.!?\n]+)/gi,
@@ -90,6 +91,13 @@ export class TextAnalyzer {
 
   static detectActionItem(text: string): boolean {
     const lowerText = text.toLowerCase().trim();
+    const trimmedText = text.trim();
+    
+    // Check if text starts with a dot (quick action item syntax)
+    const startsWithDot = /^\s*\.\s*\S/.test(text);
+    if (startsWithDot) {
+      return true;
+    }
     
     // Check for existing action keywords (this should catch "pack" now)
     const hasActionKeywords = this.ACTION_KEYWORDS.some(keyword => lowerText.includes(keyword));
@@ -116,7 +124,7 @@ export class TextAnalyzer {
     // Check for time-sensitive patterns
     const hasTimePattern = /\b(by\s+\w+|before\s+\w+|after\s+\w+|tomorrow|today|tonight|this\s+week|next\s+week)\b/i.test(lowerText);
     
-    return hasActionKeywords || startsWithActionVerb || hasActionVerbWithContext || hasImperativePattern || 
+    return startsWithDot || hasActionKeywords || startsWithActionVerb || hasActionVerbWithContext || hasImperativePattern || 
            (hasTimePattern && this.ACTION_VERBS.some(verb => lowerText.includes(verb)));
   }
 
@@ -264,10 +272,16 @@ export class TextAnalyzer {
 
   static extractActionItem(text: string, entryId: string): ActionItem | null {
     if (this.detectActionItem(text)) {
+      // Clean up the title - remove leading dot if present
+      let cleanTitle = text.trim();
+      if (cleanTitle.startsWith('.')) {
+        cleanTitle = cleanTitle.substring(1).trim();
+      }
+      
       return {
         id: uuid.v4(),
         entryId,
-        title: text,
+        title: cleanTitle,
         completed: false,
         createdAt: new Date()
       };
