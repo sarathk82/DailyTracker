@@ -26,7 +26,8 @@ export class TextAnalyzer {
   private static readonly EXPENSE_KEYWORDS: string[] = [
     "spent", "bought", "purchased", "paid", "cost",
     "expense", "payment", "buy", "pay", "shopping",
-    "store", "bill", "receipt"
+    "store", "bill", "receipt", "charged", "withdrew",
+    "withdrawal", "transaction", "fee", "subscription"
   ];
 
   // Keywords for action items
@@ -171,9 +172,30 @@ export class TextAnalyzer {
     const expenseContexts = [
       'spent', 'bought', 'purchased', 'paid', 'cost', 'price', 'bill', 'receipt',
       'shopping', 'store', 'market', 'restaurant', 'cafe', 'food', 'lunch', 'dinner',
-      'gas', 'fuel', 'electricity', 'rent', 'groceries', 'medicine', 'doctor'
+      'gas', 'fuel', 'electricity', 'rent', 'groceries', 'medicine', 'doctor',
+      'haircut', 'salon', 'barber', 'transportation', 'taxi', 'uber', 'lyft',
+      'coffee', 'tea', 'snack', 'movie', 'ticket', 'parking', 'toll'
     ];
-    return expenseContexts.some(context => lowerText.includes(context));
+    
+    // Check for explicit expense contexts
+    const hasDirectContext = expenseContexts.some(context => lowerText.includes(context));
+    if (hasDirectContext) {
+      return true;
+    }
+    
+    // Check for "number + for + item" pattern (e.g., "500 for haircut", "20 for lunch")
+    const forPattern = /\d+(?:\.\d{1,2})?\s+for\s+\w+/i.test(text);
+    if (forPattern) {
+      return true;
+    }
+    
+    // Check for "number + currency + for + item" pattern
+    const currencyForPattern = /(?:Rs\.?|rs\.?|RS\.?|₹|[$€£])\s*\d+(?:\.\d{1,2})?\s+for\s+\w+/i.test(text);
+    if (currencyForPattern) {
+      return true;
+    }
+    
+    return false;
   }
 
   // Get system default currency

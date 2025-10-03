@@ -60,6 +60,9 @@ export const JournalScreen: React.FC<{}> = () => {
     "paid ₹2500 for electricity bill",
     "lunch cost $12.99",
     "purchased fuel Rs3200",
+    "500 for haircut",
+    "₹300 for taxi",
+    "50 for parking",
     
     // Action item entries
     "need to call mom tomorrow",
