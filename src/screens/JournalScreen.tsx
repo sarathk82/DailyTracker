@@ -54,8 +54,8 @@ export const JournalScreen: React.FC<{}> = () => {
 
   // Test entries for different scenarios
   const testEntries = [
-    // Expense entries
-    "spent Rs150 on coffee",
+    // Expense entries with category extraction
+    "spent Rs150 for coffee",
     "bought groceries for $45.50",
     "paid ₹2500 for electricity bill",
     "lunch cost $12.99",
@@ -63,6 +63,7 @@ export const JournalScreen: React.FC<{}> = () => {
     "500 for haircut",
     "₹300 for taxi",
     "50 for parking",
+    "spent 200 on movie ticket",
     
     // Action item entries
     "need to call mom tomorrow",

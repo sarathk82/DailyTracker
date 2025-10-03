@@ -276,16 +276,29 @@ export const AnalyticsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📅 Recent Activity (Last 7 Days)</Text>
           <View style={styles.chartContainer}>
-            {analytics.recentActivity.map((day, index) => (
-              <View key={day.date} style={styles.chartDay}>
-                <View style={styles.chartBars}>
-                  <View style={[styles.chartBar, styles.entriesBar, { height: Math.max(4, day.entries * 8) }]} />
-                  <View style={[styles.chartBar, styles.expensesBar, { height: Math.max(4, day.expenses * 8) }]} />
-                  <View style={[styles.chartBar, styles.actionsBar, { height: Math.max(4, day.actions * 8) }]} />
+            {analytics.recentActivity.map((day, index) => {
+              // Calculate max values for proper scaling
+              const maxEntries = Math.max(...analytics.recentActivity.map(d => d.entries));
+              const maxExpenses = Math.max(...analytics.recentActivity.map(d => d.expenses));
+              const maxActions = Math.max(...analytics.recentActivity.map(d => d.actions));
+              const maxValue = Math.max(maxEntries, maxExpenses, maxActions, 1);
+              
+              // Scale bars to fit within the allocated height (50px max)
+              const entriesHeight = Math.max(4, (day.entries / maxValue) * 50);
+              const expensesHeight = Math.max(4, (day.expenses / maxValue) * 50);
+              const actionsHeight = Math.max(4, (day.actions / maxValue) * 50);
+              
+              return (
+                <View key={day.date} style={styles.chartDay}>
+                  <View style={styles.chartBars}>
+                    <View style={[styles.chartBar, styles.entriesBar, { height: entriesHeight }]} />
+                    <View style={[styles.chartBar, styles.expensesBar, { height: expensesHeight }]} />
+                    <View style={[styles.chartBar, styles.actionsBar, { height: actionsHeight }]} />
+                  </View>
+                  <Text style={styles.chartDate}>{day.date}</Text>
                 </View>
-                <Text style={styles.chartDate}>{day.date}</Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
           
           {/* Legend */}
@@ -515,7 +528,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'flex-end',
-    height: 120,
+    height: 100,
+    marginBottom: 8,
   },
   chartDay: {
     alignItems: 'center',
@@ -524,7 +538,7 @@ const styles = StyleSheet.create({
   chartBars: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    height: 60,
+    height: 50,
     marginBottom: 8,
     gap: 2,
   },

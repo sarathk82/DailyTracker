@@ -94,14 +94,27 @@ export class TextAnalyzer {
     const lowerText = text.toLowerCase().trim();
     const trimmedText = text.trim();
     
+    // First check if this is an expense - if so, don't treat as action item
+    if (this.detectExpense(text)) {
+      return false;
+    }
+    
     // Check if text starts with a dot (quick action item syntax)
     const startsWithDot = /^\s*\.\s*\S/.test(text);
     if (startsWithDot) {
       return true;
     }
     
-    // Check for existing action keywords (this should catch "pack" now)
-    const hasActionKeywords = this.ACTION_KEYWORDS.some(keyword => lowerText.includes(keyword));
+    // Check for existing action keywords (use word boundaries to avoid partial matches)
+    const hasActionKeywords = this.ACTION_KEYWORDS.some(keyword => {
+      // Use word boundaries for multi-word keywords
+      if (keyword.includes(' ')) {
+        return lowerText.includes(keyword);
+      }
+      // Use word boundaries for single words to avoid partial matches
+      const wordBoundaryPattern = new RegExp(`\\b${keyword}\\b`, 'i');
+      return wordBoundaryPattern.test(lowerText);
+    });
     
     // Check if text starts with an action verb
     const startsWithActionVerb = this.ACTION_VERBS.some(verb => {
@@ -111,7 +124,9 @@ export class TextAnalyzer {
     
     // Simplified check: if it contains any action verb + common action context words
     const hasActionVerbWithContext = this.ACTION_VERBS.some(verb => {
-      if (lowerText.includes(verb)) {
+      // Use word boundaries to avoid partial matches
+      const verbPattern = new RegExp(`\\b${verb}\\b`, 'i');
+      if (verbPattern.test(lowerText)) {
         // If it has the verb, check for action context
         const actionContext = /\b(by|before|after|tomorrow|today|tonight|this|next|the|my|for|to|on|at)\b/i.test(lowerText);
         return actionContext;
@@ -126,7 +141,10 @@ export class TextAnalyzer {
     const hasTimePattern = /\b(by\s+\w+|before\s+\w+|after\s+\w+|tomorrow|today|tonight|this\s+week|next\s+week)\b/i.test(lowerText);
     
     return startsWithDot || hasActionKeywords || startsWithActionVerb || hasActionVerbWithContext || hasImperativePattern || 
-           (hasTimePattern && this.ACTION_VERBS.some(verb => lowerText.includes(verb)));
+           (hasTimePattern && this.ACTION_VERBS.some(verb => {
+             const verbPattern = new RegExp(`\\b${verb}\\b`, 'i');
+             return verbPattern.test(lowerText);
+           }));
   }
 
   static detectExpense(text: string): boolean {
@@ -315,14 +333,153 @@ export class TextAnalyzer {
     const amount = this.extractAmount(text);
     if (!amount) return null;
 
+    // Extract category and clean description from the text
+    const categoryInfo = this.extractCategoryFromText(text);
+
     return {
       id: uuid.v4(),
       entryId,
       amount: amount.value,
       currency: amount.currency,
-      description: text,
+      description: categoryInfo.description,
+      category: categoryInfo.category,
       createdAt: new Date()
     };
+  }
+
+  // Extract category and keep full description from expense text
+  private static extractCategoryFromText(text: string): { category?: string; description: string } {
+    const lowerText = text.toLowerCase().trim();
+    const originalText = text.trim();
+    
+    // Pattern 1: "spent/paid/bought X for Y" -> category: Y, description: original text
+    const forPattern = /(?:spent|paid|bought|purchased|cost|charged)\s+(?:Rs\.?|rs\.?|RS\.?|₹|[$€£])?\s*\d+(?:\.\d{1,2})?\s+for\s+(.+)/i;
+    const forMatch = text.match(forPattern);
+    if (forMatch) {
+      const category = forMatch[1].trim();
+      return {
+        category: this.mapToStandardCategory(category),
+        description: originalText
+      };
+    }
+
+    // Pattern 2: "X for Y" -> category: Y, description: original text
+    const simpleForPattern = /(?:Rs\.?|rs\.?|RS\.?|₹|[$€£])?\s*\d+(?:\.\d{1,2})?\s+for\s+(.+)/i;
+    const simpleForMatch = text.match(simpleForPattern);
+    if (simpleForMatch) {
+      const category = simpleForMatch[1].trim();
+      return {
+        category: this.mapToStandardCategory(category),
+        description: originalText
+      };
+    }
+
+    // Pattern 3: "spent/paid/bought X on Y" -> category: Y, description: original text
+    const onPattern = /(?:spent|paid|bought|purchased)\s+(?:Rs\.?|rs\.?|RS\.?|₹|[$€£])?\s*\d+(?:\.\d{1,2})?\s+on\s+(.+)/i;
+    const onMatch = text.match(onPattern);
+    if (onMatch) {
+      const category = onMatch[1].trim();
+      return {
+        category: this.mapToStandardCategory(category),
+        description: originalText
+      };
+    }
+
+    // Pattern 4: Look for expense context words and extract category
+    const expenseContexts = [
+      'haircut', 'salon', 'barber', 'taxi', 'uber', 'lyft', 'parking', 'toll',
+      'coffee', 'tea', 'lunch', 'dinner', 'breakfast', 'snack', 'food',
+      'groceries', 'shopping', 'movie', 'ticket', 'gas', 'fuel',
+      'electricity', 'rent', 'medicine', 'doctor', 'train', 'bus', 'flight',
+      'metro', 'subway', 'cab', 'auto'
+    ];
+    
+    for (const context of expenseContexts) {
+      if (lowerText.includes(context)) {
+        // For compound terms like "train ticket", extract the full relevant phrase
+        if (context === 'ticket') {
+          // Look for transportation + ticket combinations first
+          const transportTicketMatch = lowerText.match(/\b(train|bus|flight|metro|subway)\s+ticket\b/);
+          if (transportTicketMatch) {
+            return {
+              category: this.mapToStandardCategory(transportTicketMatch[0]),
+              description: originalText
+            };
+          }
+          // Look for movie/entertainment + ticket combinations
+          const entertainmentTicketMatch = lowerText.match(/\b(movie|cinema|concert|show)\s+ticket\b/);
+          if (entertainmentTicketMatch) {
+            return {
+              category: this.mapToStandardCategory(entertainmentTicketMatch[0]),
+              description: originalText
+            };
+          }
+          // Generic ticket
+          return {
+            category: this.mapToStandardCategory('ticket'),
+            description: originalText
+          };
+        }
+        
+        return {
+          category: this.mapToStandardCategory(context),
+          description: originalText
+        };
+      }
+    }
+
+    // Fallback: return original text as description without category
+    return {
+      description: originalText
+    };
+  }
+
+  // Map extracted categories to standard category names
+  private static mapToStandardCategory(extractedCategory: string): string {
+    const lowerCategory = extractedCategory.toLowerCase().trim();
+    
+    // Transportation (check first for specific transport + ticket combinations)
+    if (['train ticket', 'bus ticket', 'flight ticket', 'metro ticket', 'subway ticket'].some(word => lowerCategory.includes(word))) {
+      return 'Transportation';
+    }
+    
+    // Transportation (general)
+    if (['taxi', 'uber', 'lyft', 'parking', 'toll', 'gas', 'fuel', 'transportation', 'train', 'bus', 'flight', 'metro', 'subway', 'cab', 'auto'].some(word => lowerCategory.includes(word))) {
+      return 'Transportation';
+    }
+    
+    // Food & Dining
+    if (['coffee', 'tea', 'lunch', 'dinner', 'breakfast', 'snack', 'food', 'groceries', 'restaurant', 'cafe'].some(word => lowerCategory.includes(word))) {
+      return 'Food';
+    }
+    
+    // Personal Care
+    if (['haircut', 'salon', 'barber', 'medicine', 'doctor', 'hospital', 'pharmacy'].some(word => lowerCategory.includes(word))) {
+      return 'Health & Personal Care';
+    }
+    
+    // Entertainment (check after transportation to avoid conflicts)
+    if (['movie ticket', 'concert ticket', 'show ticket', 'movie', 'cinema', 'theater', 'entertainment'].some(word => lowerCategory.includes(word))) {
+      return 'Entertainment';
+    }
+    
+    // Generic ticket (fallback for other tickets)
+    if (lowerCategory.includes('ticket') && !['train', 'bus', 'flight', 'metro', 'subway'].some(transport => lowerCategory.includes(transport))) {
+      return 'Entertainment';
+    }
+    
+    // Utilities
+    if (['electricity', 'rent', 'bill', 'utilities', 'water', 'internet'].some(word => lowerCategory.includes(word))) {
+      return 'Utilities';
+    }
+    
+    // Shopping
+    if (['shopping', 'clothes', 'clothing', 'shoes', 'accessories'].some(word => lowerCategory.includes(word))) {
+      return 'Shopping';
+    }
+    
+    // Default: capitalize first letter of extracted category
+    return extractedCategory.charAt(0).toUpperCase() + extractedCategory.slice(1);
   }
 
   private static extractAmount(text: string): { value: number; currency: string } | null {

@@ -41,14 +41,18 @@ const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onEdit, onDelete }) 
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => onEdit(expense)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="pencil" size={16} color="#666" />
+            <Ionicons name="pencil" size={18} color="#666" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.actionButton}
+            style={[styles.actionButton, styles.deleteButton]}
             onPress={() => onDelete(expense.id)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="trash" size={16} color="#f44336" />
+            <Ionicons name="trash" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -335,21 +339,19 @@ export const ExpensesScreen: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    Alert.alert(
-      'Delete Expense',
-      'Are you sure you want to delete this expense?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await StorageService.deleteExpense(id);
-            setExpenses(prev => prev.filter(expense => expense.id !== id));
-          },
-        },
-      ]
-    );
+    // Use window.confirm for web compatibility instead of Alert.alert
+    const confirmed = typeof window !== 'undefined' 
+      ? window.confirm('Are you sure you want to delete this expense?')
+      : true; // On mobile, proceed directly
+    
+    if (confirmed) {
+      try {
+        await StorageService.deleteExpense(id);
+        setExpenses(prev => prev.filter(expense => expense.id !== id));
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+      }
+    }
   };
 
   const renderExpense = ({ item }: { item: Expense }) => (
@@ -628,8 +630,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   actionButton: {
-    padding: 8,
+    padding: 10,
     marginLeft: 8,
+    minWidth: 36,
+    minHeight: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  deleteButton: {
+    backgroundColor: '#f44336',
+    borderColor: '#d32f2f',
   },
   expenseDescription: {
     fontSize: 14,

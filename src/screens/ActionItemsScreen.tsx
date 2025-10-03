@@ -34,6 +34,7 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
       <TouchableOpacity
         style={styles.itemHeader}
         onPress={() => onToggleComplete(item.id)}
+        activeOpacity={0.7}
       >
         <Ionicons
           name={item.completed ? "checkbox" : "checkbox-outline"}
@@ -59,14 +60,18 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => onEdit(item)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="pencil" size={16} color="#666" />
+            <Ionicons name="pencil" size={18} color="#666" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.actionButton}
+            style={[styles.actionButton, styles.deleteButton]}
             onPress={() => onDelete(item.id)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="trash" size={16} color="#f44336" />
+            <Ionicons name="trash" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -203,21 +208,19 @@ export const ActionItemsScreen: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    Alert.alert(
-      'Delete Action Item',
-      'Are you sure you want to delete this action item?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            await StorageService.deleteActionItem(id);
-            setActionItems(prev => prev.filter(item => item.id !== id));
-          },
-        },
-      ]
-    );
+    // Use window.confirm for web compatibility instead of Alert.alert
+    const confirmed = typeof window !== 'undefined' 
+      ? window.confirm('Are you sure you want to delete this action item?')
+      : true; // On mobile, proceed directly
+    
+    if (confirmed) {
+      try {
+        await StorageService.deleteActionItem(id);
+        setActionItems(prev => prev.filter(item => item.id !== id));
+      } catch (error) {
+        console.error('Error deleting action item:', error);
+      }
+    }
   };
 
   const renderActionItem = ({ item }: { item: ActionItem }) => (
@@ -421,8 +424,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   actionButton: {
-    padding: 8,
+    padding: 10,
     marginLeft: 8,
+    minWidth: 36,
+    minHeight: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  deleteButton: {
+    backgroundColor: '#f44336',
+    borderColor: '#d32f2f',
   },
   emptyContainer: {
     flex: 1,
