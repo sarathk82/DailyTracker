@@ -208,14 +208,26 @@ export const JournalScreen: React.FC<{}> = () => {
     alert(message);
   };
 
+  // Helper function to convert dot-prefix to checkbox format
+  const convertDotToCheckbox = (text: string): string => {
+    // Convert ". task" to "☐ task" (unchecked checkbox)
+    return text.replace(/^\s*\.\s*/, '☐ ');
+  };
+
     const handleSendMessage = async () => {
     const trimmedInput = inputText.trim();
     if (!trimmedInput) return;
 
     try {
+      // Convert dot-prefix to checkbox format for display
+      let displayText = trimmedInput;
+      if (TextAnalyzer.detectActionItem(trimmedInput)) {
+        displayText = convertDotToCheckbox(trimmedInput);
+      }
+
       const entry: Entry = {
         id: uuid.v4(),
-        text: trimmedInput,
+        text: displayText, // Use the converted text with checkbox
         timestamp: new Date(),
         type: 'log',
         isMarkdown,
@@ -233,7 +245,7 @@ export const JournalScreen: React.FC<{}> = () => {
         }
       }
 
-      // Check for action item
+      // Check for action item (using original text for detection)
       if (TextAnalyzer.detectActionItem(trimmedInput)) {
         const actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
         if (actionItem) {
@@ -504,9 +516,15 @@ export const JournalScreen: React.FC<{}> = () => {
               
               // Auto-send after a short delay so you can see it being typed
               setTimeout(async () => {
+                // Convert dot-prefix to checkbox format for display
+                let displayText = testMessage;
+                if (TextAnalyzer.detectActionItem(testMessage)) {
+                  displayText = convertDotToCheckbox(testMessage);
+                }
+
                 const entry: Entry = {
                   id: uuid.v4(),
-                  text: testMessage,
+                  text: displayText, // Use the converted text with checkbox
                   timestamp: new Date(),
                   type: 'log',
                   isMarkdown,
@@ -524,7 +542,7 @@ export const JournalScreen: React.FC<{}> = () => {
                   }
                 }
 
-                // Check for action item
+                // Check for action item (using original test message for detection)
                 if (TextAnalyzer.detectActionItem(testMessage)) {
                   const actionItem = TextAnalyzer.extractActionItem(testMessage, entry.id);
                   if (actionItem) {
@@ -1005,7 +1023,7 @@ const layoutStyles = StyleSheet.create({
   // Minimal Layout Styles
   minimalContainer: {
     flexDirection: 'row',
-    paddingVertical: 8,
+    paddingVertical: 0, // Eliminated all vertical padding for maximum density
     paddingHorizontal: 20,
     alignItems: 'flex-start',
   },

@@ -30,7 +30,7 @@ export class TextAnalyzer {
     "withdrawal", "transaction", "fee", "subscription"
   ];
 
-  // Keywords for action items
+  // Keywords for action items (kept for reference, but only dot-prefix is used)
   private static readonly ACTION_KEYWORDS: string[] = [
     "todo", "to-do", "task", "need to", "should",
     "must", "have to", "action", "plan", "schedule",
@@ -41,110 +41,13 @@ export class TextAnalyzer {
     "check", "review", "submit", "apply", "book", "reserve"
   ];
 
-  // Action verbs - verbs that typically start actionable sentences
-  private static readonly ACTION_VERBS: string[] = [
-    // Communication verbs
-    "call", "email", "text", "message", "contact", "reach", "notify", "inform", "tell", "ask",
-    "discuss", "talk", "speak", "phone", "write", "send", "reply", "respond", "follow",
-    
-    // Task/Work verbs
-    "finish", "complete", "start", "begin", "do", "make", "create", "build", "develop",
-    "work", "fix", "repair", "solve", "handle", "manage", "organize", "plan", "prepare",
-    "setup", "set", "configure", "install", "update", "upgrade", "implement", "execute",
-    
-    // Getting/Obtaining verbs
-    "buy", "purchase", "get", "obtain", "acquire", "pick", "collect", "fetch", "retrieve",
-    "download", "order", "request", "reserve", "book", "schedule", "arrange", "secure",
-    
-    // Review/Analysis verbs
-    "review", "check", "verify", "confirm", "validate", "test", "analyze", "examine",
-    "inspect", "audit", "evaluate", "assess", "study", "research", "investigate",
-    
-    // Submission/Delivery verbs
-    "submit", "send", "deliver", "provide", "share", "upload", "publish", "post",
-    "present", "report", "announce", "declare", "file", "register", "apply",
-    
-    // Organization verbs
-    "clean", "organize", "sort", "arrange", "pack", "unpack", "move", "transfer",
-    "backup", "save", "store", "delete", "remove", "clear", "tidy", "declutter",
-    
-    // Learning/Development verbs
-    "learn", "study", "read", "watch", "attend", "join", "participate", "practice",
-    "train", "exercise", "improve", "develop", "enhance", "strengthen", "master",
-    
-    // Planning verbs
-    "plan", "schedule", "book", "reserve", "coordinate", "arrange", "prepare", "draft",
-    "outline", "design", "sketch", "map", "list", "prioritize", "decide", "choose"
-  ];
-
-  // Regular expressions for action items
-  private static readonly ACTION_PATTERNS: RegExp[] = [
-    /^\s*\.\s*([^.!?\n]+)/gi, // Dot-prefixed action items (e.g., ". call mom")
-    /\bto-?do:?\s*([^.!?\n]+)/gi,
-    /\btask:?\s*([^.!?\n]+)/gi,
-    /\baction:?\s*([^.!?\n]+)/gi,
-    /\bremind(?:er)?:?\s*([^.!?\n]+)/gi,
-    /\bneed to:?\s*([^.!?\n]+)/gi,
-    /\bshould:?\s*([^.!?\n]+)/gi,
-    /\bmust:?\s*([^.!?\n]+)/gi,
-    /\bhave to:?\s*([^.!?\n]+)/gi
-  ];
+  // Only dot-prefix detection is used for action items
+  // Format: ". task description" becomes an action item
 
   static detectActionItem(text: string): boolean {
-    const lowerText = text.toLowerCase().trim();
-    const trimmedText = text.trim();
-    
-    // First check if this is an expense - if so, don't treat as action item
-    if (this.detectExpense(text)) {
-      return false;
-    }
-    
-    // Check if text starts with a dot (quick action item syntax)
+    // Only detect action items that start with a dot (simple and explicit)
     const startsWithDot = /^\s*\.\s*\S/.test(text);
-    if (startsWithDot) {
-      return true;
-    }
-    
-    // Check for existing action keywords (use word boundaries to avoid partial matches)
-    const hasActionKeywords = this.ACTION_KEYWORDS.some(keyword => {
-      // Use word boundaries for multi-word keywords
-      if (keyword.includes(' ')) {
-        return lowerText.includes(keyword);
-      }
-      // Use word boundaries for single words to avoid partial matches
-      const wordBoundaryPattern = new RegExp(`\\b${keyword}\\b`, 'i');
-      return wordBoundaryPattern.test(lowerText);
-    });
-    
-    // Check if text starts with an action verb
-    const startsWithActionVerb = this.ACTION_VERBS.some(verb => {
-      const verbPattern = new RegExp(`^\\s*${verb}\\b`, 'i');
-      return verbPattern.test(text);
-    });
-    
-    // Simplified check: if it contains any action verb + common action context words
-    const hasActionVerbWithContext = this.ACTION_VERBS.some(verb => {
-      // Use word boundaries to avoid partial matches
-      const verbPattern = new RegExp(`\\b${verb}\\b`, 'i');
-      if (verbPattern.test(lowerText)) {
-        // If it has the verb, check for action context
-        const actionContext = /\b(by|before|after|tomorrow|today|tonight|this|next|the|my|for|to|on|at)\b/i.test(lowerText);
-        return actionContext;
-      }
-      return false;
-    });
-    
-    // Check for imperative patterns
-    const hasImperativePattern = /^(i\s+)?(need to|should|must|have to|will|want to|plan to)\b/i.test(lowerText);
-    
-    // Check for time-sensitive patterns
-    const hasTimePattern = /\b(by\s+\w+|before\s+\w+|after\s+\w+|tomorrow|today|tonight|this\s+week|next\s+week)\b/i.test(lowerText);
-    
-    return startsWithDot || hasActionKeywords || startsWithActionVerb || hasActionVerbWithContext || hasImperativePattern || 
-           (hasTimePattern && this.ACTION_VERBS.some(verb => {
-             const verbPattern = new RegExp(`\\b${verb}\\b`, 'i');
-             return verbPattern.test(lowerText);
-           }));
+    return startsWithDot;
   }
 
   static detectExpense(text: string): boolean {
