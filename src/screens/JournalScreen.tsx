@@ -101,23 +101,18 @@ export const JournalScreen: React.FC<{}> = () => {
     
     setEntries(sortedEntries);
     setFilteredEntries(sortedEntries); // Initialize filtered entries
-    
-    // Scroll to bottom after entries are loaded (with longer delay to ensure render)
-    setTimeout(() => {
-      if (sortedEntries.length > 0) {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      }
-    }, 300);
   }, []);
 
-  // Create a flattened list with date separators
+  // Create a flattened list with date separators (reversed for inverted FlatList)
   const createEntriesWithDateSeparators = useCallback((entriesList: Entry[]) => {
     if (entriesList.length === 0) return [];
 
+    // Reverse the entries first so newest appear at top when inverted
+    const reversedEntries = [...entriesList].reverse();
     const result: (Entry | { type: 'dateSeparator'; date: string; id: string })[] = [];
     let currentDate = '';
 
-    entriesList.forEach((entry, index) => {
+    reversedEntries.forEach((entry, index) => {
       const entryDate = format(entry.timestamp, 'yyyy-MM-dd');
       
       // Add date separator if this is a new date
@@ -172,12 +167,6 @@ export const JournalScreen: React.FC<{}> = () => {
     setFilteredEntries(filtered);
   }, [searchQuery, entries]);
 
-  const scrollToBottom = useCallback(() => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-  }, []);
-
   const getListStyle = (layout: string) => {
     switch (layout) {
       case 'cards':
@@ -227,16 +216,6 @@ export const JournalScreen: React.FC<{}> = () => {
     loadSettings();
     loadExpensesAndActions();
   }, [loadEntries, loadSettings, loadExpensesAndActions]);
-
-  // Ensure we scroll to bottom when entries are loaded initially
-  useEffect(() => {
-    if (entries.length > 0) {
-      // Use a longer delay to ensure FlatList has finished rendering
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      }, 500);
-    }
-  }, [entries.length]);
 
   const showToast = (message: string) => {
     alert(message);
@@ -681,6 +660,7 @@ export const JournalScreen: React.FC<{}> = () => {
         }}
         style={[styles.messagesList, getListStyle(layoutStyle)]}
         showsVerticalScrollIndicator={false}
+        inverted={true}
         ListEmptyComponent={() => {
           const isEmpty = showSearch ? filteredEntries.length === 0 : entries.length === 0;
           const message = showSearch && searchQuery.trim() 
