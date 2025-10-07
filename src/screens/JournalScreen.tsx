@@ -102,15 +102,38 @@ export const JournalScreen: React.FC<{}> = () => {
     setEntries(sortedEntries);
     setFilteredEntries(sortedEntries); // Initialize filtered entries
     
-    // Scroll to bottom after entries are loaded (with small delay to ensure render)
-    
-    
-    // Scroll to bottom after entries are loaded (with small delay to ensure render)
+    // Scroll to bottom after entries are loaded (with longer delay to ensure render)
     setTimeout(() => {
       if (sortedEntries.length > 0) {
-        flatListRef.current?.scrollToEnd({ animated: true });
+        flatListRef.current?.scrollToEnd({ animated: false });
       }
-    }, 100);
+    }, 300);
+  }, []);
+
+  // Create a flattened list with date separators
+  const createEntriesWithDateSeparators = useCallback((entriesList: Entry[]) => {
+    if (entriesList.length === 0) return [];
+
+    const result: (Entry | { type: 'dateSeparator'; date: string; id: string })[] = [];
+    let currentDate = '';
+
+    entriesList.forEach((entry, index) => {
+      const entryDate = format(entry.timestamp, 'yyyy-MM-dd');
+      
+      // Add date separator if this is a new date
+      if (entryDate !== currentDate) {
+        result.push({
+          type: 'dateSeparator',
+          date: entryDate,
+          id: `date-${entryDate}`,
+        });
+        currentDate = entryDate;
+      }
+      
+      result.push(entry);
+    });
+
+    return result;
   }, []);
 
   // Filter entries based on search query
@@ -204,6 +227,16 @@ export const JournalScreen: React.FC<{}> = () => {
     loadSettings();
     loadExpensesAndActions();
   }, [loadEntries, loadSettings, loadExpensesAndActions]);
+
+  // Ensure we scroll to bottom when entries are loaded initially
+  useEffect(() => {
+    if (entries.length > 0) {
+      // Use a longer delay to ensure FlatList has finished rendering
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 500);
+    }
+  }, [entries.length]);
 
   const showToast = (message: string) => {
     alert(message);
@@ -480,26 +513,63 @@ export const JournalScreen: React.FC<{}> = () => {
     </View>
   );
 
-  const renderEntry = ({ item }: { item: Entry }) => {
+  // Render date separator component
+  const renderDateSeparator = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    
+    let displayDate;
+    if (format(date, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')) {
+      displayDate = 'Today';
+    } else if (format(date, 'yyyy-MM-dd') === format(yesterday, 'yyyy-MM-dd')) {
+      displayDate = 'Yesterday';
+    } else {
+      displayDate = format(date, 'EEEE, MMMM d, yyyy');
+    }
+
+    return (
+      <View style={styles.dateSeparator}>
+        <View style={styles.dateSeparatorLine} />
+        <Text style={styles.dateSeparatorText}>{displayDate}</Text>
+        <View style={styles.dateSeparatorLine} />
+      </View>
+    );
+  };
+
+  const renderItem = ({ item }: { item: Entry | { type: 'dateSeparator'; date: string; id: string } }) => {
+    // Handle date separator
+    if ('type' in item && item.type === 'dateSeparator') {
+      return renderDateSeparator(item.date);
+    }
+
+    // Handle regular entry
+    const entry = item as Entry;
     // Find associated expense or action item for this entry
-    const expense = item.type === 'expense' ? expenses.find(e => e.entryId === item.id) : undefined;
-    const actionItem = item.type === 'action' ? actionItems.find(a => a.entryId === item.id) : undefined;
+    const expense = entry.type === 'expense' ? expenses.find(e => e.entryId === entry.id) : undefined;
+    const actionItem = entry.type === 'action' ? actionItems.find(a => a.entryId === entry.id) : undefined;
     
     switch (layoutStyle) {
       case 'cards':
-        return renderCardEntry(item, expense, actionItem);
+        return renderCardEntry(entry, expense, actionItem);
       case 'list':
-        return renderListEntry(item, expense, actionItem);
+        return renderListEntry(entry, expense, actionItem);
       case 'timeline':
-        return renderTimelineEntry(item, expense, actionItem);
+        return renderTimelineEntry(entry, expense, actionItem);
       case 'magazine':
-        return renderMagazineEntry(item, expense, actionItem);
+        return renderMagazineEntry(entry, expense, actionItem);
       case 'minimal':
-        return renderMinimalEntry(item, expense, actionItem);
+        return renderMinimalEntry(entry, expense, actionItem);
       case 'chat':
       default:
-        return renderChatEntry(item, expense, actionItem);
+        return renderChatEntry(entry, expense, actionItem);
     }
+  };
+
+  // Get data with date separators
+  const getDataWithSeparators = () => {
+    const baseEntries = showSearch ? filteredEntries : entries;
+    return createEntriesWithDateSeparators(baseEntries);
   };
 
   return (
@@ -601,9 +671,14 @@ export const JournalScreen: React.FC<{}> = () => {
 
       <FlatList
         ref={flatListRef}
-        data={showSearch ? filteredEntries : entries}
-        renderItem={renderEntry}
-        keyExtractor={(item) => item.id}
+        data={getDataWithSeparators()}
+        renderItem={renderItem}
+        keyExtractor={(item) => {
+          if ('type' in item && item.type === 'dateSeparator') {
+            return item.id;
+          }
+          return (item as Entry).id;
+        }}
         style={[styles.messagesList, getListStyle(layoutStyle)]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={() => {
@@ -769,6 +844,27 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: "#ccc",
+  },
+  dateSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+    paddingHorizontal: 8,
+  },
+  dateSeparatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  dateSeparatorText: {
+    marginHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
 });
 
