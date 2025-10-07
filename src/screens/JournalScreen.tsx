@@ -37,6 +37,7 @@ export const JournalScreen: React.FC<{}> = () => {
   const [isMarkdown, setIsMarkdown] = useState(true);
   const [testIndex, setTestIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+  const textInputRef = useRef<TextInput>(null);
   
   // Settings state (will be loaded from storage)
   const [enterToSend, setEnterToSend] = useState(true);
@@ -260,6 +261,13 @@ export const JournalScreen: React.FC<{}> = () => {
 
       // Clear input after successful processing
       setInputText("");
+      
+      // Refocus the text input for better UX - use setTimeout to ensure state update completes
+      setTimeout(() => {
+        if (textInputRef.current) {
+          textInputRef.current.focus();
+        }
+      }, 100);
     } catch (error) {
       console.error('Error processing message:', error);
       showToast('Failed to process message');
@@ -619,6 +627,7 @@ export const JournalScreen: React.FC<{}> = () => {
         style={styles.inputContainer}
       >
         <TextInput
+          ref={textInputRef}
           style={styles.textInput}
           value={inputText}
           onChangeText={setInputText}
