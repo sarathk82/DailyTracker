@@ -103,29 +103,40 @@ export const JournalScreen: React.FC<{}> = () => {
     setFilteredEntries(sortedEntries); // Initialize filtered entries
   }, []);
 
-  // Create a flattened list with date separators (reversed for inverted FlatList)
+  // Create a flattened list with date separators (for inverted FlatList)
   const createEntriesWithDateSeparators = useCallback((entriesList: Entry[]) => {
     if (entriesList.length === 0) return [];
 
-    // Reverse the entries first so newest appear at top when inverted
-    const reversedEntries = [...entriesList].reverse();
-    const result: (Entry | { type: 'dateSeparator'; date: string; id: string })[] = [];
-    let currentDate = '';
-
-    reversedEntries.forEach((entry, index) => {
+    // Don't reverse - work with original chronological order
+    // Group entries by date first in chronological order
+    const groupedByDate: { [date: string]: Entry[] } = {};
+    
+    entriesList.forEach((entry) => {
       const entryDate = format(entry.timestamp, 'yyyy-MM-dd');
-      
-      // Add date separator if this is a new date
-      if (entryDate !== currentDate) {
-        result.push({
-          type: 'dateSeparator',
-          date: entryDate,
-          id: `date-${entryDate}`,
-        });
-        currentDate = entryDate;
+      if (!groupedByDate[entryDate]) {
+        groupedByDate[entryDate] = [];
       }
+      groupedByDate[entryDate].push(entry);
+    });
+
+    // Get dates in chronological order (oldest first)
+    const dates = Object.keys(groupedByDate).sort();
+    
+    // Build result array with date separators
+    const result: (Entry | { type: 'dateSeparator'; date: string; id: string })[] = [];
+    
+    // Process dates in reverse order for inverted list (newest first)
+    dates.reverse().forEach((date) => {
+      // Add date separator
+      result.push({
+        type: 'dateSeparator',
+        date: date,
+        id: `date-${date}`,
+      });
       
-      result.push(entry);
+      // Add entries for this date in reverse order (newest first within the day)
+      const dayEntries = groupedByDate[date].reverse();
+      result.push(...dayEntries);
     });
 
     return result;
@@ -274,12 +285,23 @@ export const JournalScreen: React.FC<{}> = () => {
       // Clear input after successful processing
       setInputText("");
       
+      // Scroll to top (newest message) in inverted list
+      setTimeout(() => {
+        try {
+          // Try scrollToIndex first (most reliable for showing new message)
+          flatListRef.current?.scrollToIndex({ index: 0, animated: true });
+        } catch (error) {
+          // Fallback: scroll to top offset (works when scrollToIndex fails)
+          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        }
+      }, 200);
+      
       // Refocus the text input for better UX - use setTimeout to ensure state update completes
       setTimeout(() => {
         if (textInputRef.current) {
           textInputRef.current.focus();
         }
-      }, 100);
+      }, 300);
     } catch (error) {
       console.error('Error processing message:', error);
       showToast('Failed to process message');
@@ -613,6 +635,17 @@ export const JournalScreen: React.FC<{}> = () => {
                 await loadExpensesAndActions();
 
                 setInputText("");
+                
+                // Scroll to top (newest message) in inverted list
+                setTimeout(() => {
+                  try {
+                    // Try scrollToIndex first (most reliable for showing new message)
+                    flatListRef.current?.scrollToIndex({ index: 0, animated: true });
+                  } catch (error) {
+                    // Fallback: scroll to top offset (works when scrollToIndex fails)
+                    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+                  }
+                }, 200);
               }, 500);
             }}
           >
