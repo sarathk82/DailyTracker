@@ -107,38 +107,29 @@ export const JournalScreen: React.FC<{}> = () => {
   const createEntriesWithDateSeparators = useCallback((entriesList: Entry[]) => {
     if (entriesList.length === 0) return [];
 
-    // Don't reverse - work with original chronological order
-    // Group entries by date first in chronological order
-    const groupedByDate: { [date: string]: Entry[] } = {};
+    // Sort entries chronologically (oldest first)
+    const sortedEntries = [...entriesList].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     
-    entriesList.forEach((entry) => {
-      const entryDate = format(entry.timestamp, 'yyyy-MM-dd');
-      if (!groupedByDate[entryDate]) {
-        groupedByDate[entryDate] = [];
-      }
-      groupedByDate[entryDate].push(entry);
-    });
-
-    // Get dates in chronological order (oldest first)
-    const dates = Object.keys(groupedByDate).sort();
-    
-    // Build result array with date separators
     const result: (Entry | { type: 'dateSeparator'; date: string; id: string })[] = [];
-    
-    // Process dates in reverse order for inverted list (newest first)
-    dates.reverse().forEach((date) => {
-      // Add date separator
-      result.push({
-        type: 'dateSeparator',
-        date: date,
-        id: `date-${date}`,
-      });
+    let currentDate = '';
+
+    sortedEntries.forEach((entry) => {
+      const entryDate = format(entry.timestamp, 'yyyy-MM-dd');
       
-      // Add entries for this date in reverse order (newest first within the day)
-      const dayEntries = groupedByDate[date].reverse();
-      result.push(...dayEntries);
+      // Add date separator if this is a new date
+      if (entryDate !== currentDate) {
+        result.push({
+          type: 'dateSeparator',
+          date: entryDate,
+          id: `date-${entryDate}`,
+        });
+        currentDate = entryDate;
+      }
+      
+      result.push(entry);
     });
 
+    // The FlatList inverted prop will handle showing this in reverse order
     return result;
   }, []);
 
@@ -228,6 +219,11 @@ export const JournalScreen: React.FC<{}> = () => {
     loadExpensesAndActions();
   }, [loadEntries, loadSettings, loadExpensesAndActions]);
 
+  // Entries will auto-scroll via FlatList onLayout and onContentSizeChange
+  useEffect(() => {
+    // This useEffect is kept for potential future scroll enhancements
+  }, [entries.length]);
+
   const showToast = (message: string) => {
     alert(message);
   };
@@ -285,15 +281,9 @@ export const JournalScreen: React.FC<{}> = () => {
       // Clear input after successful processing
       setInputText("");
       
-      // Scroll to top (newest message) in inverted list
+      // Scroll to bottom (newest message) after sending
       setTimeout(() => {
-        try {
-          // Try scrollToIndex first (most reliable for showing new message)
-          flatListRef.current?.scrollToIndex({ index: 0, animated: true });
-        } catch (error) {
-          // Fallback: scroll to top offset (works when scrollToIndex fails)
-          flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-        }
+        flatListRef.current?.scrollToEnd({ animated: true });
       }, 200);
       
       // Refocus the text input for better UX - use setTimeout to ensure state update completes
@@ -636,15 +626,9 @@ export const JournalScreen: React.FC<{}> = () => {
 
                 setInputText("");
                 
-                // Scroll to top (newest message) in inverted list
+                // Scroll to bottom (newest message) after sending test
                 setTimeout(() => {
-                  try {
-                    // Try scrollToIndex first (most reliable for showing new message)
-                    flatListRef.current?.scrollToIndex({ index: 0, animated: true });
-                  } catch (error) {
-                    // Fallback: scroll to top offset (works when scrollToIndex fails)
-                    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-                  }
+                  flatListRef.current?.scrollToEnd({ animated: true });
                 }, 200);
               }, 500);
             }}
@@ -693,7 +677,22 @@ export const JournalScreen: React.FC<{}> = () => {
         }}
         style={[styles.messagesList, getListStyle(layoutStyle)]}
         showsVerticalScrollIndicator={false}
-        inverted={true}
+        onLayout={() => {
+          // Scroll to bottom when FlatList layout is complete
+          if (flatListRef.current) {
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }, 100);
+          }
+        }}
+        onContentSizeChange={() => {
+          // Scroll to bottom when content size changes (new messages)
+          if (flatListRef.current) {
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }, 100);
+          }
+        }}
         ListEmptyComponent={() => {
           const isEmpty = showSearch ? filteredEntries.length === 0 : entries.length === 0;
           const message = showSearch && searchQuery.trim() 
