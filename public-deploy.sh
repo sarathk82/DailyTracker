@@ -1,22 +1,29 @@
 #!/bin/bash
 
-echo "🚀 Creating Expo Snack for Public Sharing"
-echo "========================================"
+echo "🚀 Building Daily Tracker for GitHub Pages..."
 
-echo "Since Node.js v23.3.0 is causing build issues, here are your best options for public sharing:"
-echo ""
+# Build the app
+npm run build:web
 
-echo "Option 1: Expo Snack (Instant)"
-echo "1. Go to https://snack.expo.dev"
-echo "2. Copy your source code to the online editor"
-echo "3. Get instant shareable URL"
+echo "📦 Build complete! Files are in the 'dist' folder."
 echo ""
+echo "📋 Next Steps:"
+echo "1. Go to https://github.com"
+echo "2. Create a new public repository (e.g., 'dailytracker-web')"
+echo "3. Upload all files from the 'dist' folder to the repository"
+echo "4. Go to repository Settings → Pages"
+echo "5. Set Source to 'Deploy from a branch'"
+echo "6. Select 'main' branch and '/ (root)' folder"
+echo "7. Save and wait a few minutes"
+echo ""
+echo "🌐 Your app will be available at:"
+echo "https://yourusername.github.io/repositoryname"
+echo ""
+echo "📂 Files to upload:"
+ls -la dist/
 
-echo "Option 2: GitHub + Expo (Recommended)"
-echo "1. Push code to GitHub"
-echo "2. Create Expo Snack from GitHub URL"
-echo "3. Share the snack URL"
 echo ""
+echo "✅ Ready for deployment!"
 
 echo "Option 3: Downgrade Node.js and Deploy"
 echo "# If you have nvm:"
