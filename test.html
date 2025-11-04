@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>DailyTracker - Test</title>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+        flex-direction: column;
+      }
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+      }
+      .error {
+        color: red;
+        background: #ffeaa7;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading">
+      <h2>Loading Daily Tracker...</h2>
+      <p>If this message persists, check the browser console for errors.</p>
+    </div>
+    
+    <div id="root"></div>
+    
+    <script>
+      // Add error handling
+      window.addEventListener('error', function(e) {
+        console.error('Error loading app:', e.error);
+        document.body.innerHTML = '<div class="error"><h3>Error loading app:</h3><p>' + e.message + '</p><p>Check browser console for details.</p></div>';
+      });
+      
+      // Check if the script loads
+      console.log('Starting to load Daily Tracker bundle...');
+    </script>
+    
+    <script src="./_expo/static/js/web/index-1ccf5ec0fdbabbf835e30074dcb547a1.js" defer></script>
+    
+    <script>
+      // Remove loading message after a few seconds if app doesn't load
+      setTimeout(function() {
+        var loading = document.querySelector('.loading');
+        var root = document.querySelector('#root');
+        if (loading && root && root.children.length === 0) {
+          loading.innerHTML = '<div class="error"><h3>App failed to load</h3><p>The JavaScript bundle may have errors. Check the browser console.</p></div>';
+        }
+      }, 5000);
+    </script>
+  </body>
+</html>
