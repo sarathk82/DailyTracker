@@ -17,16 +17,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dailytracker.app",
-      "jsEngine": "hermes"
+      "bundleIdentifier": "com.anonymous.dailytracker"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "package": "com.dailytracker.app"
+      "package": "com.anonymous.dailytracker"
     },
     "web": {
       "favicon": "./assets/favicon.png",

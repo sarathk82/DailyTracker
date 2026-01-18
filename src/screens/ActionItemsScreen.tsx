@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
+import Markdown from 'react-native-markdown-display';
 
 import { ActionItem } from '../types';
 import { StorageService } from '../utils/storage';
@@ -41,9 +43,17 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
           size={24}
           color={item.completed ? "#4caf50" : "#666"}
         />
-        <Text style={[styles.itemTitle, item.completed && styles.completedText]}>
-          {item.title}
-        </Text>
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Markdown style={{
+            body: {
+              fontSize: 16,
+              color: item.completed ? '#999' : '#333',
+              textDecorationLine: item.completed ? 'line-through' : 'none',
+            }
+          }}>
+            {item.title}
+          </Markdown>
+        </View>
       </TouchableOpacity>
 
       {item.description && item.description !== item.title && (
@@ -161,9 +171,17 @@ export const ActionItemsScreen: React.FC = () => {
     setActionItems(items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
   }, []);
 
+  // Load action items on initial mount
   useEffect(() => {
     loadActionItems();
   }, [loadActionItems]);
+
+  // Refresh action items when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadActionItems();
+    }, [loadActionItems])
+  );
 
   const filteredItems = actionItems.filter(item => {
     switch (filter) {

@@ -49,9 +49,24 @@ export const JournalScreen: React.FC<{}> = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [filteredEntries, setFilteredEntries] = useState<Entry[]>([]);
   
+  // Debug: Log state values to check for issues
+  useEffect(() => {
+    console.log('🔍 Debug - Modal states:', { showSettings, showSearch });
+  }, [showSettings, showSearch]);
+
   // Data for enhanced messages
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+  
+  // Quick-action tags for explicit categorization
+  const [forceExpense, setForceExpense] = useState(false);
+  const [forceAction, setForceAction] = useState(false);
+  
+  // Edit modal state
+  const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editCategory, setEditCategory] = useState("");
 
   // Test entries for different scenarios
   const testEntries = [
@@ -228,10 +243,10 @@ export const JournalScreen: React.FC<{}> = () => {
     alert(message);
   };
 
-  // Helper function to convert dot-prefix to checkbox format
+  // Helper function to convert dot-prefix to checkmark format
   const convertDotToCheckbox = (text: string): string => {
-    // Convert ". task" to "☐ task" (unchecked checkbox)
-    return text.replace(/^\s*\.\s*/, '☐ ');
+    // Convert ". task" to "✅ task" (checkmark)
+    return text.replace(/^\s*\.\s*/, '✅ ');
   };
 
     const handleSendMessage = async () => {
@@ -241,7 +256,8 @@ export const JournalScreen: React.FC<{}> = () => {
     try {
       // Convert dot-prefix to checkbox format for display
       let displayText = trimmedInput;
-      if (TextAnalyzer.detectActionItem(trimmedInput)) {
+      const autoDetectedAction = TextAnalyzer.detectActionItem(trimmedInput);
+      if (autoDetectedAction || forceAction) {
         displayText = convertDotToCheckbox(trimmedInput);
       }
 
@@ -256,18 +272,45 @@ export const JournalScreen: React.FC<{}> = () => {
       // Save the entry first
       await StorageService.addEntry(entry);
       
-      // Check for expense
-      if (TextAnalyzer.detectExpense(trimmedInput)) {
+      // Check for expense (auto-detect OR user explicitly marked it)
+      const autoDetectedExpense = TextAnalyzer.detectExpense(trimmedInput);
+      if (autoDetectedExpense || forceExpense) {
         const expenseInfo = TextAnalyzer.extractExpenseInfo(trimmedInput, entry.id);
         if (expenseInfo) {
+          // Add autoDetected flag
+          expenseInfo.autoDetected = autoDetectedExpense && !forceExpense;
           await StorageService.addExpense(expenseInfo);
           await updateEntryType(entry.id, 'expense');
+        } else if (forceExpense) {
+          // User forced expense but no amount found - show alert
+          Alert.alert(
+            "No Amount Found",
+            "Please include a numeric amount in your entry (e.g., 150, Rs200, $50)"
+          );
         }
       }
 
-      // Check for action item (using original text for detection)
-      if (TextAnalyzer.detectActionItem(trimmedInput)) {
-        const actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
+      // Check for action item (auto-detect OR user explicitly marked it)
+      if (autoDetectedAction || forceAction) {
+        // If forceAction is true but no auto-detection, create action item from text
+        let actionItem;
+        if (forceAction && !autoDetectedAction) {
+          // Manually create action item from the text
+          actionItem = {
+            id: uuid.v4(),
+            entryId: entry.id,
+            title: trimmedInput,
+            completed: false,
+            createdAt: new Date(),
+            autoDetected: false
+          };
+        } else {
+          actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
+          if (actionItem) {
+            actionItem.autoDetected = autoDetectedAction && !forceAction;
+          }
+        }
+        
         if (actionItem) {
           await StorageService.addActionItem(actionItem);
           await updateEntryType(entry.id, 'action');
@@ -278,8 +321,10 @@ export const JournalScreen: React.FC<{}> = () => {
       await loadEntries();
       await loadExpensesAndActions();
 
-      // Clear input after successful processing
+      // Clear input and force flags after successful processing
       setInputText("");
+      setForceExpense(false);
+      setForceAction(false);
       
       // Scroll to bottom (newest message) after sending
       setTimeout(() => {
@@ -299,22 +344,48 @@ export const JournalScreen: React.FC<{}> = () => {
   };
 
   const handleLongPress = (entry: Entry) => {
-    Alert.alert("Entry Options", "What would you like to do with this entry?", [
+    const options: any[] = [
       {
+        text: "Edit Entry",
+        onPress: () => handleEditEntry(entry),
+      },
+    ];
+    
+    // Add type conversion options
+    if (entry.type !== "expense") {
+      options.push({
         text: "Mark as Expense",
         onPress: () => markAsExpense(entry),
-        style: entry.type === "expense" ? "cancel" : "default",
-      },
-      {
+      });
+    }
+    
+    if (entry.type !== "action") {
+      options.push({
         text: "Mark as Action Item",
         onPress: () => markAsActionItem(entry),
-        style: entry.type === "action" ? "cancel" : "default",
+      });
+    }
+    
+    if (entry.type !== "log") {
+      options.push({
+        text: "Remove Category",
+        onPress: () => removeCategory(entry),
+      });
+    }
+    
+    options.push(
+      {
+        text: "Delete Entry",
+        onPress: () => handleDeleteEntry(entry),
+        style: "destructive",
       },
       {
         text: "Cancel",
         style: "cancel",
-      },
-    ]);
+      }
+    );
+    
+    Alert.alert("Entry Options", "What would you like to do with this entry?", options);
   };
 
   const markAsExpense = async (entry: Entry) => {
@@ -322,6 +393,7 @@ export const JournalScreen: React.FC<{}> = () => {
 
     const expenseInfo = TextAnalyzer.extractExpenseInfo(entry.text, entry.id);
     if (expenseInfo) {
+      expenseInfo.autoDetected = false; // Manually categorized
       await StorageService.addExpense(expenseInfo);
       await updateEntryType(entry.id, "expense");
       // Reload expenses to show updated categorization
@@ -337,12 +409,184 @@ export const JournalScreen: React.FC<{}> = () => {
   const markAsActionItem = async (entry: Entry) => {
     if (entry.type === "action") return;
 
-    const actionItem = TextAnalyzer.extractActionItem(entry.text, entry.id);
-    if (actionItem) {
-      await StorageService.addActionItem(actionItem);
-      await updateEntryType(entry.id, "action");
-      // Reload action items to show updated categorization
+    // Try to extract using TextAnalyzer, but if that fails, create manually
+    let actionItem = TextAnalyzer.extractActionItem(entry.text, entry.id);
+    
+    if (!actionItem) {
+      // Create action item manually from the text
+      actionItem = {
+        id: uuid.v4(),
+        entryId: entry.id,
+        title: entry.text.replace(/^✅\s*/, ''), // Remove checkmark if present
+        completed: false,
+        createdAt: new Date(),
+        autoDetected: false
+      };
+    } else {
+      actionItem.autoDetected = false; // Manually categorized
+    }
+    
+    await StorageService.addActionItem(actionItem);
+    await updateEntryType(entry.id, "action");
+    // Reload action items to show updated categorization
+    await loadExpensesAndActions();
+  };
+
+  const removeCategory = async (entry: Entry) => {
+    try {
+      // Remove associated expense or action item
+      if (entry.type === "expense") {
+        const expense = expenses.find(e => e.entryId === entry.id);
+        if (expense) {
+          await StorageService.deleteExpense(expense.id);
+        }
+      } else if (entry.type === "action") {
+        const actionItem = actionItems.find(a => a.entryId === entry.id);
+        if (actionItem) {
+          await StorageService.deleteActionItem(actionItem.id);
+        }
+      }
+      
+      // Update entry type to log
+      await updateEntryType(entry.id, "log");
       await loadExpensesAndActions();
+      showToast("Category removed");
+    } catch (error) {
+      console.error('Error removing category:', error);
+      showToast('Failed to remove category');
+    }
+  };
+
+  const handleDeleteEntry = async (entry: Entry) => {
+    console.log('handleDeleteEntry called for:', entry.id, entry.text);
+    
+    const confirmDelete = async () => {
+      try {
+        console.log('Deleting entry:', entry.id);
+        // Delete associated expense or action item first
+        if (entry.type === "expense") {
+          const expense = expenses.find(e => e.entryId === entry.id);
+          if (expense) {
+            await StorageService.deleteExpense(expense.id);
+          }
+        } else if (entry.type === "action") {
+          const actionItem = actionItems.find(a => a.entryId === entry.id);
+          if (actionItem) {
+            await StorageService.deleteActionItem(actionItem.id);
+          }
+        }
+        
+        // Delete the entry
+        const currentEntries = await StorageService.getEntries();
+        const updatedEntries = currentEntries.filter(e => e.id !== entry.id);
+        await StorageService.saveEntries(updatedEntries);
+        
+        // Reload data
+        await loadEntries();
+        await loadExpensesAndActions();
+        showToast("Entry deleted");
+      } catch (error) {
+        console.error('Error deleting entry:', error);
+        showToast('Failed to delete entry');
+      }
+    };
+    
+    if (Platform.OS === 'web') {
+      if (confirm("Are you sure you want to delete this entry?")) {
+        await confirmDelete();
+      }
+    } else {
+      Alert.alert(
+        "Delete Entry",
+        "Are you sure you want to delete this entry?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: confirmDelete,
+          },
+        ]
+      );
+    }
+  };
+
+  const handleEditEntry = (entry: Entry) => {
+    setEditingEntry(entry);
+    setEditText(entry.text.replace(/^✅\s*/, '')); // Remove checkmark if present
+    
+    // Pre-fill expense details if it's an expense
+    if (entry.type === "expense") {
+      const expense = expenses.find(e => e.entryId === entry.id);
+      if (expense) {
+        setEditAmount(expense.amount.toString());
+        setEditCategory(expense.category || "");
+      }
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEntry || !editText.trim()) return;
+    
+    try {
+      // Update entry text, type, and preserve markdown flag
+      const currentEntries = await StorageService.getEntries();
+      const updatedEntries = currentEntries.map(e => 
+        e.id === editingEntry.id ? { ...e, text: editText.trim(), type: editingEntry.type, isMarkdown: editingEntry.isMarkdown } : e
+      );
+      await StorageService.saveEntries(updatedEntries);
+      
+      // Update expense details if it's an expense
+      if (editingEntry.type === "expense") {
+        const expense = expenses.find(e => e.entryId === editingEntry.id);
+        if (expense && editAmount) {
+          const amount = parseFloat(editAmount);
+          if (!isNaN(amount) && amount > 0) {
+            await StorageService.updateExpense(expense.id, {
+              amount,
+              category: editCategory || expense.category,
+              description: editText.trim(),
+            });
+          }
+        }
+      }
+      
+      // Update or create action item if it's an action
+      if (editingEntry.type === "action") {
+        let actionItem = actionItems.find(a => a.entryId === editingEntry.id);
+        if (actionItem) {
+          // Update existing action item
+          await StorageService.updateActionItem(actionItem.id, {
+            title: editText.trim(),
+          });
+        } else {
+          // Create new action item if it doesn't exist
+          const newActionItem = {
+            id: uuid.v4(),
+            entryId: editingEntry.id,
+            title: editText.trim(),
+            completed: false,
+            createdAt: new Date(),
+            autoDetected: false
+          };
+          await StorageService.addActionItem(newActionItem);
+        }
+      }
+      
+      // Reload data and close modal
+      await loadEntries();
+      await loadExpensesAndActions();
+      setEditingEntry(null);
+      setEditText("");
+      setEditAmount("");
+      setEditCategory("");
+      showToast("Entry updated");
+    } catch (error) {
+      console.error('Error updating entry:', error);
+      showToast('Failed to update entry');
     }
   };
 
@@ -369,6 +613,7 @@ export const JournalScreen: React.FC<{}> = () => {
     <MessageBubble 
       entry={item} 
       onLongPress={handleLongPress}
+      onEdit={handleEditEntry}
       markdownStyles={markdownStyles}
       expense={expense}
       actionItem={actionItem}
@@ -379,7 +624,25 @@ export const JournalScreen: React.FC<{}> = () => {
     <View style={layoutStyles.cardContainer}>
       <View style={layoutStyles.cardHeader}>
         <Text style={layoutStyles.cardDate}>{format(item.timestamp, 'MMM dd, yyyy')}</Text>
-        <Text style={layoutStyles.cardTime}>{format(item.timestamp, 'h:mm a')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text style={layoutStyles.cardTime}>{format(item.timestamp, 'h:mm a')}</Text>
+          {item.type !== 'system' && (
+            <>
+              <TouchableOpacity 
+                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
+                onPress={() => handleEditEntry(item)}
+              >
+                <Text style={{ fontSize: 12 }}>✏️</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
+                onPress={() => handleDeleteEntry(item)}
+              >
+                <Text style={{ fontSize: 12 }}>🗑️</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
       <View style={layoutStyles.cardContent}>
         {item.isMarkdown ? (
@@ -410,6 +673,25 @@ export const JournalScreen: React.FC<{}> = () => {
         <View style={layoutStyles.listIndicator} />
       </View>
       <View style={layoutStyles.listContent}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <View style={{ flex: 1 }} />
+          {item.type !== 'system' && (
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              <TouchableOpacity 
+                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
+                onPress={() => handleEditEntry(item)}
+              >
+                <Text style={{ fontSize: 12 }}>✏️</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
+                onPress={() => handleDeleteEntry(item)}
+              >
+                <Text style={{ fontSize: 12 }}>🗑️</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
         {item.isMarkdown ? (
           <Markdown style={markdownStyles}>{item.text}</Markdown>
         ) : (
@@ -434,7 +716,25 @@ export const JournalScreen: React.FC<{}> = () => {
         <View style={layoutStyles.timelineLine} />
       </View>
       <View style={layoutStyles.timelineContent}>
-        <Text style={layoutStyles.timelineDate}>{format(item.timestamp, 'MMM dd, h:mm a')}</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <Text style={layoutStyles.timelineDate}>{format(item.timestamp, 'MMM dd, h:mm a')}</Text>
+          {item.type !== 'system' && (
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              <TouchableOpacity 
+                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
+                onPress={() => handleEditEntry(item)}
+              >
+                <Text style={{ fontSize: 12 }}>✏️</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
+                onPress={() => handleDeleteEntry(item)}
+              >
+                <Text style={{ fontSize: 12 }}>🗑️</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
         {item.isMarkdown ? (
           <Markdown style={markdownStyles}>{item.text}</Markdown>
         ) : (
@@ -458,6 +758,22 @@ export const JournalScreen: React.FC<{}> = () => {
     <View style={layoutStyles.magazineContainer}>
       <View style={layoutStyles.magazineHeader}>
         <Text style={layoutStyles.magazineDate}>{format(item.timestamp, 'EEEE, MMMM dd')}</Text>
+        {item.type !== 'system' && (
+          <View style={{ flexDirection: 'row', gap: 4 }}>
+            <TouchableOpacity 
+              style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
+              onPress={() => handleEditEntry(item)}
+            >
+              <Text style={{ fontSize: 12 }}>✏️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
+              onPress={() => handleDeleteEntry(item)}
+            >
+              <Text style={{ fontSize: 12 }}>🗑️</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
       <View style={layoutStyles.magazineBody}>
         {item.isMarkdown ? (
@@ -500,6 +816,22 @@ export const JournalScreen: React.FC<{}> = () => {
         <Text style={layoutStyles.minimalTime}>{format(item.timestamp, 'h:mm a')}</Text>
         {expense && <Text style={layoutStyles.minimalExpense}>💰{TextAnalyzer.formatCurrency(expense.amount, expense.currency)}</Text>}
         {actionItem && <Text style={layoutStyles.minimalAction}>✅</Text>}
+        {item.type !== 'system' && (
+          <>
+            <TouchableOpacity 
+              style={{ padding: 2, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4, marginLeft: 4 }}
+              onPress={() => handleEditEntry(item)}
+            >
+              <Text style={{ fontSize: 10 }}>✏️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ padding: 2, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4, marginLeft: 2 }}
+              onPress={() => handleDeleteEntry(item)}
+            >
+              <Text style={{ fontSize: 10 }}>🗑️</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );
@@ -565,79 +897,25 @@ export const JournalScreen: React.FC<{}> = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { zIndex: 10000 }]}>
         <Text style={styles.headerTitle}>Daily Journal</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 10001 }}>
           <TouchableOpacity
-            style={[styles.settingsButton, { marginRight: 8 }]}
-            onPress={() => setShowSearch(!showSearch)}
+            style={[styles.settingsButton, { marginRight: 8, zIndex: 10002 }]}
+            onPress={() => {
+              console.log('🔍 Search button pressed');
+              setShowSearch(!showSearch);
+            }}
           >
             <Text style={styles.settingsButtonText}>🔍</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={{ backgroundColor: '#4caf50', padding: 8, borderRadius: 4, marginRight: 8 }}
-            onPress={async () => {
-              const testMessage = testEntries[testIndex];
-              setTestIndex((prev) => (prev + 1) % testEntries.length);
-              
-              // Simulate typing the test message
-              setInputText(testMessage);
-              
-              // Auto-send after a short delay so you can see it being typed
-              setTimeout(async () => {
-                // Convert dot-prefix to checkbox format for display
-                let displayText = testMessage;
-                if (TextAnalyzer.detectActionItem(testMessage)) {
-                  displayText = convertDotToCheckbox(testMessage);
-                }
-
-                const entry: Entry = {
-                  id: uuid.v4(),
-                  text: displayText, // Use the converted text with checkbox
-                  timestamp: new Date(),
-                  type: 'log',
-                  isMarkdown,
-                };
-
-                // Save the entry first
-                await StorageService.addEntry(entry);
-                
-                // Check for expense
-                if (TextAnalyzer.detectExpense(testMessage)) {
-                  const expenseInfo = TextAnalyzer.extractExpenseInfo(testMessage, entry.id);
-                  if (expenseInfo) {
-                    await StorageService.addExpense(expenseInfo);
-                    await updateEntryType(entry.id, 'expense');
-                  }
-                }
-
-                // Check for action item (using original test message for detection)
-                if (TextAnalyzer.detectActionItem(testMessage)) {
-                  const actionItem = TextAnalyzer.extractActionItem(testMessage, entry.id);
-                  if (actionItem) {
-                    await StorageService.addActionItem(actionItem);
-                    await updateEntryType(entry.id, 'action');
-                  }
-                }
-
-                // Reload all data to show updated entries with categorization
-                await loadEntries();
-                await loadExpensesAndActions();
-
-                setInputText("");
-                
-                // Scroll to bottom (newest message) after sending test
-                setTimeout(() => {
-                  flatListRef.current?.scrollToEnd({ animated: true });
-                }, 200);
-              }, 500);
+            style={[styles.settingsButton, { zIndex: 10003 }]}
+            onPress={() => {
+              console.log('⚙️ Settings button pressed');
+              setShowSettings(true);
             }}
-          >
-            <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>TEST</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.settingsButton]}
-            onPress={() => setShowSettings(true)}
           >
             <Text style={styles.settingsButtonText}>⚙️</Text>
           </TouchableOpacity>
@@ -711,49 +989,207 @@ export const JournalScreen: React.FC<{}> = () => {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.inputContainer}
+        style={[styles.inputContainer, { zIndex: 10000 }]}
       >
-        <TextInput
-          ref={textInputRef}
-          style={styles.textInput}
-          value={inputText}
-          onChangeText={setInputText}
-          placeholder={
-            isMarkdown
-              ? "Type a message (Markdown supported)..."
-              : "Type a message..."
-          }
-          multiline
-          maxLength={1000}
-          onSubmitEditing={enterToSend ? handleSendMessage : undefined}
-          blurOnSubmit={enterToSend}
-          returnKeyType={enterToSend ? "send" : "default"}
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            !inputText.trim() && styles.sendButtonDisabled,
-          ]}
-          onPress={handleSendMessage}
-          disabled={!inputText.trim()}
-        >
-          <Text style={{ color: '#fff', fontSize: 16 }}>→</Text>
-        </TouchableOpacity>
+        <View style={styles.quickActionsRow}>
+          <TouchableOpacity
+            style={[
+              styles.quickActionButton,
+              forceExpense && styles.quickActionButtonActive,
+            ]}
+            onPress={() => setForceExpense(!forceExpense)}
+          >
+            <Text style={[styles.quickActionText, forceExpense && styles.quickActionTextActive]}>💰</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.quickActionButton,
+              forceAction && styles.quickActionButtonActive,
+            ]}
+            onPress={() => setForceAction(!forceAction)}
+          >
+            <Text style={[styles.quickActionText, forceAction && styles.quickActionTextActive]}>✅</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.inputRow}>
+          <TextInput
+            ref={textInputRef}
+            style={styles.textInput}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder={
+              forceExpense
+                ? "Type expense (e.g., 150 for coffee)..."
+                : forceAction
+                ? "Type task description..."
+                : isMarkdown
+                ? "Type a message (Markdown supported)..."
+                : "Type a message..."
+            }
+            multiline
+            maxLength={1000}
+            onSubmitEditing={enterToSend ? handleSendMessage : undefined}
+            blurOnSubmit={enterToSend}
+            returnKeyType={enterToSend ? "send" : "default"}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              !inputText.trim() && styles.sendButtonDisabled,
+            ]}
+            onPress={handleSendMessage}
+            disabled={!inputText.trim()}
+          >
+            <Text style={{ color: '#fff', fontSize: 16 }}>→</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
       
-      <Modal
-        visible={showSettings}
-        animationType="slide"
-        presentationStyle="formSheet"
-      >
-        <SettingsScreen 
-          onClose={() => {
-            setShowSettings(false);
-            // Reload settings after closing
-            loadSettings();
-          }} 
-        />
-      </Modal>
+      {showSettings && (
+        <Modal
+          visible={showSettings}
+          animationType="slide"
+          presentationStyle="formSheet"
+        >
+          <SettingsScreen 
+            onClose={() => {
+              setShowSettings(false);
+              // Reload settings after closing
+              loadSettings();
+            }} 
+          />
+        </Modal>
+      )}
+      
+      {editingEntry && (
+        <Modal
+          visible={!!editingEntry}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setEditingEntry(null)}
+        >
+          <View style={styles.editModalOverlay}>
+            <View style={styles.editModalContent}>
+              <Text style={styles.editModalTitle}>Edit Entry</Text>
+              
+              <Text style={styles.editLabel}>Text:</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <TouchableOpacity
+                  style={[
+                    styles.markdownToggle,
+                    editingEntry.isMarkdown && styles.markdownToggleActive
+                  ]}
+                  onPress={() => setEditingEntry({ ...editingEntry, isMarkdown: !editingEntry.isMarkdown })}
+                >
+                  <Text style={styles.markdownToggleText}>
+                    {editingEntry.isMarkdown ? '✅ Markdown' : '❌ Plain Text'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={styles.editTextInput}
+                value={editText}
+                onChangeText={setEditText}
+                placeholder="Entry text"
+                multiline
+                maxLength={1000}
+              />
+              
+              <Text style={styles.editLabel}>Category:</Text>
+              <View style={styles.categoryButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.categoryButton,
+                    editingEntry.type === 'log' && styles.categoryButtonActive
+                  ]}
+                  onPress={async () => {
+                    if (editingEntry.type !== 'log') {
+                      await removeCategory(editingEntry);
+                      setEditingEntry({ ...editingEntry, type: 'log' });
+                    }
+                  }}
+                >
+                  <Text style={styles.categoryButtonText}>📝 Log</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.categoryButton,
+                    editingEntry.type === 'expense' && styles.categoryButtonActive
+                  ]}
+                  onPress={async () => {
+                    if (editingEntry.type !== 'expense') {
+                      await markAsExpense(editingEntry);
+                      const expense = expenses.find(e => e.entryId === editingEntry.id);
+                      if (expense) {
+                        setEditAmount(expense.amount.toString());
+                        setEditCategory(expense.category || "");
+                      }
+                      setEditingEntry({ ...editingEntry, type: 'expense' });
+                    }
+                  }}
+                >
+                  <Text style={styles.categoryButtonText}>💰 Expense</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.categoryButton,
+                    editingEntry.type === 'action' && styles.categoryButtonActive
+                  ]}
+                  onPress={async () => {
+                    if (editingEntry.type !== 'action') {
+                      await markAsActionItem(editingEntry);
+                      setEditingEntry({ ...editingEntry, type: 'action' });
+                    }
+                  }}
+                >
+                  <Text style={styles.categoryButtonText}>✅ Task</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {editingEntry.type === "expense" && (
+                <>
+                  <Text style={styles.editLabel}>Amount:</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    value={editAmount}
+                    onChangeText={setEditAmount}
+                    placeholder="150"
+                    keyboardType="decimal-pad"
+                  />
+                  
+                  <Text style={styles.editLabel}>Category (optional):</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    value={editCategory}
+                    onChangeText={setEditCategory}
+                    placeholder="Food, Transportation, etc."
+                  />
+                </>
+              )}
+              
+              <View style={styles.editModalButtons}>
+                <TouchableOpacity
+                  style={[styles.editModalButton, styles.editModalButtonCancel]}
+                  onPress={() => {
+                    setEditingEntry(null);
+                    setEditText("");
+                    setEditAmount("");
+                    setEditCategory("");
+                  }}
+                >
+                  <Text style={styles.editModalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.editModalButton, styles.editModalButtonSave]}
+                  onPress={handleSaveEdit}
+                >
+                  <Text style={[styles.editModalButtonText, { color: '#fff' }]}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 };
@@ -767,8 +1203,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
@@ -822,17 +1258,43 @@ const styles = StyleSheet.create({
   },
   messagesList: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    paddingBottom: Platform.OS === "ios" ? 6 : 4,
     backgroundColor: "#fff",
     borderTopWidth: 1,
     borderTopColor: "#e0e0e0",
+  },
+  quickActionsRow: {
+    flexDirection: "row",
+    marginBottom: 4,
+    gap: 4,
+  },
+  quickActionButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
+    backgroundColor: "#f0f0f0",
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+  },
+  quickActionButtonActive: {
+    backgroundColor: "#007AFF",
+    borderColor: "#0056b3",
+  },
+  quickActionText: {
+    fontSize: 18,
+  },
+  quickActionTextActive: {
+    transform: [{ scale: 1.1 }],
+  },
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
   },
   textInput: {
     flex: 1,
@@ -856,6 +1318,117 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: "#ccc",
+  },
+  editModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  editModalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    width: "100%",
+    maxWidth: 500,
+  },
+  editModalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: "#333",
+  },
+  editLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#666",
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: "#f9f9f9",
+  },
+  editTextInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: "#f9f9f9",
+    minHeight: 80,
+    maxHeight: 200,
+    textAlignVertical: "top",
+  },
+  editModalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 20,
+    gap: 12,
+  },
+  editModalButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  editModalButtonCancel: {
+    backgroundColor: "#f0f0f0",
+  },
+  editModalButtonSave: {
+    backgroundColor: "#007AFF",
+  },
+  editModalButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+  },
+  categoryButtons: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  categoryButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#f0f0f0",
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+    alignItems: "center",
+  },
+  categoryButtonActive: {
+    backgroundColor: "#007AFF",
+    borderColor: "#0056b3",
+  },
+  categoryButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+  },
+  markdownToggle: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: "#f0f0f0",
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  markdownToggleActive: {
+    backgroundColor: "#e8f5e8",
+    borderColor: "#4caf50",
+  },
+  markdownToggleText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#333",
   },
   dateSeparator: {
     flexDirection: 'row',

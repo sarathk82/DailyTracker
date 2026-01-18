@@ -9,6 +9,8 @@ import { TextAnalyzer } from '../utils/textAnalysis';
 interface MessageBubbleProps {
   entry: Entry;
   onLongPress: (entry: Entry) => void;
+  onEdit?: (entry: Entry) => void;
+
   markdownStyles: any;
   expense?: Expense;
   actionItem?: ActionItem;
@@ -17,6 +19,7 @@ interface MessageBubbleProps {
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
   entry,
   onLongPress,
+  onEdit,
   markdownStyles,
   expense,
   actionItem,
@@ -52,14 +55,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     switch (entry.type) {
       case "expense":
         if (expense) {
-          return `💰 Auto-categorized as Expense: ${TextAnalyzer.formatCurrency(expense.amount, expense.currency)}`;
+          const prefix = expense.autoDetected ? '💰 Auto-categorized as Expense' : '💰 Manually categorized as Expense';
+          return `${prefix}: ${TextAnalyzer.formatCurrency(expense.amount, expense.currency)}`;
         }
-        return "💰 Auto-categorized as Expense";
+        return "💰 Expense";
       case "action":
         if (actionItem) {
-          return `✅ Auto-categorized as Action Item: ${actionItem.title}`;
+          const prefix = actionItem.autoDetected ? '✅ Auto-categorized as Task' : '✅ Manually categorized as Task';
+          return `${prefix}: ${actionItem.title}`;
         }
-        return "✅ Auto-categorized as Action Item";
+        return "✅ Task";
       default:
         return null;
     }
@@ -96,6 +101,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         <Text style={styles.timestamp}>
           {format(entry.timestamp, "HH:mm")}
         </Text>
+        {entry.type !== 'system' && (
+          <View style={styles.actionButtons}>
+            {onEdit && (
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => onEdit(entry)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.actionButtonText}>✏️</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
       {entry.isMarkdown ? (
         <Markdown style={markdownStyles}>{entry.text}</Markdown>
@@ -132,55 +150,36 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   } : {};
 
   return (
-    <View style={entry.type === 'system' ? styles.systemMessageContainer : styles.messageContainer}>
-      {Platform.OS === 'web' ? (
-        <View 
-          {...webStyles}
-          style={[getBubbleStyle(), webStyles.style]}
-          onTouchEnd={(e) => {
-            const selection = window.getSelection();
-            if (selection?.toString().length === 0 && entry.type !== 'system') {
-              onLongPress(entry);
-            }
-          }}
-        >
-          <MessageContent />
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={getBubbleStyle()}
-          activeOpacity={0.7}
-          onLongPress={handleNativeLongPress}
-        >
-          <MessageContent />
-        </TouchableOpacity>
-      )}
+    <View style={entry.type === 'system' ? styles.systemMessageContainer : styles.userMessageContainer}>
+      <View style={getBubbleStyle()}>
+        <MessageContent />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   userMessageContainer: {
-    marginVertical: 4,
+    marginVertical: 1,
     alignSelf: 'flex-start',
-    maxWidth: '85%',
+    maxWidth: '95%',
   },
   systemMessageContainer: {
-    marginVertical: 4,
+    marginVertical: 1,
     alignSelf: 'flex-end',
-    maxWidth: '85%',
+    maxWidth: '95%',
   },
   messageContainer: {
-    marginVertical: 4,
+    marginVertical: 1,
     alignSelf: "flex-start",
-    maxWidth: "80%",
+    maxWidth: "95%",
   },
   messageBubble: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     minWidth: 60,
     maxWidth: "100%",
-    borderRadius: 18,
+    borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -210,8 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   systemMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#fff',
+    backgroundColor: '#e3f2fd',
     marginLeft: '15%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 5,
@@ -219,8 +217,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 5,
   },
   userMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#fff',
+    backgroundColor: '#f0f0f0',
     marginRight: '15%',
     borderTopLeftRadius: 5,
     borderTopRightRadius: 20,
@@ -231,16 +228,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 1,
+    flexWrap: 'nowrap',
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 2,
+    flexShrink: 0,
+  },
+  actionButton: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
+  },
+  actionButtonText: {
+    fontSize: 14,
   },
   timestamp: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#666",
-    marginLeft: 8,
+    marginLeft: 4,
   },
   messageText: {
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 17,
     ...(Platform.OS === 'web' ? {
       userSelect: 'text',
       WebkitUserSelect: 'text',
@@ -259,9 +270,9 @@ const styles = StyleSheet.create({
     color: "#333",  // Dark text for action/expense messages
   },
   categoryLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#666",
     fontStyle: "italic",
-    marginTop: 4,
+    marginTop: 2,
   },
 });

@@ -14,6 +14,7 @@ export interface ActionItem {
   completed: boolean;
   createdAt: Date;
   dueDate?: Date;
+  autoDetected?: boolean;
 }
 
 export interface Expense {
@@ -24,6 +25,7 @@ export interface Expense {
   description: string;
   category?: string;
   createdAt: Date;
+  autoDetected?: boolean;
 }
 
 export interface SettingsData {
