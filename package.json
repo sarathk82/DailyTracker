@@ -52,6 +52,8 @@
     "@babel/preset-typescript": "^7.27.1",
     "@expo/webpack-config": "^19.0.1",
     "@react-native/babel-preset": "^0.81.1",
+    "webpack": "^5.90.0",
+    "webpack-cli": "^5.1.4",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/react-native": "^12.9.0",
