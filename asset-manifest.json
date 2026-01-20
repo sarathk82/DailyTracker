@@ -1,18 +1,19 @@
 {
   "files": {
-    "main.js": "/DailyTracker/static/js/main.efbbde1c.js",
-    "static/js/546.a4f82c1d.js": "/DailyTracker/static/js/546.a4f82c1d.js",
+    "main.js": "/DailyTracker/static/js/main.a14347dc.js",
+    "static/js/7.170609a1.js": "/DailyTracker/static/js/7.170609a1.js",
     "static/media/Ionicons.ttf": "/DailyTracker/static/media/Ionicons.40518f95b2e2a69c5c07.ttf",
     "favicon.ico": "/DailyTracker/favicon.ico",
     "index.html": "/DailyTracker/index.html",
     "favicon-32.png": "/DailyTracker/favicon-32.png",
     "favicon-16.png": "/DailyTracker/favicon-16.png",
+    "manifest.json": "/DailyTracker/manifest.json",
     "serve.json": "/DailyTracker/serve.json",
-    "main.efbbde1c.js.map": "/DailyTracker/static/js/main.efbbde1c.js.map",
-    "546.a4f82c1d.js.map": "/DailyTracker/static/js/546.a4f82c1d.js.map"
+    "main.a14347dc.js.map": "/DailyTracker/static/js/main.a14347dc.js.map",
+    "7.170609a1.js.map": "/DailyTracker/static/js/7.170609a1.js.map"
   },
   "entrypoints": [
-    "static/js/546.a4f82c1d.js",
-    "static/js/main.efbbde1c.js"
+    "static/js/7.170609a1.js",
+    "static/js/main.a14347dc.js"
   ]
 }
