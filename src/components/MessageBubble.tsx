@@ -44,26 +44,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     },
     onPanResponderRelease: (_, gestureState) => {
       if (gestureState.dx < -80) {
-        // Swipe threshold reached - show delete confirmation
-        Alert.alert(
-          'Delete Entry',
-          'Are you sure you want to delete this entry?',
-          [
-            { text: 'Cancel', style: 'cancel', onPress: () => {
-              Animated.spring(translateX, {
-                toValue: 0,
-                useNativeDriver: true,
-              }).start();
-            }},
-            { text: 'Delete', style: 'destructive', onPress: () => {
-              if (onDelete) onDelete(entry);
-              Animated.spring(translateX, {
-                toValue: 0,
-                useNativeDriver: true,
-              }).start();
-            }},
-          ]
-        );
+        // Swipe threshold reached - keep it swiped to show delete icon
+        Animated.spring(translateX, {
+          toValue: -80,
+          useNativeDriver: true,
+        }).start();
       } else {
         // Snap back
         Animated.spring(translateX, {
@@ -210,9 +195,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {entry.text}
         </Text>
       )}
-      {entry.type !== "log" && entry.type !== "system" && (
-        <Text style={styles.categoryLabel}>{getCategoryLabel()}</Text>
-      )}
     </View>
   );
 
@@ -230,18 +212,11 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   return (
     <View style={entry.type === 'system' ? styles.systemMessageContainer : styles.userMessageContainer}>
       <View style={styles.bubbleWrapper}>
-        {/* Delete indicator (shown behind bubble when swiping) */}
-        {!desktop && entry.type !== 'system' && (
-          <View style={styles.deleteIndicator}>
-            <Text style={{ fontSize: 24, color: '#fff' }}>🗑️</Text>
-          </View>
-        )}
-        
         <Animated.View
           {...panResponder.panHandlers}
           style={[
-            getBubbleStyle(),
             {
+              flexDirection: 'row',
               transform: [{ translateX }],
             },
           ]}
@@ -257,9 +232,26 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             } : undefined}
             delayLongPress={500}
             disabled={desktop && entry.type !== 'system'}
+            style={getBubbleStyle()}
           >
             <MessageContent />
           </TouchableOpacity>
+          
+          {/* Delete indicator (positioned to the right of bubble) */}
+          {!desktop && entry.type !== 'system' && (
+            <TouchableOpacity 
+              style={styles.deleteIndicator}
+              onPress={() => {
+                if (onDelete) onDelete(entry);
+                Animated.spring(translateX, {
+                  toValue: 0,
+                  useNativeDriver: true,
+                }).start();
+              }}
+            >
+              <Text style={{ fontSize: 24, color: '#f44336' }}>🗑️</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </View>
     </View>
@@ -281,14 +273,15 @@ const styles = StyleSheet.create({
   },
   bubbleWrapper: {
     position: 'relative',
+    overflow: 'hidden',
   },
   deleteIndicator: {
     position: 'absolute',
-    right: 0,
+    right: -80,
     top: 0,
     bottom: 0,
     width: 80,
-    backgroundColor: '#f44336',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 12,
@@ -305,14 +298,18 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     alignSelf: 'flex-start',
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.18,
-    shadowRadius: 1.0,
-    elevation: 1,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.18)',
+    } : {
+      shadowColor: "#000",
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.18,
+      shadowRadius: 1.0,
+      elevation: 1,
+    }),
   },
   defaultBubble: {
     backgroundColor: "#f0f0f0", // Light gray for user messages

@@ -293,7 +293,6 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
             
             <ScrollView style={modalStyles.optionsList} showsVerticalScrollIndicator={true}>
               {CURRENCIES.map((currency) => {
-                console.log(`Rendering currency option: ${currency.name}`);
                 return (
                   <TouchableOpacity
                     key={currency.code}
@@ -302,7 +301,7 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
                       settings.systemCurrency === currency.code && modalStyles.selectedOption
                     ]}
                     onPress={() => {
-                      console.log(`Selected currency: ${currency.name}`);
+
                       updateSetting('systemCurrency', currency.code);
                       setShowCurrencyModal(false);
                     }}
@@ -345,7 +344,6 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
             
             <ScrollView style={modalStyles.optionsList} showsVerticalScrollIndicator={true}>
               {LAYOUT_OPTIONS.map((layout) => {
-                console.log(`Rendering layout option: ${layout.name}`);
                 return (
                   <TouchableOpacity
                     key={layout.id}
@@ -354,7 +352,7 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
                       settings.layoutStyle === layout.id && modalStyles.selectedOption
                     ]}
                     onPress={() => {
-                      console.log(`Selected layout: ${layout.name}`);
+
                       updateSetting('layoutStyle', layout.id);
                       setShowLayoutModal(false);
                     }}
@@ -406,7 +404,7 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
                       currentTheme === theme.id && modalStyles.selectedOption
                     ]}
                     onPress={() => {
-                      console.log(`Selected theme: ${theme.name}`);
+
                       updateSetting('theme', theme.id);
                       setShowThemeModal(false);
                     }}

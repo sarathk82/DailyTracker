@@ -20,6 +20,7 @@ import { Entry, Expense, ActionItem } from "../types";
 import { StorageService } from "../utils/storage";
 import { TextAnalyzer } from "../utils/textAnalysis";
 import { MessageBubble } from "../components/MessageBubble";
+import { MinimalEntryItem } from "../components/MinimalEntryItem";
 import { SettingsScreen } from "./SettingsScreen";
 import { isDesktop } from "../utils/platform";
 
@@ -40,6 +41,8 @@ export const JournalScreen: React.FC<{}> = () => {
   const flatListRef = useRef<FlatList>(null);
   const textInputRef = useRef<TextInput>(null);
   const shouldAutoScrollRef = useRef(false);
+  const isInitialLoadRef = useRef(true);
+  const hasScrolledToBottomRef = useRef(false);
   
   // Settings state (will be loaded from storage)
   const [enterToSend, setEnterToSend] = useState(true);
@@ -51,10 +54,7 @@ export const JournalScreen: React.FC<{}> = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [filteredEntries, setFilteredEntries] = useState<Entry[]>([]);
   
-  // Debug: Log state values to check for issues
-  useEffect(() => {
-    console.log('🔍 Debug - Modal states:', { showSettings, showSearch });
-  }, [showSettings, showSearch]);
+
 
   // Data for enhanced messages
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -227,6 +227,8 @@ export const JournalScreen: React.FC<{}> = () => {
     
     setEntries(sortedEntries);
     setFilteredEntries(sortedEntries); // Initialize filtered entries
+    // Reset scroll flag when entries are loaded so it scrolls to bottom
+    hasScrolledToBottomRef.current = false;
   }, []);
 
   // Create a flattened list with date separators (for inverted FlatList)
@@ -345,11 +347,6 @@ export const JournalScreen: React.FC<{}> = () => {
     loadExpensesAndActions();
   }, [loadEntries, loadSettings, loadExpensesAndActions]);
 
-  // Entries will auto-scroll via FlatList onLayout and onContentSizeChange
-  useEffect(() => {
-    // This useEffect is kept for potential future scroll enhancements
-  }, [entries.length]);
-
   const showToast = (message: string) => {
     alert(message);
   };
@@ -432,7 +429,7 @@ export const JournalScreen: React.FC<{}> = () => {
       await loadEntries();
       await loadExpensesAndActions();
 
-      // Add system feedback message in chat view only
+      // Add system feedback message only in chat view
       if (layoutStyle === 'chat') {
         let systemMessage = '';
         let wasExpense = false;
@@ -480,17 +477,17 @@ export const JournalScreen: React.FC<{}> = () => {
       setForceExpense(false);
       setForceAction(false);
       
-      // Scroll to bottom (newest message) after sending - increase delay to ensure content is rendered
+      // Scroll to bottom (offset 0 for inverted list) to show the new message
       setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 300);
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
       
-      // Refocus the text input for better UX - use setTimeout to ensure state update completes
+      // Refocus the text input for better UX
       setTimeout(() => {
         if (textInputRef.current) {
           textInputRef.current.focus();
         }
-      }, 400);
+      }, 150);
     } catch (error) {
       console.error('Error processing message:', error);
       showToast('Failed to process message');
@@ -791,90 +788,29 @@ export const JournalScreen: React.FC<{}> = () => {
 
   const renderCardEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <View style={layoutStyles.cardContainer}>
-      <View style={layoutStyles.cardHeader}>
-        <Text style={layoutStyles.cardDate}>{format(item.timestamp, 'MMM dd, yyyy')}</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={layoutStyles.cardTime}>{format(item.timestamp, 'h:mm a')}</Text>
-          {item.type !== 'system' && (
-            <>
-              <TouchableOpacity 
-                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
-                onPress={() => handleEditEntry(item)}
-              >
-                <Text style={{ fontSize: 12 }}>✏️</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
-                onPress={() => handleDeleteEntry(item)}
-              >
-                <Text style={{ fontSize: 12 }}>🗑️</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      </View>
-      <View style={layoutStyles.cardContent}>
-        {item.isMarkdown ? (
-          <Markdown style={markdownStyles}>{item.text}</Markdown>
-        ) : (
-          <Text style={layoutStyles.cardText}>{item.text}</Text>
-        )}
-        {expense && (
-          <View style={layoutStyles.expenseTag}>
-            <Text style={layoutStyles.expenseText}>
-              💰 {TextAnalyzer.formatCurrency(expense.amount, expense.currency)}
-            </Text>
-          </View>
-        )}
-        {actionItem && (
-          <View style={layoutStyles.actionTag}>
-            <Text style={layoutStyles.actionText}>✅ Task</Text>
-          </View>
-        )}
-      </View>
+      <MessageBubble 
+        entry={item} 
+        onLongPress={handleLongPress}
+        onEdit={handleEditEntry}
+        onDelete={handleDeleteEntry}
+        markdownStyles={markdownStyles}
+        expense={expense}
+        actionItem={actionItem}
+      />
     </View>
   );
 
   const renderListEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <View style={layoutStyles.listContainer}>
-      <View style={layoutStyles.listLeft}>
-        <Text style={layoutStyles.listTime}>{format(item.timestamp, 'h:mm a')}</Text>
-        <View style={layoutStyles.listIndicator} />
-      </View>
-      <View style={layoutStyles.listContent}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <View style={{ flex: 1 }} />
-          {item.type !== 'system' && (
-            <View style={{ flexDirection: 'row', gap: 4 }}>
-              <TouchableOpacity 
-                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
-                onPress={() => handleEditEntry(item)}
-              >
-                <Text style={{ fontSize: 12 }}>✏️</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
-                onPress={() => handleDeleteEntry(item)}
-              >
-                <Text style={{ fontSize: 12 }}>🗑️</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-        {item.isMarkdown ? (
-          <Markdown style={markdownStyles}>{item.text}</Markdown>
-        ) : (
-          <Text style={layoutStyles.listText}>{item.text}</Text>
-        )}
-        <View style={layoutStyles.listMeta}>
-          {expense && (
-            <Text style={layoutStyles.listExpense}>
-              💰 {TextAnalyzer.formatCurrency(expense.amount, expense.currency)}
-            </Text>
-          )}
-          {actionItem && <Text style={layoutStyles.listAction}>✅ Task</Text>}
-        </View>
-      </View>
+      <MessageBubble 
+        entry={item} 
+        onLongPress={handleLongPress}
+        onEdit={handleEditEntry}
+        onDelete={handleDeleteEntry}
+        markdownStyles={markdownStyles}
+        expense={expense}
+        actionItem={actionItem}
+      />
     </View>
   );
 
@@ -885,124 +821,43 @@ export const JournalScreen: React.FC<{}> = () => {
         <View style={layoutStyles.timelineLine} />
       </View>
       <View style={layoutStyles.timelineContent}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <Text style={layoutStyles.timelineDate}>{format(item.timestamp, 'MMM dd, h:mm a')}</Text>
-          {item.type !== 'system' && (
-            <View style={{ flexDirection: 'row', gap: 4 }}>
-              <TouchableOpacity 
-                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
-                onPress={() => handleEditEntry(item)}
-              >
-                <Text style={{ fontSize: 12 }}>✏️</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
-                onPress={() => handleDeleteEntry(item)}
-              >
-                <Text style={{ fontSize: 12 }}>🗑️</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-        {item.isMarkdown ? (
-          <Markdown style={markdownStyles}>{item.text}</Markdown>
-        ) : (
-          <Text style={layoutStyles.timelineText}>{item.text}</Text>
-        )}
-        {(expense || actionItem) && (
-          <View style={layoutStyles.timelineTags}>
-            {expense && (
-              <Text style={layoutStyles.timelineExpense}>
-                💰 {TextAnalyzer.formatCurrency(expense.amount, expense.currency)}
-              </Text>
-            )}
-            {actionItem && <Text style={layoutStyles.timelineAction}>✅ Task</Text>}
-          </View>
-        )}
+        <MessageBubble 
+          entry={item} 
+          onLongPress={handleLongPress}
+          onEdit={handleEditEntry}
+          onDelete={handleDeleteEntry}
+          markdownStyles={markdownStyles}
+          expense={expense}
+          actionItem={actionItem}
+        />
       </View>
     </View>
   );
 
   const renderMagazineEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <View style={layoutStyles.magazineContainer}>
-      <View style={layoutStyles.magazineHeader}>
-        <Text style={layoutStyles.magazineDate}>{format(item.timestamp, 'EEEE, MMMM dd')}</Text>
-        {item.type !== 'system' && (
-          <View style={{ flexDirection: 'row', gap: 4 }}>
-            <TouchableOpacity 
-              style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
-              onPress={() => handleEditEntry(item)}
-            >
-              <Text style={{ fontSize: 12 }}>✏️</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={{ padding: 4, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4 }}
-              onPress={() => handleDeleteEntry(item)}
-            >
-              <Text style={{ fontSize: 12 }}>🗑️</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-      <View style={layoutStyles.magazineBody}>
-        {item.isMarkdown ? (
-          <Markdown style={markdownStyles}>{item.text}</Markdown>
-        ) : (
-          <Text style={layoutStyles.magazineText}>{item.text}</Text>
-        )}
-      </View>
-      {(expense || actionItem) && (
-        <View style={layoutStyles.magazineFooter}>
-          {expense && (
-            <View style={layoutStyles.magazineExpenseBlock}>
-              <Text style={layoutStyles.magazineExpenseLabel}>Expense</Text>
-              <Text style={layoutStyles.magazineExpenseAmount}>
-                {TextAnalyzer.formatCurrency(expense.amount, expense.currency)}
-              </Text>
-            </View>
-          )}
-          {actionItem && (
-            <View style={layoutStyles.magazineActionBlock}>
-              <Text style={layoutStyles.magazineActionLabel}>Action Item</Text>
-              <Text style={layoutStyles.magazineActionText}>Task</Text>
-            </View>
-          )}
-        </View>
-      )}
+      <MessageBubble 
+        entry={item} 
+        onLongPress={handleLongPress}
+        onEdit={handleEditEntry}
+        onDelete={handleDeleteEntry}
+        markdownStyles={markdownStyles}
+        expense={expense}
+        actionItem={actionItem}
+      />
     </View>
   );
 
   const renderMinimalEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
-    <View style={layoutStyles.minimalContainer}>
-      <View style={layoutStyles.minimalContent}>
-        {item.isMarkdown ? (
-          <Markdown style={markdownStyles}>{item.text}</Markdown>
-        ) : (
-          <Text style={layoutStyles.minimalText}>{item.text}</Text>
-        )}
-      </View>
-      <View style={layoutStyles.minimalMeta}>
-        <Text style={layoutStyles.minimalTime}>{format(item.timestamp, 'h:mm a')}</Text>
-        {expense && <Text style={layoutStyles.minimalExpense}>💰{TextAnalyzer.formatCurrency(expense.amount, expense.currency)}</Text>}
-        {actionItem && <Text style={layoutStyles.minimalAction}>✅</Text>}
-        {item.type !== 'system' && (
-          <>
-            <TouchableOpacity 
-              style={{ padding: 2, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4, marginLeft: 4 }}
-              onPress={() => handleEditEntry(item)}
-            >
-              <Text style={{ fontSize: 10 }}>✏️</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={{ padding: 2, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 4, marginLeft: 2 }}
-              onPress={() => handleDeleteEntry(item)}
-            >
-              <Text style={{ fontSize: 10 }}>🗑️</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-    </View>
+    <MinimalEntryItem 
+      item={item}
+      expense={expense}
+      actionItem={actionItem}
+      onEdit={handleEditEntry}
+      onDelete={handleDeleteEntry}
+      markdownStyles={markdownStyles}
+      layoutStyles={layoutStyles}
+    />
   );
 
   // Render date separator component
@@ -1051,6 +906,8 @@ export const JournalScreen: React.FC<{}> = () => {
       case 'magazine':
         return renderMagazineEntry(entry, expense, actionItem);
       case 'minimal':
+        // Skip system feedback messages in minimal view
+        if (entry.type === 'system') return null;
         return renderMinimalEntry(entry, expense, actionItem);
       case 'chat':
       default:
@@ -1061,7 +918,9 @@ export const JournalScreen: React.FC<{}> = () => {
   // Get data with date separators
   const getDataWithSeparators = () => {
     const baseEntries = showSearch ? filteredEntries : entries;
-    return createEntriesWithDateSeparators(baseEntries);
+    const data = createEntriesWithDateSeparators(baseEntries);
+    // Reverse the data so newest messages are first (will appear at bottom when inverted)
+    return data.reverse();
   };
 
   return (
@@ -1079,7 +938,6 @@ export const JournalScreen: React.FC<{}> = () => {
           <TouchableOpacity
             style={[styles.settingsButton, { marginRight: 8, zIndex: 10002 }]}
             onPress={() => {
-              console.log('🔍 Search button pressed');
               setShowSearch(!showSearch);
             }}
           >
@@ -1089,7 +947,6 @@ export const JournalScreen: React.FC<{}> = () => {
           <TouchableOpacity
             style={[styles.settingsButton, { zIndex: 10003 }]}
             onPress={() => {
-              console.log('⚙️ Settings button pressed');
               setShowSettings(true);
             }}
           >
@@ -1131,17 +988,9 @@ export const JournalScreen: React.FC<{}> = () => {
         }}
         style={[styles.messagesList, getListStyle(layoutStyle)]}
         showsVerticalScrollIndicator={false}
-        onLayout={() => {
-          // Scroll to bottom only on initial load
-          if (flatListRef.current && entries.length > 0) {
-            setTimeout(() => {
-              flatListRef.current?.scrollToEnd({ animated: false });
-            }, 100);
-          }
-        }}
-        onContentSizeChange={() => {
-          // Only auto-scroll on initial load, not when new messages are sent
-          // (new messages use manual scrollToEnd in handleSendMessage)
+        inverted
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
         }}
         ListEmptyComponent={() => {
           const isEmpty = showSearch ? filteredEntries.length === 0 : entries.length === 0;
@@ -1169,7 +1018,10 @@ export const JournalScreen: React.FC<{}> = () => {
               styles.quickActionButton,
               forceExpense && styles.quickActionButtonActive,
             ]}
-            onPress={() => setForceExpense(!forceExpense)}
+            onPress={() => {
+              setForceExpense(!forceExpense);
+              if (!forceExpense) setForceAction(false); // Clear task when enabling expense
+            }}
           >
             <Text style={[styles.quickActionText, forceExpense && styles.quickActionTextActive]}>💰</Text>
           </TouchableOpacity>
@@ -1178,7 +1030,10 @@ export const JournalScreen: React.FC<{}> = () => {
               styles.quickActionButton,
               forceAction && styles.quickActionButtonActive,
             ]}
-            onPress={() => setForceAction(!forceAction)}
+            onPress={() => {
+              setForceAction(!forceAction);
+              if (!forceAction) setForceExpense(false); // Clear expense when enabling task
+            }}
           >
             <Text style={[styles.quickActionText, forceAction && styles.quickActionTextActive]}>✅</Text>
           </TouchableOpacity>
@@ -1898,23 +1753,27 @@ const layoutStyles = StyleSheet.create({
   // Minimal Layout Styles
   minimalContainer: {
     flexDirection: 'row',
-    paddingVertical: 0, // Eliminated all vertical padding for maximum density
+    paddingVertical: 0,
     paddingHorizontal: 20,
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   minimalContent: {
     flex: 1,
     marginRight: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   minimalText: {
     fontSize: 16,
-    lineHeight: 22,
     color: '#212529',
+    flex: 1,
   },
   minimalMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    flexShrink: 0,
   },
   minimalTime: {
     fontSize: 12,
