@@ -1,16 +1,17 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Platform, Alert, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Platform, Alert, StyleSheet, Animated, PanResponder } from 'react-native';
 // import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import Markdown from "react-native-markdown-display";
 import { Entry, Expense, ActionItem } from '../types';
 import { TextAnalyzer } from '../utils/textAnalysis';
+import { isDesktop } from '../utils/platform';
 
 interface MessageBubbleProps {
   entry: Entry;
   onLongPress: (entry: Entry) => void;
   onEdit?: (entry: Entry) => void;
-
+  onDelete?: (entry: Entry) => void;
   markdownStyles: any;
   expense?: Expense;
   actionItem?: ActionItem;
@@ -20,10 +21,59 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   entry,
   onLongPress,
   onEdit,
+  onDelete,
   markdownStyles,
   expense,
   actionItem,
 }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [translateX] = useState(new Animated.Value(0));
+  const desktop = isDesktop();
+
+  // Swipe gesture for delete (mobile only)
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => !desktop && entry.type !== 'system',
+    onMoveShouldSetPanResponder: (_, gestureState) => {
+      return !desktop && entry.type !== 'system' && Math.abs(gestureState.dx) > 5;
+    },
+    onPanResponderMove: (_, gestureState) => {
+      // Only allow left swipe
+      if (gestureState.dx < 0) {
+        translateX.setValue(gestureState.dx);
+      }
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dx < -80) {
+        // Swipe threshold reached - show delete confirmation
+        Alert.alert(
+          'Delete Entry',
+          'Are you sure you want to delete this entry?',
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => {
+              Animated.spring(translateX, {
+                toValue: 0,
+                useNativeDriver: true,
+              }).start();
+            }},
+            { text: 'Delete', style: 'destructive', onPress: () => {
+              if (onDelete) onDelete(entry);
+              Animated.spring(translateX, {
+                toValue: 0,
+                useNativeDriver: true,
+              }).start();
+            }},
+          ]
+        );
+      } else {
+        // Snap back
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      }
+    },
+  });
+
   const getBubbleStyle = () => {
     const baseStyles = [styles.messageBubble];
     const alignmentStyle = entry.type === 'system' ? styles.systemMessage : styles.userMessage;
@@ -101,7 +151,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         <Text style={styles.timestamp}>
           {format(entry.timestamp, "HH:mm")}
         </Text>
-        {entry.type !== 'system' && (
+        {entry.type !== 'system' && desktop && isHovered && (
           <View style={styles.actionButtons}>
             {onEdit && (
               <TouchableOpacity 
@@ -109,12 +159,33 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 onPress={() => onEdit(entry)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={styles.actionButtonText}>✏️</Text>
+                <Text style={styles.actionButtonText}>✏️ Edit</Text>
+              </TouchableOpacity>
+            )}
+            {onDelete && (
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={() => {
+                  Alert.alert(
+                    'Delete Entry',
+                    'Are you sure you want to delete this entry?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Delete', style: 'destructive', onPress: () => onDelete(entry) },
+                    ]
+                  );
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.actionButtonText}>🗑️ Delete</Text>
               </TouchableOpacity>
             )}
           </View>
         )}
       </View>
+      {entry.type !== 'system' && !desktop && (
+        <Text style={styles.gestureHint}>Long press to edit • Swipe left to delete</Text>
+      )}
       {entry.isMarkdown ? (
         <Markdown style={markdownStyles}>{entry.text}</Markdown>
       ) : (
@@ -151,8 +222,38 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   return (
     <View style={entry.type === 'system' ? styles.systemMessageContainer : styles.userMessageContainer}>
-      <View style={getBubbleStyle()}>
-        <MessageContent />
+      <View style={styles.bubbleWrapper}>
+        {/* Delete indicator (shown behind bubble when swiping) */}
+        {!desktop && entry.type !== 'system' && (
+          <View style={styles.deleteIndicator}>
+            <Text style={{ fontSize: 24, color: '#fff' }}>🗑️</Text>
+          </View>
+        )}
+        
+        <Animated.View
+          {...panResponder.panHandlers}
+          style={[
+            getBubbleStyle(),
+            {
+              transform: [{ translateX }],
+            },
+          ]}
+          {...(desktop && entry.type !== 'system' ? {
+            onMouseEnter: () => setIsHovered(true),
+            onMouseLeave: () => setIsHovered(false),
+          } : {})}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onLongPress={entry.type !== 'system' ? () => {
+              if (onEdit) onEdit(entry);
+            } : undefined}
+            onPress={desktop && entry.type !== 'system' && onEdit ? () => onEdit(entry) : undefined}
+            delayLongPress={500}
+          >
+            <MessageContent />
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </View>
   );
@@ -168,6 +269,20 @@ const styles = StyleSheet.create({
     marginVertical: 1,
     alignSelf: 'flex-end',
     maxWidth: '95%',
+  },
+  bubbleWrapper: {
+    position: 'relative',
+  },
+  deleteIndicator: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 80,
+    backgroundColor: '#f44336',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
   },
   messageContainer: {
     marginVertical: 1,
@@ -237,12 +352,23 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   actionButton: {
-    padding: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 6,
     borderRadius: 4,
     backgroundColor: "rgba(0, 0, 0, 0.05)",
   },
+  deleteButton: {
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+  },
   actionButtonText: {
-    fontSize: 14,
+    fontSize: 12,
+  },
+  gestureHint: {
+    fontSize: 9,
+    color: '#999',
+    fontStyle: 'italic',
+    marginBottom: 4,
   },
   timestamp: {
     fontSize: 10,

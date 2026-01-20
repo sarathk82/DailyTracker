@@ -21,6 +21,7 @@ import { StorageService } from "../utils/storage";
 import { TextAnalyzer } from "../utils/textAnalysis";
 import { MessageBubble } from "../components/MessageBubble";
 import { SettingsScreen } from "./SettingsScreen";
+import { isDesktop } from "../utils/platform";
 
 // Custom UUID function since react-native-uuid causes crashes
 const uuid = {
@@ -38,6 +39,7 @@ export const JournalScreen: React.FC<{}> = () => {
   const [testIndex, setTestIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const textInputRef = useRef<TextInput>(null);
+  const shouldAutoScrollRef = useRef(false);
   
   // Settings state (will be loaded from storage)
   const [enterToSend, setEnterToSend] = useState(true);
@@ -325,6 +327,9 @@ export const JournalScreen: React.FC<{}> = () => {
       setInputText("");
       setForceExpense(false);
       setForceAction(false);
+      
+      // Mark that we should auto-scroll after new message
+      shouldAutoScrollRef.current = true;
       
       // Scroll to bottom (newest message) after sending
       setTimeout(() => {
@@ -614,6 +619,7 @@ export const JournalScreen: React.FC<{}> = () => {
       entry={item} 
       onLongPress={handleLongPress}
       onEdit={handleEditEntry}
+      onDelete={handleDeleteEntry}
       markdownStyles={markdownStyles}
       expense={expense}
       actionItem={actionItem}
@@ -956,18 +962,19 @@ export const JournalScreen: React.FC<{}> = () => {
         style={[styles.messagesList, getListStyle(layoutStyle)]}
         showsVerticalScrollIndicator={false}
         onLayout={() => {
-          // Scroll to bottom when FlatList layout is complete
-          if (flatListRef.current) {
+          // Scroll to bottom only on initial load
+          if (flatListRef.current && entries.length > 0 && !shouldAutoScrollRef.current) {
             setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 100);
           }
         }}
         onContentSizeChange={() => {
-          // Scroll to bottom when content size changes (new messages)
-          if (flatListRef.current) {
+          // Only auto-scroll if we just sent a new message
+          if (flatListRef.current && shouldAutoScrollRef.current) {
             setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
+              shouldAutoScrollRef.current = false;
             }, 100);
           }
         }}
