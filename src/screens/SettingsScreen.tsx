@@ -8,6 +8,7 @@ import {
   ScrollView,
   Alert,
   Modal,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StorageService } from '../utils/storage';
@@ -18,6 +19,7 @@ const defaultSettings: SettingsData = {
   enterToSend: true,
   systemCurrency: 'AUTO', // AUTO means use system default
   layoutStyle: 'chat', // Default to current chat style
+  theme: 'system', // light, dark, or system
 };
 
 const CURRENCIES = [
@@ -31,10 +33,17 @@ const CURRENCIES = [
   { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
 ];
 
+const THEME_OPTIONS = [
+  { id: 'light', name: 'Light Mode', icon: '☀️' },
+  { id: 'dark', name: 'Dark Mode', icon: '🌙' },
+  { id: 'system', name: 'System Default', icon: '⚙️' },
+];
+
 export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLayoutModal, setShowLayoutModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -53,8 +62,10 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
 
   const saveSettings = async (newSettings: SettingsData) => {
     try {
+      console.log('Saving settings:', newSettings);
       await StorageService.saveSettings(newSettings);
       setSettings(newSettings);
+      console.log('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
       Alert.alert('Error', 'Failed to save settings');
@@ -65,6 +76,7 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
     key: K,
     value: SettingsData[K]
   ) => {
+    console.log(`Updating setting ${String(key)} to ${value}`);
     const newSettings = { ...settings, [key]: value };
     saveSettings(newSettings);
   };
@@ -78,9 +90,7 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
   const LAYOUT_OPTIONS = [
     { id: 'chat', name: 'Chat Style', icon: '💬' },
     { id: 'cards', name: 'Card Layout', icon: '🃏' },
-    { id: 'list', name: 'List View', icon: '📋' },
     { id: 'timeline', name: 'Timeline Style', icon: '⏰' },
-    { id: 'magazine', name: 'Magazine Layout', icon: '📰' },
     { id: 'minimal', name: 'Minimal Design', icon: '✨' },
   ];
 
@@ -98,6 +108,66 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
   const getCurrentCurrencyName = () => {
     const current = CURRENCIES.find(c => c.code === settings.systemCurrency);
     return current ? `${current.symbol} ${current.name}` : 'Auto-detect';
+  };
+
+  const showThemePicker = () => {
+    console.log('Theme picker tapped');
+    setShowThemeModal(true);
+  };
+
+  const getCurrentThemeName = () => {
+    const currentTheme = settings.theme || 'system';
+    const current = THEME_OPTIONS.find(t => t.id === currentTheme);
+    return current ? `${current.icon} ${current.name}` : '⚙️ System Default';
+  };
+
+  const handleClearJournal = async () => {
+    console.log('handleClearJournal called');
+    
+    // Use window.confirm for web, Alert for native
+    const confirmClear = Platform.OS === 'web' 
+      ? window.confirm('This will delete all journal entries but keep your expenses and tasks. Continue?')
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Clear Journal Entries',
+            'This will delete all journal entries but keep your expenses and tasks. Continue?',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              {
+                text: 'Clear',
+                style: 'destructive',
+                onPress: () => resolve(true),
+              },
+            ]
+          );
+        });
+
+    if (confirmClear) {
+      try {
+        console.log('Clearing journal entries...');
+        // Get all entries
+        const allEntries = await StorageService.getEntries();
+        console.log(`Found ${allEntries.length} entries to clear`);
+        
+        // Filter to keep only system messages (if any) or clear all
+        // Since expenses and tasks are stored separately, we can safely clear all entries
+        await StorageService.saveEntries([]);
+        console.log('Journal entries cleared successfully');
+        
+        if (Platform.OS === 'web') {
+          window.alert('Journal entries cleared. Your expenses and tasks are safe. Please refresh the journal tab.');
+        } else {
+          Alert.alert('Success', 'Journal entries cleared. Your expenses and tasks are safe. Please refresh the journal tab.');
+        }
+      } catch (error) {
+        console.error('Error clearing journal:', error);
+        if (Platform.OS === 'web') {
+          window.alert('Failed to clear journal entries');
+        } else {
+          Alert.alert('Error', 'Failed to clear journal entries');
+        }
+      }
+    }
   };
 
   return (
@@ -158,6 +228,17 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
           
+          <TouchableOpacity style={styles.settingItem} onPress={showThemePicker}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Theme</Text>
+              <Text style={styles.settingDescription}>
+                Choose your color theme preference
+              </Text>
+              <Text style={styles.settingValue}>{getCurrentThemeName()}</Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.settingItem} onPress={showLayoutPicker}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingLabel}>Journal Layout</Text>
@@ -167,6 +248,23 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
               <Text style={styles.settingValue}>{getCurrentLayoutName()}</Text>
             </View>
             <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Data Management</Text>
+          
+          <TouchableOpacity 
+            style={[styles.settingItem, styles.dangerSettingItem]} 
+            onPress={handleClearJournal}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingLabel, styles.dangerText]}>Clear Journal Entries</Text>
+              <Text style={styles.settingDescription}>
+                Delete all journal entries while keeping expenses and tasks
+              </Text>
+            </View>
+            <Text style={[styles.arrow, styles.dangerText]}>›</Text>
           </TouchableOpacity>
         </View>
 
@@ -284,6 +382,58 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
           </View>
         </View>
       </Modal>
+
+      {/* Theme Selection Modal */}
+      <Modal
+        visible={showThemeModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowThemeModal(false)}
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.container}>
+            <Text style={modalStyles.title}>Select Theme</Text>
+            <Text style={modalStyles.subtitle}>Choose your preferred color theme:</Text>
+            
+            <ScrollView style={modalStyles.optionsList} showsVerticalScrollIndicator={true}>
+              {THEME_OPTIONS.map((theme) => {
+                const currentTheme = settings.theme || 'system';
+                return (
+                  <TouchableOpacity
+                    key={theme.id}
+                    style={[
+                      modalStyles.option,
+                      currentTheme === theme.id && modalStyles.selectedOption
+                    ]}
+                    onPress={() => {
+                      console.log(`Selected theme: ${theme.name}`);
+                      updateSetting('theme', theme.id);
+                      setShowThemeModal(false);
+                    }}
+                  >
+                    <Text style={[
+                      modalStyles.optionText,
+                      currentTheme === theme.id && modalStyles.selectedOptionText
+                    ]}>
+                      {theme.icon} {theme.name}
+                    </Text>
+                    {currentTheme === theme.id && (
+                      <Text style={modalStyles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            
+            <TouchableOpacity
+              style={modalStyles.cancelButton}
+              onPress={() => setShowThemeModal(false)}
+            >
+              <Text style={modalStyles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -365,6 +515,12 @@ const styles = StyleSheet.create({
   arrow: {
     fontSize: 20,
     color: '#ccc',
+  },
+  dangerSettingItem: {
+    backgroundColor: '#fff0f0',
+  },
+  dangerText: {
+    color: '#d32f2f',
   },
 });
 

@@ -145,7 +145,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   const MessageContent = () => (
-    <View>
+    <View style={{ flex: 1 }}>
       <View style={styles.messageHeader}>
         {getIcon()}
         <Text style={styles.timestamp}>
@@ -165,15 +165,22 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             {onDelete && (
               <TouchableOpacity 
                 style={[styles.actionButton, styles.deleteButton]}
-                onPress={() => {
-                  Alert.alert(
-                    'Delete Entry',
-                    'Are you sure you want to delete this entry?',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Delete', style: 'destructive', onPress: () => onDelete(entry) },
-                    ]
-                  );
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (Platform.OS === 'web') {
+                    if (window.confirm('Are you sure you want to delete this entry?')) {
+                      onDelete(entry);
+                    }
+                  } else {
+                    Alert.alert(
+                      'Delete Entry',
+                      'Are you sure you want to delete this entry?',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => onDelete(entry) },
+                      ]
+                    );
+                  }
                 }}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
@@ -248,8 +255,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             onLongPress={entry.type !== 'system' ? () => {
               if (onEdit) onEdit(entry);
             } : undefined}
-            onPress={desktop && entry.type !== 'system' && onEdit ? () => onEdit(entry) : undefined}
             delayLongPress={500}
+            disabled={desktop && entry.type !== 'system'}
           >
             <MessageContent />
           </TouchableOpacity>
@@ -261,14 +268,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
 const styles = StyleSheet.create({
   userMessageContainer: {
-    marginVertical: 1,
+    marginVertical: 4,
     alignSelf: 'flex-start',
-    maxWidth: '95%',
+    maxWidth: '90%',
+    flexShrink: 0,
   },
   systemMessageContainer: {
-    marginVertical: 1,
+    marginVertical: 4,
     alignSelf: 'flex-end',
-    maxWidth: '95%',
+    maxWidth: '90%',
+    flexShrink: 0,
   },
   bubbleWrapper: {
     position: 'relative',
@@ -290,10 +299,11 @@ const styles = StyleSheet.create({
     maxWidth: "95%",
   },
   messageBubble: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 60,
-    maxWidth: "100%",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 200,
+    maxWidth: '100%',
+    alignSelf: 'flex-start',
     borderRadius: 12,
     shadowColor: "#000",
     shadowOffset: {
@@ -343,18 +353,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 1,
-    flexWrap: 'nowrap',
+    marginBottom: 4,
+    flexWrap: 'wrap',
+    minWidth: 200,
   },
   actionButtons: {
     flexDirection: "row",
-    gap: 2,
-    flexShrink: 0,
+    gap: 4,
+    alignItems: 'center',
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 6,
+    padding: 4,
+    paddingHorizontal: 6,
     borderRadius: 4,
     backgroundColor: "rgba(0, 0, 0, 0.05)",
   },
@@ -377,10 +389,12 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 15,
-    lineHeight: 17,
+    lineHeight: 20,
     ...(Platform.OS === 'web' ? {
       userSelect: 'text',
       WebkitUserSelect: 'text',
+      display: 'inline-block',
+      minWidth: 'fit-content',
     } as any : {}),
   },
   userMessageText: {
@@ -400,5 +414,7 @@ const styles = StyleSheet.create({
     color: "#666",
     fontStyle: "italic",
     marginTop: 2,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
 });

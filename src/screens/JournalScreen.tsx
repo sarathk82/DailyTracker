@@ -72,7 +72,7 @@ export const JournalScreen: React.FC<{}> = () => {
 
   // Test entries for different scenarios
   const testEntries = [
-    // Expense entries with category extraction
+    // Expense entries first
     "spent Rs150 for coffee",
     "bought groceries for $45.50",
     "paid ₹2500 for electricity bill",
@@ -82,6 +82,8 @@ export const JournalScreen: React.FC<{}> = () => {
     "₹300 for taxi",
     "50 for parking",
     "spent 200 on movie ticket",
+    "paid $25 for gym membership",
+    "dinner cost Rs850",
     
     // Action item entries
     "need to call mom tomorrow",
@@ -92,13 +94,120 @@ export const JournalScreen: React.FC<{}> = () => {
     ". pick up dry cleaning",
     ". schedule dentist appointment",
     ". buy birthday gift for Sarah",
+    ". pay credit card bill",
+    "todo: prepare presentation slides",
     
-    // Regular entries
+    // Regular log entries
     "had a great meeting today",
     "weather is lovely",
     "feeling productive this morning",
     "learned something new about React Native",
-    "grateful for a good day"
+    "grateful for a good day",
+    "enjoyed my morning coffee",
+    "finished reading a great book",
+    "went for a long walk",
+    "cooked a delicious meal",
+    "watched an interesting documentary",
+    "had a video call with friends",
+    "organized my workspace",
+    "tried a new recipe today",
+    "listened to a great podcast",
+    "feeling motivated and energized",
+    "completed my daily workout",
+    "spent quality time with family",
+    "practiced meditation for 20 minutes",
+    "wrote in my journal",
+    "started learning a new skill",
+    "cleaned and organized my room",
+    "discovered a new favorite song",
+    "made progress on personal project",
+    "helped a friend with their work",
+    "reflected on my goals",
+    "enjoyed the sunset",
+    "read an inspiring article",
+    "practiced gratitude",
+    "had a relaxing evening",
+    "played games with friends",
+    "explored a new neighborhood",
+    "tried a new coffee shop",
+    "attended an online webinar",
+    "updated my resume",
+    "planned next week's schedule",
+    "sorted through old photos",
+    "donated unused items",
+    "fixed a bug in my code",
+    "reviewed my budget",
+    "called an old friend",
+    "planted some herbs",
+    "rearranged furniture",
+    "learned a new keyboard shortcut",
+    "backed up my data",
+    "cleaned out my inbox",
+    "updated my software",
+    "read documentation",
+    "wrote unit tests",
+    "refactored some code",
+    "debugged an issue",
+    "improved performance",
+    "added new features",
+    "reviewed pull requests",
+    "attended standup meeting",
+    "brainstormed ideas",
+    "sketched UI designs",
+    "created wireframes",
+    "wrote technical specs",
+    "researched best practices",
+    "optimized database queries",
+    "configured CI/CD pipeline",
+    "set up monitoring",
+    "analyzed metrics",
+    "documented API endpoints",
+    "reviewed architecture",
+    "planned sprint tasks",
+    "estimated story points",
+    "pair programmed with teammate",
+    "conducted code review",
+    "deployed to staging",
+    "tested new feature",
+    "fixed production bug",
+    "updated dependencies",
+    "wrote blog post",
+    "shared knowledge with team",
+    "mentored junior developer",
+    "attended tech talk",
+    "experimented with new library",
+    "built proof of concept",
+    "improved accessibility",
+    "enhanced security",
+    "reduced technical debt",
+    "improved error handling",
+    "added logging",
+    "created dashboard",
+    "automated workflow",
+    "simplified complex logic",
+    "improved user experience",
+    "gathered user feedback",
+    "analyzed usage patterns",
+    "identified bottlenecks",
+    "proposed solution",
+    "implemented caching",
+    "optimized bundle size",
+    "improved load time",
+    "enhanced mobile experience",
+    "added dark mode",
+    "created design system",
+    "standardized components",
+    "improved code coverage",
+    "fixed flaky tests",
+    "upgraded framework version",
+    "migrated to new API",
+    "cleaned up legacy code",
+    "consolidated services",
+    "improved modularity",
+    "reduced coupling",
+    "enhanced maintainability",
+    "documented codebase",
+    "created runbook"
   ];
 
   const loadEntries = useCallback(async () => {
@@ -323,29 +432,77 @@ export const JournalScreen: React.FC<{}> = () => {
       await loadEntries();
       await loadExpensesAndActions();
 
+      // Add system feedback message in chat view only
+      if (layoutStyle === 'chat') {
+        let systemMessage = '';
+        let wasExpense = false;
+        let wasAction = false;
+        
+        // Check if it was categorized as expense
+        const expense = await StorageService.getExpenses().then(exps => exps.find(e => e.entryId === entry.id));
+        if (expense) {
+          wasExpense = true;
+          const prefix = expense.autoDetected ? 'Auto-categorized' : 'Manually categorized';
+          systemMessage = `💰 ${prefix} as Expense: ${TextAnalyzer.formatCurrency(expense.amount, expense.currency)}`;
+          if (expense.category) systemMessage += ` (${expense.category})`;
+        }
+        
+        // Check if it was categorized as action (only if not expense)
+        if (!wasExpense) {
+          const actionItem = await StorageService.getActionItems().then(items => items.find(a => a.entryId === entry.id));
+          if (actionItem) {
+            wasAction = true;
+            const prefix = actionItem.autoDetected ? 'Auto-categorized' : 'Manually categorized';
+            systemMessage = `✅ ${prefix} as Task: ${actionItem.title}`;
+          }
+        }
+        
+        // Default message if not categorized
+        if (!wasExpense && !wasAction) {
+          systemMessage = '✓ Got it!';
+        }
+
+        if (systemMessage) {
+          const systemEntry: Entry = {
+            id: uuid.v4(),
+            text: systemMessage,
+            timestamp: new Date(Date.now() + 100),
+            type: 'system',
+            isMarkdown: false,
+          };
+          await StorageService.addEntry(systemEntry);
+          await loadEntries();
+        }
+      }
+
       // Clear input and force flags after successful processing
       setInputText("");
       setForceExpense(false);
       setForceAction(false);
       
-      // Mark that we should auto-scroll after new message
-      shouldAutoScrollRef.current = true;
-      
-      // Scroll to bottom (newest message) after sending
+      // Scroll to bottom (newest message) after sending - increase delay to ensure content is rendered
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 200);
+      }, 300);
       
       // Refocus the text input for better UX - use setTimeout to ensure state update completes
       setTimeout(() => {
         if (textInputRef.current) {
           textInputRef.current.focus();
         }
-      }, 300);
+      }, 400);
     } catch (error) {
       console.error('Error processing message:', error);
       showToast('Failed to process message');
     }
+  };
+
+  const addSingleTestEntry = () => {
+    if (testIndex >= testEntries.length) {
+      setTestIndex(0);
+    }
+    setInputText(testEntries[testIndex]);
+    setTestIndex(testIndex + 1);
   };
 
   const handleLongPress = (entry: Entry) => {
@@ -463,11 +620,8 @@ export const JournalScreen: React.FC<{}> = () => {
   };
 
   const handleDeleteEntry = async (entry: Entry) => {
-    console.log('handleDeleteEntry called for:', entry.id, entry.text);
-    
     const confirmDelete = async () => {
       try {
-        console.log('Deleting entry:', entry.id);
         // Delete associated expense or action item first
         if (entry.type === "expense") {
           const expense = expenses.find(e => e.entryId === entry.id);
@@ -489,10 +643,8 @@ export const JournalScreen: React.FC<{}> = () => {
         // Reload data
         await loadEntries();
         await loadExpensesAndActions();
-        showToast("Entry deleted");
       } catch (error) {
         console.error('Error deleting entry:', error);
-        showToast('Failed to delete entry');
       }
     };
     
@@ -535,6 +687,19 @@ export const JournalScreen: React.FC<{}> = () => {
 
   const handleSaveEdit = async () => {
     if (!editingEntry || !editText.trim()) return;
+    
+    // Validate amount for expense entries
+    if (editingEntry.type === "expense") {
+      if (!editAmount || !editAmount.trim()) {
+        Alert.alert('Amount Required', 'Please enter an amount for the expense');
+        return;
+      }
+      const amount = parseFloat(editAmount);
+      if (isNaN(amount) || amount <= 0) {
+        Alert.alert('Invalid Amount', 'Please enter a valid amount greater than 0');
+        return;
+      }
+    }
     
     try {
       // Update entry text, type, and preserve markdown flag
@@ -588,10 +753,8 @@ export const JournalScreen: React.FC<{}> = () => {
       setEditText("");
       setEditAmount("");
       setEditCategory("");
-      showToast("Entry updated");
     } catch (error) {
       console.error('Error updating entry:', error);
-      showToast('Failed to update entry');
     }
   };
 
@@ -907,6 +1070,13 @@ export const JournalScreen: React.FC<{}> = () => {
         <Text style={styles.headerTitle}>Daily Journal</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 10001 }}>
           <TouchableOpacity
+            style={[styles.settingsButton, { marginRight: 8, zIndex: 10004 }]}
+            onPress={addSingleTestEntry}
+          >
+            <Text style={styles.settingsButtonText}>🧪</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.settingsButton, { marginRight: 8, zIndex: 10002 }]}
             onPress={() => {
               console.log('🔍 Search button pressed');
@@ -963,20 +1133,15 @@ export const JournalScreen: React.FC<{}> = () => {
         showsVerticalScrollIndicator={false}
         onLayout={() => {
           // Scroll to bottom only on initial load
-          if (flatListRef.current && entries.length > 0 && !shouldAutoScrollRef.current) {
+          if (flatListRef.current && entries.length > 0) {
             setTimeout(() => {
               flatListRef.current?.scrollToEnd({ animated: false });
             }, 100);
           }
         }}
         onContentSizeChange={() => {
-          // Only auto-scroll if we just sent a new message
-          if (flatListRef.current && shouldAutoScrollRef.current) {
-            setTimeout(() => {
-              flatListRef.current?.scrollToEnd({ animated: false });
-              shouldAutoScrollRef.current = false;
-            }, 100);
-          }
+          // Only auto-scroll on initial load, not when new messages are sent
+          // (new messages use manual scrollToEnd in handleSendMessage)
         }}
         ListEmptyComponent={() => {
           const isEmpty = showSearch ? filteredEntries.length === 0 : entries.length === 0;
@@ -1125,11 +1290,19 @@ export const JournalScreen: React.FC<{}> = () => {
                   ]}
                   onPress={async () => {
                     if (editingEntry.type !== 'expense') {
-                      await markAsExpense(editingEntry);
-                      const expense = expenses.find(e => e.entryId === editingEntry.id);
-                      if (expense) {
-                        setEditAmount(expense.amount.toString());
-                        setEditCategory(expense.category || "");
+                      // Remove existing categorization
+                      if (editingEntry.type === 'action') {
+                        await removeCategory(editingEntry);
+                      }
+                      // Try to extract amount from text first
+                      const expenseInfo = TextAnalyzer.extractExpenseInfo(editText, editingEntry.id);
+                      if (expenseInfo) {
+                        setEditAmount(expenseInfo.amount.toString());
+                        setEditCategory(expenseInfo.category || "");
+                      } else {
+                        // No amount found in text, leave empty for manual entry
+                        setEditAmount("");
+                        setEditCategory("");
                       }
                       setEditingEntry({ ...editingEntry, type: 'expense' });
                     }
@@ -1144,7 +1317,12 @@ export const JournalScreen: React.FC<{}> = () => {
                   ]}
                   onPress={async () => {
                     if (editingEntry.type !== 'action') {
-                      await markAsActionItem(editingEntry);
+                      // Remove existing categorization
+                      if (editingEntry.type === 'expense') {
+                        await removeCategory(editingEntry);
+                        setEditAmount("");
+                        setEditCategory("");
+                      }
                       setEditingEntry({ ...editingEntry, type: 'action' });
                     }
                   }}
@@ -1160,7 +1338,7 @@ export const JournalScreen: React.FC<{}> = () => {
                     style={styles.editInput}
                     value={editAmount}
                     onChangeText={setEditAmount}
-                    placeholder="150"
+                    placeholder="Enter amount"
                     keyboardType="decimal-pad"
                   />
                   

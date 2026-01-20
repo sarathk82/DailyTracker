@@ -33,6 +33,7 @@ export interface SettingsData {
   enterToSend: boolean;
   systemCurrency: string;
   layoutStyle: string;
+  theme?: string; // 'light', 'dark', or 'system'
 }
 
 export type TabParamList = {
