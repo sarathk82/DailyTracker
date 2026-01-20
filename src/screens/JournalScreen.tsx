@@ -1757,17 +1757,20 @@ const layoutStyles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
   },
   minimalContent: {
     flex: 1,
     marginRight: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 0,
+    maxWidth: '100%',
+    overflow: 'hidden',
   },
   minimalText: {
     fontSize: 16,
     color: '#212529',
-    flex: 1,
   },
   minimalMeta: {
     flexDirection: 'row',
@@ -1798,7 +1801,9 @@ const markdownStyles = StyleSheet.create({
   heading1: {
     fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginTop: 12,
+    marginBottom: 12,
+    paddingVertical: 4,
   },
   heading2: {
     fontSize: 18,

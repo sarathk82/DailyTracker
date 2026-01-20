@@ -59,43 +59,45 @@ export const MinimalEntryItem: React.FC<MinimalEntryItemProps> = ({
   }) : { panHandlers: {} };
 
   return (
-    <TouchableOpacity
-      activeOpacity={1}
-      onPress={() => {
-        // Toggle time visibility on tap
-        if (!desktop) {
-          setShowTime(!showTime);
-        }
-      }}
-      onLongPress={() => {
-        if (!desktop && item.type !== 'system') {
-          onEdit(item);
-        }
-      }}
-      delayLongPress={500}
-      disabled={desktop}
-      {...(desktop ? {
-        onMouseEnter: () => setShowTime(true),
-        onMouseLeave: () => setShowTime(false),
-      } : {})}
-    >
-      <View style={{ position: 'relative', overflow: 'hidden' }}>
-        <Animated.View
-          {...(!desktop ? panResponder.panHandlers : {})}
-          style={[
-            { flexDirection: 'row' },
-            !desktop && { transform: [{ translateX }] },
-          ]}
+    <View style={{ position: 'relative', overflow: 'hidden' }}>
+      <Animated.View
+        {...(!desktop ? panResponder.panHandlers : {})}
+        style={[
+          { flexDirection: 'row' },
+          !desktop && { transform: [{ translateX }] },
+        ]}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={{ flex: 1 }}
+          onPress={() => {
+            // Toggle time visibility on tap
+            if (!desktop) {
+              setShowTime(!showTime);
+            }
+          }}
+          onLongPress={() => {
+            if (!desktop && item.type !== 'system') {
+              onEdit(item);
+            }
+          }}
+          delayLongPress={500}
+          {...(desktop ? {
+            onMouseEnter: () => setShowTime(true),
+            onMouseLeave: () => setShowTime(false),
+          } : {})}
         >
           <View style={layoutStyles.minimalContainer}>
           <View style={layoutStyles.minimalContent}>
-            {item.isMarkdown ? (
-              <Markdown style={markdownStyles}>{item.text}</Markdown>
-            ) : (
-              <Text style={layoutStyles.minimalText} numberOfLines={1} ellipsizeMode="tail">{item.text}</Text>
-            )}
-            {expense && <Text style={{ fontSize: 14 }}>💰</Text>}
-            {actionItem && <Text style={{ fontSize: 14 }}>✅</Text>}
+            <View style={{ flex: 1, minWidth: 0, marginRight: 4 }}>
+              {item.isMarkdown ? (
+                <Markdown style={markdownStyles}>{item.text}</Markdown>
+              ) : (
+                <Text style={layoutStyles.minimalText} numberOfLines={1} ellipsizeMode="tail">{item.text}</Text>
+              )}
+            </View>
+            {expense && <Text style={{ fontSize: 14, flexShrink: 0 }}>💰</Text>}
+            {actionItem && <Text style={{ fontSize: 14, flexShrink: 0 }}>✅</Text>}
           </View>
           <View style={layoutStyles.minimalMeta}>
             {showTime && (
@@ -134,25 +136,25 @@ export const MinimalEntryItem: React.FC<MinimalEntryItemProps> = ({
             )}
           </View>
           </View>
-          
-          {/* Delete indicator for mobile swipe */}
-          {!desktop && item.type !== 'system' && (
-            <TouchableOpacity 
-              style={styles.deleteIndicator}
-              onPress={() => {
-                onDelete(item);
-                Animated.spring(translateX, {
-                  toValue: 0,
-                  useNativeDriver: true,
-                }).start();
-              }}
-            >
-              <Text style={{ fontSize: 24, color: '#f44336' }}>🗑️</Text>
-            </TouchableOpacity>
-          )}
-        </Animated.View>
-      </View>
-    </TouchableOpacity>
+        </TouchableOpacity>
+        
+        {/* Delete indicator for mobile swipe */}
+        {!desktop && item.type !== 'system' && (
+          <TouchableOpacity 
+            style={styles.deleteIndicator}
+            onPress={() => {
+              onDelete(item);
+              Animated.spring(translateX, {
+                toValue: 0,
+                useNativeDriver: true,
+              }).start();
+            }}
+          >
+            <Text style={{ fontSize: 24, color: '#f44336' }}>🗑️</Text>
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+    </View>
   );
 };
 
