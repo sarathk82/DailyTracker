@@ -39,7 +39,14 @@ const THEME_OPTIONS = [
   { id: 'system', name: 'System Default', icon: '⚙️' },
 ];
 
-export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+export const SettingsScreen: React.FC<{ 
+  onClose: () => void;
+  onExportText?: () => void;
+  onExportJSON?: () => void;
+  onImport?: () => void;
+  onBackup?: () => void;
+  onRestore?: () => void;
+}> = ({ onClose, onExportText, onExportJSON, onImport, onBackup, onRestore }) => {
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLayoutModal, setShowLayoutModal] = useState(false);
@@ -253,6 +260,75 @@ export const SettingsScreen: React.FC<{ onClose: () => void }> = ({ onClose }) =
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data Management</Text>
+          
+          <TouchableOpacity 
+            style={styles.settingItem} 
+            onPress={onExportText}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Export as Text</Text>
+              <Text style={styles.settingDescription}>
+                Download all entries as a formatted text file
+              </Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.settingItem} 
+            onPress={onExportJSON}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Export as JSON</Text>
+              <Text style={styles.settingDescription}>
+                Download all data for backup or import
+              </Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.settingItem} 
+            onPress={onImport}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Import Data</Text>
+              <Text style={styles.settingDescription}>
+                Import entries from a JSON file
+              </Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity 
+            style={styles.settingItem} 
+            onPress={onBackup}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Create Backup</Text>
+              <Text style={styles.settingDescription}>
+                Save a backup of all your data
+              </Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.settingItem} 
+            onPress={onRestore}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingLabel}>Restore from Backup</Text>
+              <Text style={styles.settingDescription}>
+                Restore your data from a previous backup
+              </Text>
+            </View>
+            <Text style={styles.arrow}>›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
           
           <TouchableOpacity 
             style={[styles.settingItem, styles.dangerSettingItem]} 
@@ -519,6 +595,11 @@ const styles = StyleSheet.create({
   },
   dangerText: {
     color: '#d32f2f',
+  },
+  divider: {
+    height: 8,
+    backgroundColor: '#f5f5f5',
+    marginVertical: 8,
   },
 });
 

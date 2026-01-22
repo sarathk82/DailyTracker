@@ -53,6 +53,8 @@ export const JournalScreen: React.FC<{}> = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [filteredEntries, setFilteredEntries] = useState<Entry[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
 
 
@@ -261,41 +263,43 @@ export const JournalScreen: React.FC<{}> = () => {
     return result;
   }, []);
 
-  // Filter entries based on search query
+  // Filter entries based on search query and selected date
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!showSearch) {
       setFilteredEntries(entries);
       return;
     }
 
-    const query = searchQuery.toLowerCase().trim();
-    const filtered = entries.filter(entry => {
-      // Search in entry text
-      if (entry.text.toLowerCase().includes(query)) {
-        return true;
-      }
+    let filtered = entries;
+
+    // Date filter
+    if (selectedDate) {
+      const searchDate = new Date(selectedDate);
+      searchDate.setHours(0, 0, 0, 0);
       
-      // Search in date (various formats)
-      const entryDate = format(entry.timestamp, 'yyyy-MM-dd');
-      const entryDateLong = format(entry.timestamp, 'MMMM dd, yyyy');
-      const entryDateShort = format(entry.timestamp, 'MMM dd');
-      
-      if (entryDate.includes(query) || 
-          entryDateLong.toLowerCase().includes(query) || 
-          entryDateShort.toLowerCase().includes(query)) {
-        return true;
-      }
-      
-      // Search by entry type
-      if (entry.type.toLowerCase().includes(query)) {
-        return true;
-      }
-      
-      return false;
-    });
-    
+      filtered = filtered.filter((entry) => {
+        if (entry.type === 'system') return false;
+        const entryDate = new Date(entry.timestamp);
+        entryDate.setHours(0, 0, 0, 0);
+        return entryDate.getTime() === searchDate.getTime();
+      });
+    }
+
+    // Text filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((entry) => {
+        if (entry.type === 'system') return false;
+        // Text search in entry content
+        if (entry.text.toLowerCase().includes(query)) return true;
+        // Type-based search
+        if (entry.type.toLowerCase().includes(query)) return true;
+        return false;
+      });
+    }
+
     setFilteredEntries(filtered);
-  }, [searchQuery, entries]);
+  }, [searchQuery, entries, selectedDate, showSearch]);
 
   const getListStyle = (layout: string) => {
     switch (layout) {
@@ -774,6 +778,227 @@ export const JournalScreen: React.FC<{}> = () => {
     }
   };
 
+  // Export functions
+  const exportAsText = async () => {
+    try {
+      const allEntries = await StorageService.getEntries();
+      const allExpenses = await StorageService.getExpenses();
+      const allActionItems = await StorageService.getActionItems();
+      
+      let text = '='.repeat(50) + '\n';
+      text += 'DAILYTRACKER EXPORT\n';
+      text += format(new Date(), 'MMMM dd, yyyy - hh:mm a') + '\n';
+      text += '='.repeat(50) + '\n\n';
+      
+      allEntries.forEach(entry => {
+        // Skip system messages
+        if (entry.type === 'system') return;
+        
+        const date = format(new Date(entry.timestamp), 'MMM dd, yyyy - hh:mm a');
+        const expense = allExpenses.find(e => e.entryId === entry.id);
+        const action = allActionItems.find(a => a.entryId === entry.id);
+        
+        let icon = '📝';
+        if (entry.type === 'expense' || expense) icon = '💰';
+        else if (entry.type === 'action' || action) icon = '✅';
+        
+        text += `${icon} ${date}\n`;
+        text += `${entry.text}\n`;
+        
+        if (expense) {
+          text += `   Amount: ${TextAnalyzer.formatCurrency(expense.amount, expense.currency)}`;
+          if (expense.category) text += ` | Category: ${expense.category}`;
+          text += '\n';
+        }
+        
+        if (action) {
+          text += `   Task: ${action.title}\n`;
+          text += `   Status: ${action.completed ? '✓ Completed' : '○ Pending'}\n`;
+        }
+        
+        text += '\n' + '-'.repeat(50) + '\n\n';
+      });
+      
+      // Create blob and download
+      if (Platform.OS === 'web') {
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dailytracker-export-${format(new Date(), 'yyyy-MM-dd')}.txt`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast('Exported successfully');
+      } else {
+        // For mobile, we'll need to use expo-sharing or similar
+        showToast('Export available on web only');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showToast('Export failed');
+    }
+  };
+
+  const exportAsJSON = async () => {
+    try {
+      const allEntries = await StorageService.getEntries();
+      const allExpenses = await StorageService.getExpenses();
+      const allActionItems = await StorageService.getActionItems();
+      
+      const data = {
+        exportDate: new Date().toISOString(),
+        version: '1.0',
+        entries: allEntries,
+        expenses: allExpenses,
+        actionItems: allActionItems
+      };
+      
+      const json = JSON.stringify(data, null, 2);
+      
+      if (Platform.OS === 'web') {
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `dailytracker-export-${format(new Date(), 'yyyy-MM-dd')}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast('Exported successfully');
+      } else {
+        showToast('Export available on web only');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showToast('Export failed');
+    }
+  };
+
+  const importData = async () => {
+    try {
+      if (Platform.OS !== 'web') {
+        showToast('Import available on web only');
+        return;
+      }
+
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      
+      input.onchange = async (e: any) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async (event: any) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            
+            if (!data.entries || !Array.isArray(data.entries)) {
+              showToast('Invalid file format');
+              return;
+            }
+            
+            // Confirm before importing
+            const confirmed = window.confirm(
+              `Import ${data.entries.length} entries? This will merge with existing data.`
+            );
+            
+            if (!confirmed) return;
+            
+            // Get existing data
+            const existingEntries = await StorageService.getEntries();
+            const existingExpenses = await StorageService.getExpenses();
+            const existingActionItems = await StorageService.getActionItems();
+            
+            // Merge data (avoid duplicates by ID)
+            const existingEntryIds = new Set(existingEntries.map(e => e.id));
+            const newEntries = data.entries.filter((e: Entry) => !existingEntryIds.has(e.id));
+            
+            const existingExpenseIds = new Set(existingExpenses.map(e => e.id));
+            const newExpenses = (data.expenses || []).filter((e: Expense) => !existingExpenseIds.has(e.id));
+            
+            const existingActionIds = new Set(existingActionItems.map(a => a.id));
+            const newActionItems = (data.actionItems || []).filter((a: ActionItem) => !existingActionIds.has(a.id));
+            
+            // Save merged data
+            await StorageService.saveEntries([...existingEntries, ...newEntries]);
+            await StorageService.saveExpenses([...existingExpenses, ...newExpenses]);
+            await StorageService.saveActionItems([...existingActionItems, ...newActionItems]);
+            
+            await loadEntries();
+            showToast(`Imported ${newEntries.length} new entries`);
+          } catch (error) {
+            console.error('Import error:', error);
+            showToast('Import failed - invalid file');
+          }
+        };
+        reader.readAsText(file);
+      };
+      
+      input.click();
+    } catch (error) {
+      console.error('Import error:', error);
+      showToast('Import failed');
+    }
+  };
+
+  const createBackup = async () => {
+    try {
+      const allEntries = await StorageService.getEntries();
+      const allExpenses = await StorageService.getExpenses();
+      const allActionItems = await StorageService.getActionItems();
+      
+      const backup = {
+        timestamp: new Date().toISOString(),
+        entries: allEntries,
+        expenses: allExpenses,
+        actionItems: allActionItems
+      };
+      
+      await StorageService.saveBackup(backup);
+      showToast('Backup created successfully');
+    } catch (error) {
+      console.error('Backup error:', error);
+      showToast('Backup failed');
+    }
+  };
+
+  const restoreFromBackup = async () => {
+    try {
+      const backup = await StorageService.getBackup();
+      
+      if (!backup) {
+        showToast('No backup found');
+        return;
+      }
+      
+      const confirmed = Platform.OS === 'web' 
+        ? window.confirm(`Restore backup from ${format(new Date(backup.timestamp), 'MMM dd, yyyy hh:mm a')}? This will replace current data.`)
+        : await new Promise(resolve => {
+            Alert.alert(
+              'Restore Backup',
+              `Restore backup from ${format(new Date(backup.timestamp), 'MMM dd, yyyy hh:mm a')}? This will replace current data.`,
+              [
+                { text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+                { text: 'Restore', onPress: () => resolve(true) }
+              ]
+            );
+          });
+      
+      if (!confirmed) return;
+      
+      await StorageService.saveEntries(backup.entries);
+      await StorageService.saveExpenses(backup.expenses);
+      await StorageService.saveActionItems(backup.actionItems);
+      
+      await loadEntries();
+      showToast('Restored successfully');
+    } catch (error) {
+      console.error('Restore error:', error);
+      showToast('Restore failed');
+    }
+  };
+
   const renderChatEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <MessageBubble 
       entry={item} 
@@ -957,20 +1182,99 @@ export const JournalScreen: React.FC<{}> = () => {
 
       {showSearch && (
         <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search entries by text, date, or type..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-            clearButtonMode="while-editing"
-          />
-          {searchQuery.length > 0 && (
+          <View style={styles.searchSection}>
+            <Text style={styles.searchLabel}>Search by Text:</Text>
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search entries..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                clearButtonMode="while-editing"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={() => setSearchQuery("")}
+                >
+                  <Text style={styles.clearButtonText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.dateSection}>
+            <Text style={styles.searchLabel}>Filter by Date:</Text>
+            {Platform.OS === 'web' ? (
+              <View style={styles.datePickerButtonLarge}>
+                <Text style={styles.datePickerIconLarge}>📅</Text>
+                <input
+                  type="date"
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: 16,
+                    color: '#333',
+                    outline: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSelectedDate(new Date(e.target.value));
+                    } else {
+                      setSelectedDate(null);
+                    }
+                  }}
+                  value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
+                  placeholder="Select Date"
+                />
+                {selectedDate && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setSelectedDate(null);
+                    }}
+                    style={styles.datePickerClear}
+                  >
+                    <Text style={styles.datePickerClearText}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.datePickerButtonLarge}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={styles.datePickerIconLarge}>📅</Text>
+                <Text style={styles.datePickerButtonLabel}>
+                  {selectedDate ? format(selectedDate, 'MMM dd, yyyy') : 'Select Date'}
+                </Text>
+                {selectedDate && (
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setSelectedDate(null);
+                    }}
+                    style={styles.datePickerClear}
+                  >
+                    <Text style={styles.datePickerClearText}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {(searchQuery || selectedDate) && (
             <TouchableOpacity
-              style={styles.clearButton}
-              onPress={() => setSearchQuery("")}
+              style={styles.clearAllButton}
+              onPress={() => {
+                setSearchQuery("");
+                setSelectedDate(null);
+              }}
             >
-              <Text style={styles.clearButtonText}>✕</Text>
+              <Text style={styles.clearAllButtonText}>Clear All Filters</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -993,18 +1297,25 @@ export const JournalScreen: React.FC<{}> = () => {
           minIndexForVisible: 0,
         }}
         ListEmptyComponent={() => {
-          const isEmpty = showSearch ? filteredEntries.length === 0 : entries.length === 0;
-          const message = showSearch && searchQuery.trim() 
-            ? `No entries found matching "${searchQuery}"` 
-            : "No messages yet. Type a message below to get started!";
-          
-          return (
-            <View style={{ padding: 20, alignItems: 'center' }}>
-              <Text style={{ color: '#666', fontSize: 16 }}>
-                {message}
-              </Text>
-            </View>
-          );
+          // Show message when searching or filtering by date
+          if (showSearch && (searchQuery.trim() || selectedDate)) {
+            let message = '';
+            if (searchQuery.trim() && selectedDate) {
+              message = `No entries found matching "${searchQuery}" on ${format(selectedDate, 'MMM dd, yyyy')}`;
+            } else if (searchQuery.trim()) {
+              message = `No entries found matching "${searchQuery}"`;
+            } else if (selectedDate) {
+              message = `No entries found on ${format(selectedDate, 'MMM dd, yyyy')}`;
+            }
+            return (
+              <View style={{ padding: 20, alignItems: 'center', transform: [{ scaleY: -1 }] }}>
+                <Text style={{ color: '#666', fontSize: 16, textAlign: 'center' }}>
+                  {message}
+                </Text>
+              </View>
+            );
+          }
+          return null;
         }}
       />
 
@@ -1083,7 +1394,12 @@ export const JournalScreen: React.FC<{}> = () => {
               setShowSettings(false);
               // Reload settings after closing
               loadSettings();
-            }} 
+            }}
+            onExportText={exportAsText}
+            onExportJSON={exportAsJSON}
+            onImport={importData}
+            onBackup={createBackup}
+            onRestore={restoreFromBackup}
           />
         </Modal>
       )}
@@ -1230,6 +1546,104 @@ export const JournalScreen: React.FC<{}> = () => {
           </View>
         </Modal>
       )}
+      
+      {/* Date Picker Modal */}
+      {showDatePicker && (
+        <Modal
+          visible={showDatePicker}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <TouchableOpacity 
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 20,
+            }}
+            activeOpacity={1}
+            onPress={() => setShowDatePicker(false)}
+          >
+            <TouchableOpacity 
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: 400 }}
+            >
+              <View style={styles.datePickerContent}>
+                <View style={styles.datePickerHeader}>
+                  <Text style={styles.datePickerTitle}>Select Date</Text>
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker(false)}
+                    style={styles.datePickerClose}
+                  >
+                    <Text style={styles.datePickerCloseText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.datePickerQuickButtons}>
+                  <TouchableOpacity
+                    style={styles.quickDateButton}
+                    onPress={() => {
+                      setSelectedDate(new Date());
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    <Text style={styles.quickDateButtonText}>Today</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.quickDateButton}
+                    onPress={() => {
+                      const yesterday = new Date();
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      setSelectedDate(yesterday);
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    <Text style={styles.quickDateButtonText}>Yesterday</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.quickDateButton}
+                    onPress={() => {
+                      const lastWeek = new Date();
+                      lastWeek.setDate(lastWeek.getDate() - 7);
+                      setSelectedDate(lastWeek);
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    <Text style={styles.quickDateButtonText}>Last Week</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {Platform.OS === 'web' && (
+                  <View style={{ marginTop: 16 }}>
+                    <Text style={{ fontSize: 13, color: '#666', marginBottom: 8, fontWeight: '600' }}>Or pick a specific date:</Text>
+                    <input
+                      type="date"
+                      style={{
+                        width: '100%',
+                        padding: 12,
+                        fontSize: 16,
+                        borderRadius: 8,
+                        border: '1px solid #ddd',
+                        boxSizing: 'border-box',
+                      }}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setSelectedDate(new Date(e.target.value));
+                          setShowDatePicker(false);
+                        }
+                      }}
+                      defaultValue={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
+                    />
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 };
@@ -1255,22 +1669,71 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  searchSection: {
+    marginBottom: 12,
+  },
+  dateSection: {
+    marginBottom: 8,
+  },
+  searchLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 6,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   searchInput: {
     flex: 1,
-    height: 36,
+    height: 40,
     paddingHorizontal: 12,
     backgroundColor: '#f8f8f8',
-    borderRadius: 18,
+    borderRadius: 8,
     fontSize: 16,
     color: '#333',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  datePickerButtonLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    height: 40,
+  },
+  datePickerIconLarge: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  datePickerButtonLabel: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  datePickerClear: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ccc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  datePickerClearText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: 'bold',
   },
   clearButton: {
     marginLeft: 8,
@@ -1280,6 +1743,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  clearAllButton: {
+    backgroundColor: '#ff6b6b',
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  clearAllButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   clearButtonText: {
     fontSize: 12,
@@ -1822,5 +2297,68 @@ const markdownStyles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 3,
     fontFamily: "monospace",
+  },
+  datePickerContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  datePickerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  datePickerClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  datePickerCloseText: {
+    fontSize: 18,
+    color: '#666',
+    fontWeight: 'bold',
+  },
+  datePickerQuickButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  quickDateButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#007AFF',
+    flex: 1,
+    marginHorizontal: 4,
+    alignItems: 'center',
+  },
+  quickDateButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  mobileDatePicker: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  mobileDatePickerText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 });

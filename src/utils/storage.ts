@@ -5,6 +5,7 @@ const ENTRIES_KEY = '@daily_tracker_entries';
 const ACTION_ITEMS_KEY = '@daily_tracker_action_items';
 const EXPENSES_KEY = '@daily_tracker_expenses';
 const SETTINGS_KEY = '@daily_tracker_settings';
+const BACKUP_KEY = '@daily_tracker_backup';
 
 export class StorageService {
   // Entries
@@ -203,4 +204,45 @@ export class StorageService {
       console.error('Error saving settings:', e);
     }
   }
+
+  // Backup & Restore
+  static async saveBackup(backup: any): Promise<void> {
+    try {
+      const jsonValue = JSON.stringify(backup);
+      await AsyncStorage.setItem(BACKUP_KEY, jsonValue);
+    } catch (e) {
+      console.error('Error saving backup:', e);
+    }
+  }
+
+  static async getBackup(): Promise<any> {
+    try {
+      const jsonValue = await AsyncStorage.getItem(BACKUP_KEY);
+      if (jsonValue != null) {
+        const backup = JSON.parse(jsonValue);
+        // Restore date objects
+        return {
+          ...backup,
+          entries: backup.entries.map((e: any) => ({
+            ...e,
+            timestamp: new Date(e.timestamp)
+          })),
+          expenses: backup.expenses.map((e: any) => ({
+            ...e,
+            createdAt: new Date(e.createdAt)
+          })),
+          actionItems: backup.actionItems.map((a: any) => ({
+            ...a,
+            createdAt: new Date(a.createdAt),
+            dueDate: a.dueDate ? new Date(a.dueDate) : undefined
+          }))
+        };
+      }
+      return null;
+    } catch (e) {
+      console.error('Error getting backup:', e);
+      return null;
+    }
+  }
 }
+
