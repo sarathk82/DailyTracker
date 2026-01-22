@@ -267,6 +267,27 @@ export class TextAnalyzer {
       return nextWeek;
     }
     
+    // Check for "X week(s) from now" or "X month(s) from now"
+    const weeksPattern = /\b(one|two|three|four|\d+)\s+weeks?\s+from\s+now\b/i;
+    const weeksMatch = lowerText.match(weeksPattern);
+    if (weeksMatch) {
+      const weekMap: {[key: string]: number} = { 'one': 1, 'two': 2, 'three': 3, 'four': 4 };
+      const weeks = weekMap[weeksMatch[1].toLowerCase()] || parseInt(weeksMatch[1]);
+      const targetDate = new Date(today);
+      targetDate.setDate(targetDate.getDate() + (weeks * 7));
+      return targetDate;
+    }
+    
+    const monthsPattern = /\b(one|two|three|four|\d+)\s+months?\s+from\s+now\b/i;
+    const monthsMatch = lowerText.match(monthsPattern);
+    if (monthsMatch) {
+      const monthMap: {[key: string]: number} = { 'one': 1, 'two': 2, 'three': 3, 'four': 4 };
+      const months = monthMap[monthsMatch[1].toLowerCase()] || parseInt(monthsMatch[1]);
+      const targetDate = new Date(today);
+      targetDate.setMonth(targetDate.getMonth() + months);
+      return targetDate;
+    }
+    
     // Check for specific day names (e.g., "on monday", "next friday")
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     for (let i = 0; i < days.length; i++) {

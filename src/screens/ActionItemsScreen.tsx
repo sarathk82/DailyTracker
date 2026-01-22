@@ -247,24 +247,24 @@ export const ActionItemsScreen: React.FC = () => {
   const getSectionForItem = (item: ActionItem) => {
     if (item.completed) return 'completed';
     
-    if (!item.dueDate) return 'no-date';
+    if (!item.dueDate) return 'later';
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const endOfWeek = new Date(today);
+    endOfWeek.setDate(endOfWeek.getDate() + (7 - today.getDay())); // End of current week (Saturday)
     
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    endOfMonth.setHours(0, 0, 0, 0);
     
     const dueDate = new Date(item.dueDate);
     dueDate.setHours(0, 0, 0, 0);
     
     if (dueDate < today) return 'overdue';
     if (dueDate.getTime() === today.getTime()) return 'today';
-    if (dueDate.getTime() === tomorrow.getTime()) return 'tomorrow';
-    if (dueDate <= nextWeek) return 'this-week';
+    if (dueDate <= endOfWeek) return 'this-week';
+    if (dueDate <= endOfMonth) return 'this-month';
     return 'later';
   };
 
@@ -272,17 +272,16 @@ export const ActionItemsScreen: React.FC = () => {
     switch (section) {
       case 'overdue': return '🔴 Overdue';
       case 'today': return '📅 Due Today';
-      case 'tomorrow': return '📆 Due Tomorrow';
       case 'this-week': return '📋 Due This Week';
-      case 'later': return '🗓️ Due Later';
-      case 'no-date': return '📝 No Due Date';
+      case 'this-month': return '🗓️ Due This Month';
+      case 'later': return '📆 Due Later';
       case 'completed': return '✅ Completed';
       default: return '';
     }
   };
 
   const getSectionOrder = (section: string) => {
-    const order = ['overdue', 'today', 'tomorrow', 'this-week', 'later', 'no-date', 'completed'];
+    const order = ['overdue', 'today', 'this-week', 'this-month', 'later', 'completed'];
     return order.indexOf(section);
   };
 
