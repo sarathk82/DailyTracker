@@ -71,6 +71,7 @@ export const JournalScreen: React.FC<{}> = () => {
   const [editText, setEditText] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [editCategory, setEditCategory] = useState("");
+  const [editDueDate, setEditDueDate] = useState<Date | null>(null);
 
   // Test entries for different scenarios
   const testEntries = [
@@ -338,8 +339,26 @@ export const JournalScreen: React.FC<{}> = () => {
         StorageService.getExpenses(),
         StorageService.getActionItems()
       ]);
+      
+      // Migration: Set due dates for action items that don't have one
+      let needsUpdate = false;
+      const updatedActionItems = savedActionItems.map(item => {
+        if (!item.dueDate) {
+          needsUpdate = true;
+          return { ...item, dueDate: item.createdAt || new Date() };
+        }
+        return item;
+      });
+      
+      // Save updated action items if migration was needed
+      if (needsUpdate) {
+        await StorageService.saveActionItems(updatedActionItems);
+        setActionItems(updatedActionItems);
+      } else {
+        setActionItems(savedActionItems);
+      }
+      
       setExpenses(savedExpenses);
-      setActionItems(savedActionItems);
     } catch (error) {
       console.error('Error loading expenses and action items:', error);
     }
@@ -407,13 +426,15 @@ export const JournalScreen: React.FC<{}> = () => {
         // If forceAction is true but no auto-detection, create action item from text
         let actionItem;
         if (forceAction && !autoDetectedAction) {
-          // Manually create action item from the text
+          // Manually create action item from the text, extract due date
+          const dueDate = TextAnalyzer.extractDueDate(trimmedInput);
           actionItem = {
             id: uuid.v4(),
             entryId: entry.id,
             title: trimmedInput,
             completed: false,
             createdAt: new Date(),
+            dueDate: dueDate,
             autoDetected: false
           };
         } else {
@@ -684,6 +705,17 @@ export const JournalScreen: React.FC<{}> = () => {
         setEditCategory(expense.category || "");
       }
     }
+    
+    // Load action item details if it's an action
+    if (entry.type === "action") {
+      const actionItem = actionItems.find(a => a.entryId === entry.id);
+      if (actionItem && actionItem.dueDate) {
+        setEditDueDate(new Date(actionItem.dueDate));
+      } else {
+        // Default to today if no due date exists
+        setEditDueDate(new Date());
+      }
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -727,11 +759,16 @@ export const JournalScreen: React.FC<{}> = () => {
       
       // Update or create action item if it's an action
       if (editingEntry.type === "action") {
+        // Extract due date from text if changed, otherwise use editDueDate
+        const extractedDueDate = TextAnalyzer.extractDueDate(editText.trim());
+        const dueDate = extractedDueDate || editDueDate || new Date();
+        
         let actionItem = actionItems.find(a => a.entryId === editingEntry.id);
         if (actionItem) {
           // Update existing action item
           await StorageService.updateActionItem(actionItem.id, {
             title: editText.trim(),
+            dueDate: dueDate,
           });
         } else {
           // Create new action item if it doesn't exist
@@ -741,6 +778,7 @@ export const JournalScreen: React.FC<{}> = () => {
             title: editText.trim(),
             completed: false,
             createdAt: new Date(),
+            dueDate: dueDate,
             autoDetected: false
           };
           await StorageService.addActionItem(newActionItem);
@@ -754,6 +792,7 @@ export const JournalScreen: React.FC<{}> = () => {
       setEditText("");
       setEditAmount("");
       setEditCategory("");
+      setEditDueDate(null);
     } catch (error) {
       console.error('Error updating entry:', error);
     }
@@ -1409,7 +1448,13 @@ export const JournalScreen: React.FC<{}> = () => {
           visible={!!editingEntry}
           animationType="slide"
           transparent={true}
-          onRequestClose={() => setEditingEntry(null)}
+          onRequestClose={() => {
+            setEditingEntry(null);
+            setEditText("");
+            setEditAmount("");
+            setEditCategory("");
+            setEditDueDate(null);
+          }}
         >
           <View style={styles.editModalOverlay}>
             <View style={styles.editModalContent}>
@@ -1522,6 +1567,33 @@ export const JournalScreen: React.FC<{}> = () => {
                   />
                 </>
               )}
+
+              {editingEntry.type === "action" && (
+                <>
+                  <Text style={styles.editLabel}>Due Date:</Text>
+                  <View style={{ marginBottom: 12 }}>
+                    {Platform.OS === 'web' && (
+                      <input
+                        type="date"
+                        style={{
+                          width: '100%',
+                          padding: 12,
+                          fontSize: 16,
+                          borderRadius: 8,
+                          border: '1px solid #ddd',
+                          backgroundColor: '#f8f8f8',
+                        }}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setEditDueDate(new Date(e.target.value));
+                          }
+                        }}
+                        value={editDueDate ? format(editDueDate, 'yyyy-MM-dd') : ''}
+                      />
+                    )}
+                  </View>
+                </>
+              )}
               
               <View style={styles.editModalButtons}>
                 <TouchableOpacity
@@ -1531,6 +1603,7 @@ export const JournalScreen: React.FC<{}> = () => {
                     setEditText("");
                     setEditAmount("");
                     setEditCategory("");
+                    setEditDueDate(null);
                   }}
                 >
                   <Text style={styles.editModalButtonText}>Cancel</Text>
