@@ -337,16 +337,16 @@ export const SettingsScreen: React.FC<{
           <View style={dynamicStyles.divider} />
           
           <TouchableOpacity 
-            style={[dynamicStyles.settingItem, dynamicStyles.dangerSettingItem]} 
+            style={[styles.settingItem, styles.dangerSettingItem]} 
             onPress={handleClearJournal}
           >
             <View style={dynamicStyles.settingInfo}>
-              <Text style={[dynamicStyles.settingLabel, dynamicStyles.dangerText]}>Clear Journal Entries</Text>
+              <Text style={[styles.settingLabel, styles.dangerText]}>Clear Journal Entries</Text>
               <Text style={dynamicStyles.settingDescription}>
                 Delete all journal entries while keeping expenses and tasks
               </Text>
             </View>
-            <Text style={[dynamicStyles.arrow, dynamicStyles.dangerText]}>›</Text>
+            <Text style={[styles.arrow, styles.dangerText]}>›</Text>
           </TouchableOpacity>
         </View>
 
@@ -379,8 +379,8 @@ export const SettingsScreen: React.FC<{
                   <TouchableOpacity
                     key={currency.code}
                     style={[
-                      dynamicModalStyles.option,
-                      settings.systemCurrency === currency.code && dynamicModalStyles.selectedOption
+                      modalStyles.option,
+                      settings.systemCurrency === currency.code && modalStyles.selectedOption
                     ]}
                     onPress={() => {
 
@@ -389,8 +389,8 @@ export const SettingsScreen: React.FC<{
                     }}
                   >
                     <Text style={[
-                      dynamicModalStyles.optionText,
-                      settings.systemCurrency === currency.code && dynamicModalStyles.selectedOptionText
+                      modalStyles.optionText,
+                      settings.systemCurrency === currency.code && modalStyles.selectedOptionText
                     ]}>
                       {currency.symbol} {currency.name}
                     </Text>
@@ -430,8 +430,8 @@ export const SettingsScreen: React.FC<{
                   <TouchableOpacity
                     key={layout.id}
                     style={[
-                      dynamicModalStyles.option,
-                      settings.layoutStyle === layout.id && dynamicModalStyles.selectedOption
+                      modalStyles.option,
+                      settings.layoutStyle === layout.id && modalStyles.selectedOption
                     ]}
                     onPress={() => {
 
@@ -440,8 +440,8 @@ export const SettingsScreen: React.FC<{
                     }}
                   >
                     <Text style={[
-                      dynamicModalStyles.optionText,
-                      settings.layoutStyle === layout.id && dynamicModalStyles.selectedOptionText
+                      modalStyles.optionText,
+                      settings.layoutStyle === layout.id && modalStyles.selectedOptionText
                     ]}>
                       {layout.icon} {layout.name}
                     </Text>
@@ -481,8 +481,8 @@ export const SettingsScreen: React.FC<{
                   <TouchableOpacity
                     key={themeOption.id}
                     style={[
-                      dynamicModalStyles.option,
-                      themeMode === themeOption.id && dynamicModalStyles.selectedOption
+                      modalStyles.option,
+                      themeMode === themeOption.id && modalStyles.selectedOption
                     ]}
                     onPress={() => {
                       setThemeMode(themeOption.id as any);
@@ -491,8 +491,8 @@ export const SettingsScreen: React.FC<{
                     }}
                   >
                     <Text style={[
-                      dynamicModalStyles.optionText,
-                      themeMode === themeOption.id && dynamicModalStyles.selectedOptionText
+                      modalStyles.optionText,
+                      themeMode === themeOption.id && modalStyles.selectedOptionText
                     ]}>
                       {themeOption.icon} {themeOption.name}
                     </Text>

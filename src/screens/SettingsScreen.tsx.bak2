@@ -337,16 +337,16 @@ export const SettingsScreen: React.FC<{
           <View style={dynamicStyles.divider} />
           
           <TouchableOpacity 
-            style={[dynamicStyles.settingItem, dynamicStyles.dangerSettingItem]} 
+            style={[styles.settingItem, styles.dangerSettingItem]} 
             onPress={handleClearJournal}
           >
             <View style={dynamicStyles.settingInfo}>
-              <Text style={[dynamicStyles.settingLabel, dynamicStyles.dangerText]}>Clear Journal Entries</Text>
+              <Text style={[styles.settingLabel, styles.dangerText]}>Clear Journal Entries</Text>
               <Text style={dynamicStyles.settingDescription}>
                 Delete all journal entries while keeping expenses and tasks
               </Text>
             </View>
-            <Text style={[dynamicStyles.arrow, dynamicStyles.dangerText]}>›</Text>
+            <Text style={[styles.arrow, styles.dangerText]}>›</Text>
           </TouchableOpacity>
         </View>
 
@@ -368,19 +368,19 @@ export const SettingsScreen: React.FC<{
         transparent={true}
         onRequestClose={() => setShowCurrencyModal(false)}
       >
-        <View style={dynamicModalStyles.overlay}>
-          <View style={dynamicModalStyles.container}>
-            <Text style={dynamicModalStyles.title}>Select Currency</Text>
-            <Text style={dynamicModalStyles.subtitle}>Choose your preferred currency:</Text>
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.container}>
+            <Text style={modalStyles.title}>Select Currency</Text>
+            <Text style={modalStyles.subtitle}>Choose your preferred currency:</Text>
             
-            <ScrollView style={dynamicModalStyles.optionsList} showsVerticalScrollIndicator={true}>
+            <ScrollView style={modalStyles.optionsList} showsVerticalScrollIndicator={true}>
               {CURRENCIES.map((currency) => {
                 return (
                   <TouchableOpacity
                     key={currency.code}
                     style={[
-                      dynamicModalStyles.option,
-                      settings.systemCurrency === currency.code && dynamicModalStyles.selectedOption
+                      modalStyles.option,
+                      settings.systemCurrency === currency.code && modalStyles.selectedOption
                     ]}
                     onPress={() => {
 
@@ -389,13 +389,13 @@ export const SettingsScreen: React.FC<{
                     }}
                   >
                     <Text style={[
-                      dynamicModalStyles.optionText,
-                      settings.systemCurrency === currency.code && dynamicModalStyles.selectedOptionText
+                      modalStyles.optionText,
+                      settings.systemCurrency === currency.code && modalStyles.selectedOptionText
                     ]}>
                       {currency.symbol} {currency.name}
                     </Text>
                     {settings.systemCurrency === currency.code && (
-                      <Text style={dynamicModalStyles.checkmark}>✓</Text>
+                      <Text style={modalStyles.checkmark}>✓</Text>
                     )}
                   </TouchableOpacity>
                 );
@@ -403,10 +403,10 @@ export const SettingsScreen: React.FC<{
             </ScrollView>
             
             <TouchableOpacity
-              style={dynamicModalStyles.cancelButton}
+              style={modalStyles.cancelButton}
               onPress={() => setShowCurrencyModal(false)}
             >
-              <Text style={dynamicModalStyles.cancelButtonText}>Cancel</Text>
+              <Text style={modalStyles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -419,19 +419,19 @@ export const SettingsScreen: React.FC<{
         transparent={true}
         onRequestClose={() => setShowLayoutModal(false)}
       >
-        <View style={dynamicModalStyles.overlay}>
-          <View style={dynamicModalStyles.container}>
-            <Text style={dynamicModalStyles.title}>Select Layout Style</Text>
-            <Text style={dynamicModalStyles.subtitle}>Choose how your journal entries are displayed:</Text>
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.container}>
+            <Text style={modalStyles.title}>Select Layout Style</Text>
+            <Text style={modalStyles.subtitle}>Choose how your journal entries are displayed:</Text>
             
-            <ScrollView style={dynamicModalStyles.optionsList} showsVerticalScrollIndicator={true}>
+            <ScrollView style={modalStyles.optionsList} showsVerticalScrollIndicator={true}>
               {LAYOUT_OPTIONS.map((layout) => {
                 return (
                   <TouchableOpacity
                     key={layout.id}
                     style={[
-                      dynamicModalStyles.option,
-                      settings.layoutStyle === layout.id && dynamicModalStyles.selectedOption
+                      modalStyles.option,
+                      settings.layoutStyle === layout.id && modalStyles.selectedOption
                     ]}
                     onPress={() => {
 
@@ -440,13 +440,13 @@ export const SettingsScreen: React.FC<{
                     }}
                   >
                     <Text style={[
-                      dynamicModalStyles.optionText,
-                      settings.layoutStyle === layout.id && dynamicModalStyles.selectedOptionText
+                      modalStyles.optionText,
+                      settings.layoutStyle === layout.id && modalStyles.selectedOptionText
                     ]}>
                       {layout.icon} {layout.name}
                     </Text>
                     {settings.layoutStyle === layout.id && (
-                      <Text style={dynamicModalStyles.checkmark}>✓</Text>
+                      <Text style={modalStyles.checkmark}>✓</Text>
                     )}
                   </TouchableOpacity>
                 );
@@ -454,10 +454,10 @@ export const SettingsScreen: React.FC<{
             </ScrollView>
             
             <TouchableOpacity
-              style={dynamicModalStyles.cancelButton}
+              style={modalStyles.cancelButton}
               onPress={() => setShowLayoutModal(false)}
             >
-              <Text style={dynamicModalStyles.cancelButtonText}>Cancel</Text>
+              <Text style={modalStyles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -470,19 +470,19 @@ export const SettingsScreen: React.FC<{
         transparent={true}
         onRequestClose={() => setShowThemeModal(false)}
       >
-        <View style={dynamicModalStyles.overlay}>
-          <View style={dynamicModalStyles.container}>
-            <Text style={dynamicModalStyles.title}>Select Theme</Text>
-            <Text style={dynamicModalStyles.subtitle}>Choose your preferred color theme:</Text>
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.container}>
+            <Text style={modalStyles.title}>Select Theme</Text>
+            <Text style={modalStyles.subtitle}>Choose your preferred color theme:</Text>
             
-            <ScrollView style={dynamicModalStyles.optionsList} showsVerticalScrollIndicator={true}>
+            <ScrollView style={modalStyles.optionsList} showsVerticalScrollIndicator={true}>
               {THEME_OPTIONS.map((themeOption) => {
                 return (
                   <TouchableOpacity
                     key={themeOption.id}
                     style={[
-                      dynamicModalStyles.option,
-                      themeMode === themeOption.id && dynamicModalStyles.selectedOption
+                      modalStyles.option,
+                      themeMode === themeOption.id && modalStyles.selectedOption
                     ]}
                     onPress={() => {
                       setThemeMode(themeOption.id as any);
@@ -491,13 +491,13 @@ export const SettingsScreen: React.FC<{
                     }}
                   >
                     <Text style={[
-                      dynamicModalStyles.optionText,
-                      themeMode === themeOption.id && dynamicModalStyles.selectedOptionText
+                      modalStyles.optionText,
+                      themeMode === themeOption.id && modalStyles.selectedOptionText
                     ]}>
                       {themeOption.icon} {themeOption.name}
                     </Text>
                     {themeMode === themeOption.id && (
-                      <Text style={dynamicModalStyles.checkmark}>✓</Text>
+                      <Text style={modalStyles.checkmark}>✓</Text>
                     )}
                   </TouchableOpacity>
                 );
@@ -505,10 +505,10 @@ export const SettingsScreen: React.FC<{
             </ScrollView>
             
             <TouchableOpacity
-              style={dynamicModalStyles.cancelButton}
+              style={modalStyles.cancelButton}
               onPress={() => setShowThemeModal(false)}
             >
-              <Text style={dynamicModalStyles.cancelButtonText}>Cancel</Text>
+              <Text style={modalStyles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
