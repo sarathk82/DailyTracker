@@ -25,8 +25,6 @@ interface ActionItemCardProps {
   onToggleComplete: (id: string) => void;
   onEdit: (item: ActionItem) => void;
   onDelete: (id: string) => void;
-  theme: any;
-  dynamicStyles: any;
 }
 
 const ActionItemCard: React.FC<ActionItemCardProps> = ({
@@ -34,13 +32,11 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
   onToggleComplete,
   onEdit,
   onDelete,
-  theme,
-  dynamicStyles,
 }) => {
 
 
   return (
-    <View style={[dynamicStyles.itemCard, item.completed && dynamicStyles.completedCard]}>
+    <View style={[dynamicStyles.itemCard, item.completed && styles.completedCard]}>
       <TouchableOpacity
         style={dynamicStyles.itemHeader}
         onPress={() => onToggleComplete(item.id)}
@@ -65,7 +61,7 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
       </TouchableOpacity>
 
       {item.description && item.description !== item.title && (
-        <Text style={[dynamicStyles.itemDescription, item.completed && dynamicStyles.completedText]}>
+        <Text style={[dynamicStyles.itemDescription, item.completed && styles.completedText]}>
           {item.description}
         </Text>
       )}
@@ -77,9 +73,9 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
           </Text>
           {item.dueDate && (
             <Text style={[
-              dynamicStyles.itemDueDate,
-              item.completed && dynamicStyles.completedText,
-              new Date(item.dueDate) < new Date() && !item.completed && dynamicStyles.overdue
+              styles.itemDueDate,
+              item.completed && styles.completedText,
+              new Date(item.dueDate) < new Date() && !item.completed && styles.overdue
             ]}>
               Due: {format(new Date(item.dueDate), 'MMM d, yyyy')}
               {new Date(item.dueDate) < new Date() && !item.completed && ' (Overdue)'}
@@ -114,11 +110,9 @@ interface EditModalProps {
   item: ActionItem | null;
   onSave: (item: ActionItem) => void;
   onCancel: () => void;
-  theme: any;
-  dynamicStyles: any;
 }
 
-const EditModal: React.FC<EditModalProps> = ({ visible, item, onSave, onCancel, theme, dynamicStyles }) => {
+const EditModal: React.FC<EditModalProps> = ({ visible, item, onSave, onCancel }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState<Date | null>(null);
@@ -387,20 +381,18 @@ export const ActionItemsScreen: React.FC = () => {
         onToggleComplete={handleToggleComplete}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        theme={theme}
-        dynamicStyles={dynamicStyles}
       />
     );
   };
 
   const getFilterButtonStyle = (filterType: typeof filter) => [
-    dynamicStyles.filterButton,
-    filter === filterType && dynamicStyles.filterButtonActive,
+    styles.filterButton,
+    filter === filterType && styles.filterButtonActive,
   ];
 
   const getFilterTextStyle = (filterType: typeof filter) => [
-    dynamicStyles.filterButtonText,
-    filter === filterType && dynamicStyles.filterButtonTextActive,
+    styles.filterButtonText,
+    filter === filterType && styles.filterButtonTextActive,
   ];
 
   const pendingCount = actionItems.filter(item => !item.completed).length;
@@ -474,8 +466,6 @@ export const ActionItemsScreen: React.FC = () => {
           setModalVisible(false);
           setEditingItem(null);
         }}
-        theme={theme}
-        dynamicStyles={dynamicStyles}
       />
     </SafeAreaView>
   );

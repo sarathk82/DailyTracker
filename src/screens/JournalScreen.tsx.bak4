@@ -12,7 +12,6 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useTheme } from '../contexts/ThemeContext';
 // import { Ionicons } from "@expo/vector-icons";
 import Markdown from "react-native-markdown-display";
 import { format } from "date-fns";
@@ -1190,8 +1189,6 @@ export const JournalScreen: React.FC<{}> = () => {
   };
 
   const dynamicStyles = getStyles(theme);
-  const layoutStyles = getLayoutStyles(theme);
-  const markdownStyles = getMarkdownStyles(theme);
 
   return (
     <SafeAreaView style={dynamicStyles.container}>
@@ -1371,27 +1368,27 @@ export const JournalScreen: React.FC<{}> = () => {
         <View style={dynamicStyles.quickActionsRow}>
           <TouchableOpacity
             style={[
-              dynamicStyles.quickActionButton,
-              forceExpense && dynamicStyles.quickActionButtonActive,
+              styles.quickActionButton,
+              forceExpense && styles.quickActionButtonActive,
             ]}
             onPress={() => {
               setForceExpense(!forceExpense);
               if (!forceExpense) setForceAction(false); // Clear task when enabling expense
             }}
           >
-            <Text style={[dynamicStyles.quickActionText, forceExpense && dynamicStyles.quickActionTextActive]}>💰</Text>
+            <Text style={[dynamicStyles.quickActionText, forceExpense && styles.quickActionTextActive]}>💰</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[
-              dynamicStyles.quickActionButton,
-              forceAction && dynamicStyles.quickActionButtonActive,
+              styles.quickActionButton,
+              forceAction && styles.quickActionButtonActive,
             ]}
             onPress={() => {
               setForceAction(!forceAction);
               if (!forceAction) setForceExpense(false); // Clear expense when enabling task
             }}
           >
-            <Text style={[dynamicStyles.quickActionText, forceAction && dynamicStyles.quickActionTextActive]}>✅</Text>
+            <Text style={[dynamicStyles.quickActionText, forceAction && styles.quickActionTextActive]}>✅</Text>
           </TouchableOpacity>
         </View>
         <View style={dynamicStyles.inputRow}>
@@ -1417,8 +1414,8 @@ export const JournalScreen: React.FC<{}> = () => {
           />
           <TouchableOpacity
             style={[
-              dynamicStyles.sendButton,
-              !inputText.trim() && dynamicStyles.sendButtonDisabled,
+              styles.sendButton,
+              !inputText.trim() && styles.sendButtonDisabled,
             ]}
             onPress={handleSendMessage}
             disabled={!inputText.trim()}
@@ -1470,8 +1467,8 @@ export const JournalScreen: React.FC<{}> = () => {
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <TouchableOpacity
                   style={[
-                    dynamicStyles.markdownToggle,
-                    editingEntry.isMarkdown && dynamicStyles.markdownToggleActive
+                    styles.markdownToggle,
+                    editingEntry.isMarkdown && styles.markdownToggleActive
                   ]}
                   onPress={() => setEditingEntry({ ...editingEntry, isMarkdown: !editingEntry.isMarkdown })}
                 >
@@ -1493,8 +1490,8 @@ export const JournalScreen: React.FC<{}> = () => {
               <View style={dynamicStyles.categoryButtons}>
                 <TouchableOpacity
                   style={[
-                    dynamicStyles.categoryButton,
-                    editingEntry.type === 'log' && dynamicStyles.categoryButtonActive
+                    styles.categoryButton,
+                    editingEntry.type === 'log' && styles.categoryButtonActive
                   ]}
                   onPress={async () => {
                     if (editingEntry.type !== 'log') {
@@ -1507,8 +1504,8 @@ export const JournalScreen: React.FC<{}> = () => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
-                    dynamicStyles.categoryButton,
-                    editingEntry.type === 'expense' && dynamicStyles.categoryButtonActive
+                    styles.categoryButton,
+                    editingEntry.type === 'expense' && styles.categoryButtonActive
                   ]}
                   onPress={async () => {
                     if (editingEntry.type !== 'expense') {
@@ -1534,8 +1531,8 @@ export const JournalScreen: React.FC<{}> = () => {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
-                    dynamicStyles.categoryButton,
-                    editingEntry.type === 'action' && dynamicStyles.categoryButtonActive
+                    styles.categoryButton,
+                    editingEntry.type === 'action' && styles.categoryButtonActive
                   ]}
                   onPress={async () => {
                     if (editingEntry.type !== 'action') {
@@ -2047,7 +2044,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
 });
 
-const getLayoutStyles = (theme: any) => StyleSheet.create({
+const layoutStyles = StyleSheet.create({
   // Card Layout Styles
   cardContainer: {
     backgroundColor: theme.surface,
@@ -2346,7 +2343,7 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
 });
 
-const getMarkdownStyles = (theme: any) => StyleSheet.create({
+const markdownStyles = StyleSheet.create({
   body: {
     fontSize: 16,
     color: "#333",

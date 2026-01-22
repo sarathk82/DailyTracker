@@ -65,7 +65,7 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
       </TouchableOpacity>
 
       {item.description && item.description !== item.title && (
-        <Text style={[dynamicStyles.itemDescription, item.completed && dynamicStyles.completedText]}>
+        <Text style={[dynamicStyles.itemDescription, item.completed && styles.completedText]}>
           {item.description}
         </Text>
       )}
@@ -77,9 +77,9 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
           </Text>
           {item.dueDate && (
             <Text style={[
-              dynamicStyles.itemDueDate,
-              item.completed && dynamicStyles.completedText,
-              new Date(item.dueDate) < new Date() && !item.completed && dynamicStyles.overdue
+              styles.itemDueDate,
+              item.completed && styles.completedText,
+              new Date(item.dueDate) < new Date() && !item.completed && styles.overdue
             ]}>
               Due: {format(new Date(item.dueDate), 'MMM d, yyyy')}
               {new Date(item.dueDate) < new Date() && !item.completed && ' (Overdue)'}
@@ -394,13 +394,13 @@ export const ActionItemsScreen: React.FC = () => {
   };
 
   const getFilterButtonStyle = (filterType: typeof filter) => [
-    dynamicStyles.filterButton,
-    filter === filterType && dynamicStyles.filterButtonActive,
+    styles.filterButton,
+    filter === filterType && styles.filterButtonActive,
   ];
 
   const getFilterTextStyle = (filterType: typeof filter) => [
-    dynamicStyles.filterButtonText,
-    filter === filterType && dynamicStyles.filterButtonTextActive,
+    styles.filterButtonText,
+    filter === filterType && styles.filterButtonTextActive,
   ];
 
   const pendingCount = actionItems.filter(item => !item.completed).length;

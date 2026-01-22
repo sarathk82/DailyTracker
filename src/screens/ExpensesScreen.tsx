@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -26,20 +27,23 @@ interface ExpenseCardProps {
 }
 
 const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onEdit, onDelete }) => {
+  const dynamicStyles = getStyles(theme);
+
+
   return (
-    <View style={styles.expenseCard}>
-      <View style={styles.expenseHeader}>
-        <View style={styles.expenseAmount}>
-          <Text style={styles.amountText}>
+    <View style={dynamicStyles.expenseCard}>
+      <View style={dynamicStyles.expenseHeader}>
+        <View style={dynamicStyles.expenseAmount}>
+          <Text style={dynamicStyles.amountText}>
             {TextAnalyzer.formatCurrency(expense.amount, expense.currency)}
           </Text>
           {expense.category && (
-            <Text style={styles.categoryText}>{expense.category}</Text>
+            <Text style={dynamicStyles.categoryText}>{expense.category}</Text>
           )}
         </View>
-        <View style={styles.expenseActions}>
+        <View style={dynamicStyles.expenseActions}>
           <TouchableOpacity
-            style={styles.actionButton}
+            style={dynamicStyles.actionButton}
             onPress={() => onEdit(expense)}
             activeOpacity={0.7}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
@@ -47,7 +51,7 @@ const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onEdit, onDelete }) 
             <Ionicons name="pencil" size={18} color="#666" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
+            style={[dynamicStyles.actionButton, dynamicStyles.deleteButton]}
             onPress={() => onDelete(expense.id)}
             activeOpacity={0.7}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
@@ -57,11 +61,11 @@ const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onEdit, onDelete }) 
         </View>
       </View>
 
-      <Text style={styles.expenseDescription} numberOfLines={2}>
+      <Text style={dynamicStyles.expenseDescription} numberOfLines={2}>
         {expense.description}
       </Text>
 
-      <Text style={styles.expenseDate}>
+      <Text style={dynamicStyles.expenseDate}>
         {format(expense.createdAt, 'MMM d, yyyy HH:mm')}
       </Text>
     </View>
@@ -123,21 +127,21 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Edit Expense</Text>
+      <View style={dynamicStyles.modalContainer}>
+        <View style={dynamicStyles.modalContent}>
+          <Text style={dynamicStyles.modalTitle}>Edit Expense</Text>
 
           <TextInput
-            style={styles.modalInput}
+            style={dynamicStyles.modalInput}
             value={amount}
             onChangeText={setAmount}
             placeholder="Amount"
             keyboardType="numeric"
           />
 
-          <View style={styles.currencyContainer}>
-            <Text style={styles.inputLabel}>Currency:</Text>
-            <View style={styles.currencyOptions}>
+          <View style={dynamicStyles.currencyContainer}>
+            <Text style={dynamicStyles.inputLabel}>Currency:</Text>
+            <View style={dynamicStyles.currencyOptions}>
               {currencies.map((curr) => (
                 <TouchableOpacity
                   key={curr}
@@ -161,16 +165,16 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
           </View>
 
           <TextInput
-            style={[styles.modalInput, styles.modalInputLarge]}
+            style={[dynamicStyles.modalInput, dynamicStyles.modalInputLarge]}
             value={description}
             onChangeText={setDescription}
             placeholder="Description"
             multiline
           />
 
-          <View style={styles.categoryContainer}>
-            <Text style={styles.inputLabel}>Category (optional):</Text>
-            <View style={styles.categoryOptions}>
+          <View style={dynamicStyles.categoryContainer}>
+            <Text style={dynamicStyles.inputLabel}>Category (optional):</Text>
+            <View style={dynamicStyles.categoryOptions}>
               {categories.map((cat) => (
                 <TouchableOpacity
                   key={cat}
@@ -193,15 +197,15 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
             </View>
           </View>
 
-          <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.modalButton} onPress={onCancel}>
-              <Text style={styles.modalButtonText}>Cancel</Text>
+          <View style={dynamicStyles.modalButtons}>
+            <TouchableOpacity style={dynamicStyles.modalButton} onPress={onCancel}>
+              <Text style={dynamicStyles.modalButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButton, styles.modalButtonPrimary]}
+              style={[dynamicStyles.modalButton, dynamicStyles.modalButtonPrimary]}
               onPress={handleSave}
             >
-              <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>
+              <Text style={[dynamicStyles.modalButtonText, dynamicStyles.modalButtonTextPrimary]}>
                 Save
               </Text>
             </TouchableOpacity>
@@ -213,7 +217,8 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
 };
 
 export const ExpensesScreen: React.FC = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+    const { theme, isDark } = useTheme();
+const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filter, setFilter] = useState<'all' | 'thisMonth'>('all');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -373,27 +378,27 @@ export const ExpensesScreen: React.FC = () => {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Expenses</Text>
-        <View style={styles.totalsContainer}>
+    <SafeAreaView style={dynamicStyles.container}>
+      <View style={dynamicStyles.header}>
+        <Text style={dynamicStyles.headerTitle}>Expenses</Text>
+        <View style={dynamicStyles.totalsContainer}>
           {filteredExpenses.length === 0 ? (
-            <View style={styles.totalContainer}>
-              <Text style={styles.totalLabel}>Total:</Text>
-              <Text style={styles.totalAmount}>$0.00</Text>
+            <View style={dynamicStyles.totalContainer}>
+              <Text style={dynamicStyles.totalLabel}>Total:</Text>
+              <Text style={dynamicStyles.totalAmount}>$0.00</Text>
             </View>
           ) : (
             getTotalAmount(filteredExpenses).map((total) => (
-              <View key={total.currency} style={styles.totalContainer}>
-                <Text style={styles.totalLabel}>{total.currency} Total:</Text>
-                <Text style={styles.totalAmount}>{total.formatted}</Text>
+              <View key={total.currency} style={dynamicStyles.totalContainer}>
+                <Text style={dynamicStyles.totalLabel}>{total.currency} Total:</Text>
+                <Text style={dynamicStyles.totalAmount}>{total.formatted}</Text>
               </View>
             ))
           )}
         </View>
       </View>
 
-      <View style={styles.filterContainer}>
+      <View style={dynamicStyles.filterContainer}>
         <TouchableOpacity
           style={getFilterButtonStyle('all')}
           onPress={() => setFilter('all')}
@@ -409,28 +414,28 @@ export const ExpensesScreen: React.FC = () => {
       </View>
 
       {/* View Mode Toggle */}
-      <View style={styles.viewToggleContainer}>
+      <View style={dynamicStyles.viewToggleContainer}>
         <TouchableOpacity
-          style={[styles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
+          style={[dynamicStyles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
           onPress={() => setViewMode('list')}
         >
-          <Text style={[styles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>List</Text>
+          <Text style={[dynamicStyles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>List</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.viewToggleButton, viewMode === 'analytics' && styles.viewToggleButtonActive]}
+          style={[dynamicStyles.viewToggleButton, viewMode === 'analytics' && styles.viewToggleButtonActive]}
           onPress={() => setViewMode('analytics')}
         >
-          <Text style={[styles.viewToggleText, viewMode === 'analytics' && styles.viewToggleTextActive]}>Analytics</Text>
+          <Text style={[dynamicStyles.viewToggleText, viewMode === 'analytics' && styles.viewToggleTextActive]}>Analytics</Text>
         </TouchableOpacity>
       </View>
 
       {filteredExpenses.length === 0 ? (
-        <View style={styles.emptyContainer}>
+        <View style={dynamicStyles.emptyContainer}>
           <Ionicons name="receipt-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>
+          <Text style={dynamicStyles.emptyText}>
             {filter === 'all' ? 'No expenses yet' : 'No expenses this month'}
           </Text>
-          <Text style={styles.emptySubtext}>
+          <Text style={dynamicStyles.emptySubtext}>
             Add entries in your journal to track expenses
           </Text>
         </View>
@@ -440,38 +445,38 @@ export const ExpensesScreen: React.FC = () => {
             data={filteredExpenses}
             renderItem={renderExpense}
             keyExtractor={(item) => item.id}
-            style={styles.list}
+            style={dynamicStyles.list}
             showsVerticalScrollIndicator={false}
           />
         ) : (
-          <ScrollView style={styles.analyticsContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView style={dynamicStyles.analyticsContainer} showsVerticalScrollIndicator={false}>
             {/* Category Breakdown */}
-            <View style={styles.analyticsSection}>
-              <Text style={styles.analyticsSectionTitle}>📊 Category Breakdown</Text>
+            <View style={dynamicStyles.analyticsSection}>
+              <Text style={dynamicStyles.analyticsSectionTitle}>📊 Category Breakdown</Text>
               {getCategoryBreakdown(filteredExpenses).map((category, index) => (
-                <View key={category.category} style={styles.categoryAnalyticsItem}>
-                  <View style={styles.categoryAnalyticsInfo}>
-                    <Text style={styles.categoryAnalyticsName}>{category.category}</Text>
-                    <Text style={styles.categoryAnalyticsCount}>
+                <View key={category.category} style={dynamicStyles.categoryAnalyticsItem}>
+                  <View style={dynamicStyles.categoryAnalyticsInfo}>
+                    <Text style={dynamicStyles.categoryAnalyticsName}>{category.category}</Text>
+                    <Text style={dynamicStyles.categoryAnalyticsCount}>
                       {category.count} {category.count === 1 ? 'expense' : 'expenses'}
                     </Text>
                   </View>
-                  <Text style={styles.categoryAnalyticsAmount}>{category.formatted}</Text>
+                  <Text style={dynamicStyles.categoryAnalyticsAmount}>{category.formatted}</Text>
                 </View>
               ))}
             </View>
 
             {/* Monthly Trends */}
-            <View style={styles.analyticsSection}>
-              <Text style={styles.analyticsSectionTitle}>📈 Monthly Trends</Text>
+            <View style={dynamicStyles.analyticsSection}>
+              <Text style={dynamicStyles.analyticsSectionTitle}>📈 Monthly Trends</Text>
               {getMonthlyTrend().map((trend, index) => (
-                <View key={trend.month} style={styles.trendItem}>
-                  <Text style={styles.trendMonth}>{trend.month}</Text>
+                <View key={trend.month} style={dynamicStyles.trendItem}>
+                  <Text style={dynamicStyles.trendMonth}>{trend.month}</Text>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.trendAmount}>
+                    <Text style={dynamicStyles.trendAmount}>
                       {TextAnalyzer.formatCurrency(trend.amount, 'USD')}
                     </Text>
-                    <Text style={styles.categoryAnalyticsCount}>
+                    <Text style={dynamicStyles.categoryAnalyticsCount}>
                       {trend.count} {trend.count === 1 ? 'expense' : 'expenses'}
                     </Text>
                   </View>
@@ -480,11 +485,11 @@ export const ExpensesScreen: React.FC = () => {
             </View>
 
             {/* Quick Stats */}
-            <View style={styles.analyticsSection}>
-              <Text style={styles.analyticsSectionTitle}>📋 Quick Stats</Text>
-              <View style={styles.trendItem}>
-                <Text style={styles.trendMonth}>Average per expense</Text>
-                <Text style={styles.trendAmount}>
+            <View style={dynamicStyles.analyticsSection}>
+              <Text style={dynamicStyles.analyticsSectionTitle}>📋 Quick Stats</Text>
+              <View style={dynamicStyles.trendItem}>
+                <Text style={dynamicStyles.trendMonth}>Average per expense</Text>
+                <Text style={dynamicStyles.trendAmount}>
                   {filteredExpenses.length > 0
                     ? TextAnalyzer.formatCurrency(
                         filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0) / filteredExpenses.length,
@@ -494,15 +499,15 @@ export const ExpensesScreen: React.FC = () => {
                   }
                 </Text>
               </View>
-              <View style={styles.trendItem}>
-                <Text style={styles.trendMonth}>Most expensive category</Text>
-                <Text style={styles.trendAmount}>
+              <View style={dynamicStyles.trendItem}>
+                <Text style={dynamicStyles.trendMonth}>Most expensive category</Text>
+                <Text style={dynamicStyles.trendAmount}>
                   {getCategoryBreakdown(filteredExpenses)[0]?.category || 'None'}
                 </Text>
               </View>
-              <View style={styles.trendItem}>
-                <Text style={styles.trendMonth}>Total categories</Text>
-                <Text style={styles.trendAmount}>
+              <View style={dynamicStyles.trendItem}>
+                <Text style={dynamicStyles.trendMonth}>Total categories</Text>
+                <Text style={dynamicStyles.trendAmount}>
                   {getCategoryBreakdown(filteredExpenses).length}
                 </Text>
               </View>
@@ -524,22 +529,22 @@ export const ExpensesScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 8,
   },
   totalsContainer: {
@@ -553,7 +558,7 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textSecondary,
     marginRight: 8,
   },
   totalAmount: {
@@ -565,38 +570,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   filterButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginRight: 8,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.input,
   },
   filterButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.primary,
   },
   filterButtonText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   filterButtonTextActive: {
-    color: '#fff',
+    color: theme.surface,
   },
   list: {
     flex: 1,
     paddingHorizontal: 16,
   },
   expenseCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     marginVertical: 6,
     padding: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -618,9 +623,9 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     marginTop: 2,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.input,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -647,13 +652,13 @@ const styles = StyleSheet.create({
   },
   expenseDescription: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     lineHeight: 18,
     marginBottom: 8,
   },
   expenseDate: {
     fontSize: 12,
-    color: '#999',
+    color: theme.placeholder,
   },
   emptyContainer: {
     flex: 1,
@@ -664,13 +669,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#666',
+    color: theme.textSecondary,
     marginTop: 16,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: theme.placeholder,
     marginTop: 8,
     textAlign: 'center',
     lineHeight: 20,
@@ -682,7 +687,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 20,
     width: '90%',
@@ -697,7 +702,7 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
@@ -711,7 +716,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
     marginBottom: 8,
   },
   currencyContainer: {
@@ -727,21 +732,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.input,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
   },
   currencyButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   currencyButtonText: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   currencyButtonTextActive: {
-    color: '#fff',
+    color: theme.surface,
   },
   categoryContainer: {
     marginBottom: 16,
@@ -756,9 +761,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.input,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme.border,
   },
   categoryButtonActive: {
     backgroundColor: '#4caf50',
@@ -766,11 +771,11 @@ const styles = StyleSheet.create({
   },
   categoryButtonText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   categoryButtonTextActive: {
-    color: '#fff',
+    color: theme.surface,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -782,27 +787,27 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     marginHorizontal: 4,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.input,
   },
   modalButtonPrimary: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.primary,
   },
   modalButtonText: {
     textAlign: 'center',
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   modalButtonTextPrimary: {
-    color: '#fff',
+    color: theme.surface,
   },
   viewToggleContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   viewToggleButton: {
     flex: 1,
@@ -810,26 +815,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginHorizontal: 4,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.input,
     alignItems: 'center',
   },
   viewToggleButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.primary,
   },
   viewToggleText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: theme.textSecondary,
   },
   viewToggleTextActive: {
-    color: '#fff',
+    color: theme.surface,
   },
   analyticsContainer: {
     flex: 1,
     paddingHorizontal: 16,
   },
   analyticsSection: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginVertical: 8,
@@ -837,7 +842,7 @@ const styles = StyleSheet.create({
   analyticsSectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 12,
   },
   categoryAnalyticsItem: {
@@ -846,7 +851,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.input,
   },
   categoryAnalyticsInfo: {
     flex: 1,
@@ -854,11 +859,11 @@ const styles = StyleSheet.create({
   categoryAnalyticsName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   categoryAnalyticsCount: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     marginTop: 2,
   },
   categoryAnalyticsAmount: {
@@ -872,12 +877,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.input,
   },
   trendMonth: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   trendAmount: {
     fontSize: 14,

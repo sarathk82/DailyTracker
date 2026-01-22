@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../contexts/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { format, subDays, subWeeks, subMonths, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
@@ -37,7 +38,8 @@ interface AnalyticsData {
 }
 
 export const AnalyticsScreen: React.FC = () => {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+    const { theme, isDark } = useTheme();
+const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [loading, setLoading] = useState(true);
 
@@ -169,22 +171,25 @@ export const AnalyticsScreen: React.FC = () => {
   );
 
   if (loading || !analytics) {
+    const dynamicStyles = getStyles(theme);
+
+
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Loading analytics...</Text>
+      <SafeAreaView style={dynamicStyles.container}>
+        <Text style={dynamicStyles.loadingText}>Loading analytics...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Analytics & Insights</Text>
+    <SafeAreaView style={dynamicStyles.container}>
+      <View style={dynamicStyles.header}>
+        <Text style={dynamicStyles.headerTitle}>Analytics & Insights</Text>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={dynamicStyles.content} showsVerticalScrollIndicator={false}>
         {/* Period Selector */}
-        <View style={styles.periodSelector}>
+        <View style={dynamicStyles.periodSelector}>
           {(['week', 'month', 'all'] as const).map((period) => (
             <TouchableOpacity
               key={period}
@@ -205,58 +210,58 @@ export const AnalyticsScreen: React.FC = () => {
         </View>
 
         {/* Summary Cards */}
-        <View style={styles.summaryGrid}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryNumber}>{analytics.totalEntries}</Text>
-            <Text style={styles.summaryLabel}>Total Entries</Text>
+        <View style={dynamicStyles.summaryGrid}>
+          <View style={dynamicStyles.summaryCard}>
+            <Text style={dynamicStyles.summaryNumber}>{analytics.totalEntries}</Text>
+            <Text style={dynamicStyles.summaryLabel}>Total Entries</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryNumber}>{analytics.totalActionItems}</Text>
-            <Text style={styles.summaryLabel}>Action Items</Text>
+          <View style={dynamicStyles.summaryCard}>
+            <Text style={dynamicStyles.summaryNumber}>{analytics.totalActionItems}</Text>
+            <Text style={dynamicStyles.summaryLabel}>Action Items</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryNumber}>{analytics.completionRate.toFixed(0)}%</Text>
-            <Text style={styles.summaryLabel}>Completion Rate</Text>
+          <View style={dynamicStyles.summaryCard}>
+            <Text style={dynamicStyles.summaryNumber}>{analytics.completionRate.toFixed(0)}%</Text>
+            <Text style={dynamicStyles.summaryLabel}>Completion Rate</Text>
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryNumber}>{analytics.averageEntriesPerDay.toFixed(1)}</Text>
-            <Text style={styles.summaryLabel}>Avg Entries/Day</Text>
+          <View style={dynamicStyles.summaryCard}>
+            <Text style={dynamicStyles.summaryNumber}>{analytics.averageEntriesPerDay.toFixed(1)}</Text>
+            <Text style={dynamicStyles.summaryLabel}>Avg Entries/Day</Text>
           </View>
         </View>
 
         {/* Spending Overview */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💰 Spending Overview</Text>
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>💰 Spending Overview</Text>
           {analytics.totalExpenses.length > 0 ? (
-            <View style={styles.expenseList}>
+            <View style={dynamicStyles.expenseList}>
               {analytics.totalExpenses.map((expense, index) => (
-                <View key={expense.currency} style={styles.expenseItem}>
-                  <Text style={styles.expenseAmount}>
+                <View key={expense.currency} style={dynamicStyles.expenseItem}>
+                  <Text style={dynamicStyles.expenseAmount}>
                     {TextAnalyzer.formatCurrency(expense.amount, expense.currency)}
                   </Text>
-                  <Text style={styles.expenseLabel}>Total Spent</Text>
+                  <Text style={dynamicStyles.expenseLabel}>Total Spent</Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={styles.emptyText}>No expenses recorded yet</Text>
+            <Text style={dynamicStyles.emptyText}>No expenses recorded yet</Text>
           )}
         </View>
 
         {/* Top Categories */}
         {analytics.topExpenseCategories.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📊 Top Spending Categories</Text>
-            <View style={styles.categoryList}>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>📊 Top Spending Categories</Text>
+            <View style={dynamicStyles.categoryList}>
               {analytics.topExpenseCategories.map((category, index) => (
-                <View key={category.category} style={styles.categoryItem}>
-                  <View style={styles.categoryInfo}>
-                    <Text style={styles.categoryName}>{category.category}</Text>
-                    <Text style={styles.categoryAmount}>
+                <View key={category.category} style={dynamicStyles.categoryItem}>
+                  <View style={dynamicStyles.categoryInfo}>
+                    <Text style={dynamicStyles.categoryName}>{category.category}</Text>
+                    <Text style={dynamicStyles.categoryAmount}>
                       {TextAnalyzer.formatCurrency(category.amount, category.currency)}
                     </Text>
                   </View>
-                  <View style={[styles.categoryBar, { width: `${(category.amount / analytics.topExpenseCategories[0].amount) * 100}%` }]} />
+                  <View style={[dynamicStyles.categoryBar, { width: `${(category.amount / analytics.topExpenseCategories[0].amount) * 100}%` }]} />
                 </View>
               ))}
             </View>
@@ -264,18 +269,18 @@ export const AnalyticsScreen: React.FC = () => {
         )}
 
         {/* Activity Patterns */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📈 Activity Patterns</Text>
-          <View style={styles.patternCard}>
-            <Text style={styles.patternLabel}>Most Active Day</Text>
-            <Text style={styles.patternValue}>{analytics.mostActiveDay}</Text>
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>📈 Activity Patterns</Text>
+          <View style={dynamicStyles.patternCard}>
+            <Text style={dynamicStyles.patternLabel}>Most Active Day</Text>
+            <Text style={dynamicStyles.patternValue}>{analytics.mostActiveDay}</Text>
           </View>
         </View>
 
         {/* Recent Activity Chart */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📅 Recent Activity (Last 7 Days)</Text>
-          <View style={styles.chartContainer}>
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>📅 Recent Activity (Last 7 Days)</Text>
+          <View style={dynamicStyles.chartContainer}>
             {analytics.recentActivity.map((day, index) => {
               // Calculate max values for proper scaling
               const maxEntries = Math.max(...analytics.recentActivity.map(d => d.entries));
@@ -289,63 +294,63 @@ export const AnalyticsScreen: React.FC = () => {
               const actionsHeight = Math.max(4, (day.actions / maxValue) * 50);
               
               return (
-                <View key={day.date} style={styles.chartDay}>
-                  <View style={styles.chartBars}>
-                    <View style={[styles.chartBar, styles.entriesBar, { height: entriesHeight }]} />
-                    <View style={[styles.chartBar, styles.expensesBar, { height: expensesHeight }]} />
-                    <View style={[styles.chartBar, styles.actionsBar, { height: actionsHeight }]} />
+                <View key={day.date} style={dynamicStyles.chartDay}>
+                  <View style={dynamicStyles.chartBars}>
+                    <View style={[dynamicStyles.chartBar, dynamicStyles.entriesBar, { height: entriesHeight }]} />
+                    <View style={[dynamicStyles.chartBar, dynamicStyles.expensesBar, { height: expensesHeight }]} />
+                    <View style={[dynamicStyles.chartBar, dynamicStyles.actionsBar, { height: actionsHeight }]} />
                   </View>
-                  <Text style={styles.chartDate}>{day.date}</Text>
+                  <Text style={dynamicStyles.chartDate}>{day.date}</Text>
                 </View>
               );
             })}
           </View>
           
           {/* Legend */}
-          <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, styles.entriesBar]} />
-              <Text style={styles.legendText}>Entries</Text>
+          <View style={dynamicStyles.legend}>
+            <View style={dynamicStyles.legendItem}>
+              <View style={[dynamicStyles.legendColor, dynamicStyles.entriesBar]} />
+              <Text style={dynamicStyles.legendText}>Entries</Text>
             </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, styles.expensesBar]} />
-              <Text style={styles.legendText}>Expenses</Text>
+            <View style={dynamicStyles.legendItem}>
+              <View style={[dynamicStyles.legendColor, dynamicStyles.expensesBar]} />
+              <Text style={dynamicStyles.legendText}>Expenses</Text>
             </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendColor, styles.actionsBar]} />
-              <Text style={styles.legendText}>Actions</Text>
+            <View style={dynamicStyles.legendItem}>
+              <View style={[dynamicStyles.legendColor, dynamicStyles.actionsBar]} />
+              <Text style={dynamicStyles.legendText}>Actions</Text>
             </View>
           </View>
         </View>
 
         {/* Insights */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💡 Insights</Text>
-          <View style={styles.insightsList}>
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>💡 Insights</Text>
+          <View style={dynamicStyles.insightsList}>
             {analytics.averageEntriesPerDay > 3 && (
-              <View style={styles.insightCard}>
-                <Text style={styles.insightText}>
+              <View style={dynamicStyles.insightCard}>
+                <Text style={dynamicStyles.insightText}>
                   🔥 You're on fire! Averaging {analytics.averageEntriesPerDay.toFixed(1)} entries per day
                 </Text>
               </View>
             )}
             {analytics.completionRate > 75 && (
-              <View style={styles.insightCard}>
-                <Text style={styles.insightText}>
+              <View style={dynamicStyles.insightCard}>
+                <Text style={dynamicStyles.insightText}>
                   ⭐ Great job! You complete {analytics.completionRate.toFixed(0)}% of your action items
                 </Text>
               </View>
             )}
             {analytics.pendingActionItems > 5 && (
-              <View style={styles.insightCard}>
-                <Text style={styles.insightText}>
+              <View style={dynamicStyles.insightCard}>
+                <Text style={dynamicStyles.insightText}>
                   ⚠️ You have {analytics.pendingActionItems} pending action items. Consider reviewing them!
                 </Text>
               </View>
             )}
             {analytics.totalExpenses.length === 0 && analytics.totalEntries > 10 && (
-              <View style={styles.insightCard}>
-                <Text style={styles.insightText}>
+              <View style={dynamicStyles.insightCard}>
+                <Text style={dynamicStyles.insightText}>
                   💸 No expenses tracked yet. Try adding some spending entries to track your budget!
                 </Text>
               </View>
@@ -357,28 +362,28 @@ export const AnalyticsScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.background,
   },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   loadingText: {
     textAlign: 'center',
     marginTop: 50,
     fontSize: 16,
-    color: '#666',
+    color: theme.textSecondary,
   },
   content: {
     flex: 1,
@@ -387,9 +392,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme.border,
   },
   periodButton: {
     flex: 1,
@@ -397,19 +402,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginHorizontal: 4,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.input,
     alignItems: 'center',
   },
   periodButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.primary,
   },
   periodButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: theme.textSecondary,
   },
   periodButtonTextActive: {
-    color: '#fff',
+    color: theme.surface,
   },
   summaryGrid: {
     flexDirection: 'row',
@@ -420,11 +425,11 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     width: (Dimensions.get('window').width - 44) / 2,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -433,12 +438,12 @@ const styles = StyleSheet.create({
   summaryNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 4,
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     textAlign: 'center',
   },
   section: {
@@ -448,11 +453,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
     marginBottom: 12,
   },
   expenseList: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
   },
@@ -467,11 +472,11 @@ const styles = StyleSheet.create({
   },
   expenseLabel: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
     marginTop: 2,
   },
   categoryList: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
   },
@@ -489,7 +494,7 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.text,
   },
   categoryAmount: {
     fontSize: 14,
@@ -498,7 +503,7 @@ const styles = StyleSheet.create({
   },
   categoryBar: {
     height: 4,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.primary,
     borderRadius: 2,
     position: 'absolute',
     bottom: 0,
@@ -506,23 +511,23 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   patternCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
   },
   patternLabel: {
     fontSize: 14,
-    color: '#666',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   patternValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.text,
   },
   chartContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -548,7 +553,7 @@ const styles = StyleSheet.create({
     minHeight: 4,
   },
   entriesBar: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.primary,
   },
   expensesBar: {
     backgroundColor: '#2e7d32',
@@ -558,7 +563,7 @@ const styles = StyleSheet.create({
   },
   chartDate: {
     fontSize: 10,
-    color: '#666',
+    color: theme.textSecondary,
   },
   legend: {
     flexDirection: 'row',
@@ -578,28 +583,28 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: '#666',
+    color: theme.textSecondary,
   },
   insightsList: {
     gap: 8,
   },
   insightCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: theme.primary,
   },
   insightText: {
     fontSize: 14,
-    color: '#333',
+    color: theme.text,
     lineHeight: 20,
   },
   emptyText: {
     textAlign: 'center',
-    color: '#666',
+    color: theme.textSecondary,
     fontSize: 14,
-    backgroundColor: '#fff',
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 20,
   },
