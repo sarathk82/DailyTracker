@@ -24,10 +24,11 @@ interface ExpenseCardProps {
   expense: Expense;
   onEdit: (expense: Expense) => void;
   onDelete: (id: string) => void;
+  theme: any;
+  dynamicStyles: any;
 }
 
-const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onEdit, onDelete }) => {
-  const dynamicStyles = getStyles(theme);
+const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onEdit, onDelete, theme, dynamicStyles }) => {
 
 
   return (
@@ -77,6 +78,8 @@ interface EditExpenseModalProps {
   expense: Expense | null;
   onSave: (expense: Expense) => void;
   onCancel: () => void;
+  theme: any;
+  dynamicStyles: any;
 }
 
 const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
@@ -84,6 +87,8 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
   expense,
   onSave,
   onCancel,
+  theme,
+  dynamicStyles,
 }) => {
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('USD');
@@ -146,15 +151,15 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                 <TouchableOpacity
                   key={curr}
                   style={[
-                    styles.currencyButton,
-                    currency === curr && styles.currencyButtonActive,
+                    dynamicStyles.currencyButton,
+                    currency === curr && dynamicStyles.currencyButtonActive,
                   ]}
                   onPress={() => setCurrency(curr)}
                 >
                   <Text
                     style={[
-                      styles.currencyButtonText,
-                      currency === curr && styles.currencyButtonTextActive,
+                      dynamicStyles.currencyButtonText,
+                      currency === curr && dynamicStyles.currencyButtonTextActive,
                     ]}
                   >
                     {curr}
@@ -179,15 +184,15 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
                 <TouchableOpacity
                   key={cat}
                   style={[
-                    styles.categoryButton,
-                    category === cat && styles.categoryButtonActive,
+                    dynamicStyles.categoryButton,
+                    category === cat && dynamicStyles.categoryButtonActive,
                   ]}
                   onPress={() => setCategory(category === cat ? '' : cat)}
                 >
                   <Text
                     style={[
-                      styles.categoryButtonText,
-                      category === cat && styles.categoryButtonTextActive,
+                      dynamicStyles.categoryButtonText,
+                      category === cat && dynamicStyles.categoryButtonTextActive,
                     ]}
                   >
                     {cat}
@@ -217,8 +222,9 @@ const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
 };
 
 export const ExpensesScreen: React.FC = () => {
-    const { theme, isDark } = useTheme();
-const [expenses, setExpenses] = useState<Expense[]>([]);
+  const { theme, isDark } = useTheme();
+  const dynamicStyles = getStyles(theme);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filter, setFilter] = useState<'all' | 'thisMonth'>('all');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -364,17 +370,19 @@ const [expenses, setExpenses] = useState<Expense[]>([]);
       expense={item}
       onEdit={handleEdit}
       onDelete={handleDelete}
+      theme={theme}
+      dynamicStyles={dynamicStyles}
     />
   );
 
   const getFilterButtonStyle = (filterType: typeof filter) => [
-    styles.filterButton,
-    filter === filterType && styles.filterButtonActive,
+    dynamicStyles.filterButton,
+    filter === filterType && dynamicStyles.filterButtonActive,
   ];
 
-  const getFilterTextStyle = (filterType: typeof filter) => [
-    styles.filterButtonText,
-    filter === filterType && styles.filterButtonTextActive,
+  const getFilterButtonTextStyle = (filterType: typeof filter) => [
+    dynamicStyles.filterButtonText,
+    filter === filterType && dynamicStyles.filterButtonTextActive,
   ];
 
   return (
@@ -403,29 +411,29 @@ const [expenses, setExpenses] = useState<Expense[]>([]);
           style={getFilterButtonStyle('all')}
           onPress={() => setFilter('all')}
         >
-          <Text style={getFilterTextStyle('all')}>All Time</Text>
+          <Text style={getFilterButtonTextStyle('all')}>All Time</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={getFilterButtonStyle('thisMonth')}
           onPress={() => setFilter('thisMonth')}
         >
-          <Text style={getFilterTextStyle('thisMonth')}>This Month</Text>
+          <Text style={getFilterButtonTextStyle('thisMonth')}>This Month</Text>
         </TouchableOpacity>
       </View>
 
       {/* View Mode Toggle */}
       <View style={dynamicStyles.viewToggleContainer}>
         <TouchableOpacity
-          style={[dynamicStyles.viewToggleButton, viewMode === 'list' && styles.viewToggleButtonActive]}
+          style={[dynamicStyles.viewToggleButton, viewMode === 'list' && dynamicStyles.viewToggleButtonActive]}
           onPress={() => setViewMode('list')}
         >
-          <Text style={[dynamicStyles.viewToggleText, viewMode === 'list' && styles.viewToggleTextActive]}>List</Text>
+          <Text style={[dynamicStyles.viewToggleText, viewMode === 'list' && dynamicStyles.viewToggleTextActive]}>List</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[dynamicStyles.viewToggleButton, viewMode === 'analytics' && styles.viewToggleButtonActive]}
+          style={[dynamicStyles.viewToggleButton, viewMode === 'analytics' && dynamicStyles.viewToggleButtonActive]}
           onPress={() => setViewMode('analytics')}
         >
-          <Text style={[dynamicStyles.viewToggleText, viewMode === 'analytics' && styles.viewToggleTextActive]}>Analytics</Text>
+          <Text style={[dynamicStyles.viewToggleText, viewMode === 'analytics' && dynamicStyles.viewToggleTextActive]}>Analytics</Text>
         </TouchableOpacity>
       </View>
 
@@ -524,6 +532,8 @@ const [expenses, setExpenses] = useState<Expense[]>([]);
           setModalVisible(false);
           setEditingExpense(null);
         }}
+        theme={theme}
+        dynamicStyles={dynamicStyles}
       />
     </SafeAreaView>
   );

@@ -311,7 +311,7 @@ export const JournalScreen: React.FC<{}> = () => {
       case 'list':
         return { paddingHorizontal: 0, backgroundColor: theme.surface };
       case 'timeline':
-        return { paddingHorizontal: 0, backgroundColor: '#f8f9fa' };
+        return { paddingHorizontal: 0, backgroundColor: theme.input };
       case 'magazine':
         return { paddingHorizontal: 0, backgroundColor: theme.background };
       case 'minimal':
@@ -1730,7 +1730,7 @@ export const JournalScreen: React.FC<{}> = () => {
 const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: "row",
@@ -1738,14 +1738,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#fff",
+    backgroundColor: theme.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomColor: theme.border,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
+    color: theme.text,
   },
   searchContainer: {
     paddingHorizontal: 16,
@@ -1824,7 +1824,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
   },
   clearAllButton: {
-    backgroundColor: '#ff6b6b',
+    backgroundColor: theme.error,
     borderRadius: 8,
     paddingVertical: 8,
     alignItems: 'center',
@@ -1844,7 +1844,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: theme.input,
     marginLeft: 8,
   },
   settingsButtonText: {
@@ -1859,9 +1859,9 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     paddingBottom: Platform.OS === "ios" ? 6 : 4,
-    backgroundColor: "#fff",
+    backgroundColor: theme.surface,
     borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
+    borderTopColor: theme.border,
   },
   quickActionsRow: {
     flexDirection: "row",
@@ -1872,13 +1872,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 16,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: theme.input,
     borderWidth: 2,
-    borderColor: "#e0e0e0",
+    borderColor: theme.border,
   },
   quickActionButtonActive: {
-    backgroundColor: "#007AFF",
-    borderColor: "#0056b3",
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   quickActionText: {
     fontSize: 18,
@@ -1893,17 +1893,18 @@ const getStyles = (theme: any) => StyleSheet.create({
   textInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: theme.border,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginRight: 12,
     maxHeight: 100,
     fontSize: 16,
-    backgroundColor: "#f8f8f8",
+    backgroundColor: theme.input,
+    color: theme.text,
   },
   sendButton: {
-    backgroundColor: "#007AFF",
+    backgroundColor: theme.primary,
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -1911,7 +1912,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: "center",
   },
   sendButtonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: theme.border,
   },
   editModalOverlay: {
     flex: 1,
@@ -1921,7 +1922,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     padding: 20,
   },
   editModalContent: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 20,
     width: "100%",
@@ -1931,30 +1932,32 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 16,
-    color: "#333",
+    color: theme.text,
   },
   editLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#666",
+    color: theme.textSecondary,
     marginTop: 12,
     marginBottom: 6,
   },
   editInput: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: theme.input,
+    color: theme.text,
   },
   editTextInput: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: theme.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: theme.input,
+    color: theme.text,
     minHeight: 80,
     maxHeight: 200,
     textAlignVertical: "top",
@@ -1973,15 +1976,15 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: "center",
   },
   editModalButtonCancel: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: theme.input,
   },
   editModalButtonSave: {
-    backgroundColor: "#007AFF",
+    backgroundColor: theme.primary,
   },
   editModalButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: theme.text,
   },
   categoryButtons: {
     flexDirection: "row",
@@ -1993,36 +1996,36 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: theme.input,
     borderWidth: 2,
-    borderColor: "#e0e0e0",
+    borderColor: theme.border,
     alignItems: "center",
   },
   categoryButtonActive: {
-    backgroundColor: "#007AFF",
-    borderColor: "#0056b3",
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   categoryButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: theme.text,
   },
   markdownToggle: {
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 6,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: theme.input,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: theme.border,
   },
   markdownToggleActive: {
-    backgroundColor: "#e8f5e8",
-    borderColor: "#4caf50",
+    backgroundColor: theme.success + '33',
+    borderColor: theme.success,
   },
   markdownToggleText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#333",
+    color: theme.text,
   },
   dateSeparator: {
     flexDirection: 'row',
@@ -2066,18 +2069,18 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.input,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: theme.divider,
   },
   cardDate: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#495057',
+    color: theme.text,
   },
   cardTime: {
     fontSize: 12,
-    color: '#6c757d',
+    color: theme.textSecondary,
   },
   cardContent: {
     padding: 16,
@@ -2085,11 +2088,11 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   cardText: {
     fontSize: 16,
     lineHeight: 22,
-    color: '#212529',
+    color: theme.text,
     marginBottom: 8,
   },
   expenseTag: {
-    backgroundColor: '#d4edda',
+    backgroundColor: theme.success + '33',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -2098,11 +2101,11 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   expenseText: {
     fontSize: 12,
-    color: '#155724',
+    color: theme.success,
     fontWeight: '500',
   },
   actionTag: {
-    backgroundColor: '#cce5ff',
+    backgroundColor: theme.info + '33',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -2111,7 +2114,7 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   actionText: {
     fontSize: 12,
-    color: '#004085',
+    color: theme.info,
     fontWeight: '500',
   },
   
@@ -2121,7 +2124,7 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: theme.divider,
   },
   listLeft: {
     alignItems: 'center',
@@ -2130,7 +2133,7 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   listTime: {
     fontSize: 12,
-    color: '#6c757d',
+    color: theme.textSecondary,
     fontWeight: '500',
     marginBottom: 4,
   },
@@ -2138,7 +2141,7 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#007bff',
+    backgroundColor: theme.primary,
   },
   listContent: {
     flex: 1,
@@ -2146,7 +2149,7 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   listText: {
     fontSize: 16,
     lineHeight: 22,
-    color: '#212529',
+    color: theme.text,
     marginBottom: 6,
   },
   listMeta: {
@@ -2155,12 +2158,12 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   listExpense: {
     fontSize: 12,
-    color: '#28a745',
+    color: theme.success,
     fontWeight: '500',
   },
   listAction: {
     fontSize: 12,
-    color: '#007bff',
+    color: theme.primary,
     fontWeight: '500',
   },
   
@@ -2179,13 +2182,13 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#007bff',
+    backgroundColor: theme.primary,
     zIndex: 1,
   },
   timelineLine: {
     width: 2,
     flex: 1,
-    backgroundColor: '#dee2e6',
+    backgroundColor: theme.border,
     marginTop: 4,
   },
   timelineContent: {
@@ -2201,14 +2204,14 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   timelineDate: {
     fontSize: 12,
-    color: '#6c757d',
+    color: theme.textSecondary,
     fontWeight: '500',
     marginBottom: 8,
   },
   timelineText: {
     fontSize: 16,
     lineHeight: 22,
-    color: '#212529',
+    color: theme.text,
   },
   timelineTags: {
     flexDirection: 'row',
@@ -2217,16 +2220,16 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   timelineExpense: {
     fontSize: 12,
-    color: '#28a745',
-    backgroundColor: '#d4edda',
+    color: theme.success,
+    backgroundColor: theme.success + '33',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
   },
   timelineAction: {
     fontSize: 12,
-    color: '#007bff',
-    backgroundColor: '#cce5ff',
+    color: theme.primary,
+    backgroundColor: theme.info + '33',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
@@ -2246,7 +2249,7 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
     elevation: 3,
   },
   magazineHeader: {
-    backgroundColor: '#343a40',
+    backgroundColor: theme.primaryDark || theme.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
@@ -2264,7 +2267,7 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   magazineText: {
     fontSize: 17,
     lineHeight: 26,
-    color: '#212529',
+    color: theme.text,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
   },
   magazineFooter: {
@@ -2278,14 +2281,14 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   magazineExpenseLabel: {
     fontSize: 10,
-    color: '#6c757d',
+    color: theme.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   magazineExpenseAmount: {
     fontSize: 16,
-    color: '#28a745',
+    color: theme.success,
     fontWeight: '600',
   },
   magazineActionBlock: {
@@ -2293,14 +2296,14 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   magazineActionLabel: {
     fontSize: 10,
-    color: '#6c757d',
+    color: theme.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
     marginBottom: 2,
   },
   magazineActionText: {
     fontSize: 16,
-    color: '#007bff',
+    color: theme.primary,
     fontWeight: '600',
   },
   
@@ -2324,7 +2327,7 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   minimalText: {
     fontSize: 16,
-    color: '#212529',
+    color: theme.text,
   },
   minimalMeta: {
     flexDirection: 'row',
@@ -2334,48 +2337,15 @@ const getLayoutStyles = (theme: any) => StyleSheet.create({
   },
   minimalTime: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: theme.textSecondary,
   },
   minimalExpense: {
     fontSize: 12,
-    color: '#28a745',
+    color: theme.success,
   },
   minimalAction: {
     fontSize: 12,
-    color: '#007bff',
-  },
-});
-
-const getMarkdownStyles = (theme: any) => StyleSheet.create({
-  body: {
-    fontSize: 16,
-    color: "#333",
-    lineHeight: 20,
-  },
-  heading1: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginTop: 12,
-    marginBottom: 12,
-    paddingVertical: 4,
-  },
-  heading2: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-  strong: {
-    fontWeight: "bold",
-  },
-  em: {
-    fontStyle: "italic",
-  },
-  code_inline: {
-    backgroundColor: "#f0f0f0",
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 3,
-    fontFamily: "monospace",
+    color: theme.primary,
   },
   datePickerContent: {
     backgroundColor: theme.surface,
@@ -2439,5 +2409,43 @@ const getMarkdownStyles = (theme: any) => StyleSheet.create({
     fontSize: 14,
     color: theme.textSecondary,
     textAlign: 'center',
+  },
+});
+
+const getMarkdownStyles = (theme: any) => StyleSheet.create({
+  body: {
+    fontSize: 16,
+    color: theme.text,
+    lineHeight: 20,
+  },
+  heading1: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 12,
+    marginBottom: 12,
+    paddingVertical: 4,
+    color: theme.text,
+  },
+  heading2: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 6,
+    color: theme.text,
+  },
+  strong: {
+    fontWeight: "bold",
+    color: theme.text,
+  },
+  em: {
+    fontStyle: "italic",
+    color: theme.text,
+  },
+  code_inline: {
+    backgroundColor: theme.input,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 3,
+    fontFamily: "monospace",
+    color: theme.text,
   },
 });

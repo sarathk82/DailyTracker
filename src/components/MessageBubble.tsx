@@ -6,6 +6,7 @@ import Markdown from "react-native-markdown-display";
 import { Entry, Expense, ActionItem } from '../types';
 import { TextAnalyzer } from '../utils/textAnalysis';
 import { isDesktop } from '../utils/platform';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface MessageBubbleProps {
   entry: Entry;
@@ -26,6 +27,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   expense,
   actionItem,
 }) => {
+  const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
   const [translateX] = useState(new Animated.Value(0));
   const desktop = isDesktop();
@@ -60,6 +62,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   });
 
   const getBubbleStyle = () => {
+    const styles = getStyles(theme);
     const baseStyles = [styles.messageBubble];
     const alignmentStyle = entry.type === 'system' ? styles.systemMessage : styles.userMessage;
     
@@ -129,7 +132,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     }
   };
 
-  const MessageContent = () => (
+  const MessageContent = () => {
+    const styles = getStyles(theme);
+    return (
     <View style={{ flex: 1 }}>
       <View style={styles.messageHeader}>
         {getIcon()}
@@ -197,6 +202,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       )}
     </View>
   );
+  };
 
   const webStyles = Platform.OS === 'web' ? {
     style: {
@@ -210,8 +216,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   } : {};
 
   return (
-    <View style={entry.type === 'system' ? styles.systemMessageContainer : styles.userMessageContainer}>
-      <View style={styles.bubbleWrapper}>
+    <View style={entry.type === 'system' ? getStyles(theme).systemMessageContainer : getStyles(theme).userMessageContainer}>
+      <View style={getStyles(theme).bubbleWrapper}>
         <Animated.View
           {...panResponder.panHandlers}
           style={[
@@ -240,7 +246,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {/* Delete indicator (positioned to the right of bubble) */}
           {!desktop && entry.type !== 'system' && (
             <TouchableOpacity 
-              style={styles.deleteIndicator}
+              style={getStyles(theme).deleteIndicator}
               onPress={() => {
                 if (onDelete) onDelete(entry);
                 Animated.spring(translateX, {
@@ -258,7 +264,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   userMessageContainer: {
     marginVertical: 4,
     alignSelf: 'flex-start',
@@ -312,26 +318,26 @@ const styles = StyleSheet.create({
     }),
   },
   defaultBubble: {
-    backgroundColor: "#f0f0f0", // Light gray for user messages
+    backgroundColor: theme.input, // Using theme input color
   },
   expenseBubble: {
-    backgroundColor: "#e8f5e8",
-    borderColor: "#4caf50",
+    backgroundColor: theme.success + '22',
+    borderColor: theme.success,
     borderWidth: 1,
   },
   actionBubble: {
-    backgroundColor: "#e3f2fd",
-    borderColor: "#2196f3",
+    backgroundColor: theme.info + '22',
+    borderColor: theme.info,
     borderWidth: 1,
   },
   systemBubble: {
-    backgroundColor: "#e3f2fd", // Light blue for system messages
-    borderColor: "#2196f3",
+    backgroundColor: theme.info + '22',
+    borderColor: theme.info,
     borderWidth: 1,
     borderRadius: 12,
   },
   systemMessage: {
-    backgroundColor: '#e3f2fd',
+    backgroundColor: theme.info + '22',
     marginLeft: '15%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 5,
@@ -339,7 +345,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 5,
   },
   userMessage: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme.input,
     marginRight: '15%',
     borderTopLeftRadius: 5,
     borderTopRightRadius: 20,
@@ -365,23 +371,23 @@ const styles = StyleSheet.create({
     padding: 4,
     paddingHorizontal: 6,
     borderRadius: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: theme.input,
   },
   deleteButton: {
-    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    backgroundColor: theme.error + '22',
   },
   actionButtonText: {
     fontSize: 12,
   },
   gestureHint: {
     fontSize: 9,
-    color: '#999',
+    color: theme.textSecondary,
     fontStyle: 'italic',
     marginBottom: 4,
   },
   timestamp: {
     fontSize: 10,
-    color: "#666",
+    color: theme.textSecondary,
     marginLeft: 4,
   },
   messageText: {
@@ -395,20 +401,20 @@ const styles = StyleSheet.create({
     } as any : {}),
   },
   userMessageText: {
-    color: "#333", // Dark text for user messages on light background
+    color: theme.text,
   },
   systemMessageText: {
-    color: "#1565c0", // Darker blue for contrast on light background
+    color: theme.info,
     fontSize: 14,
     textAlign: "left",
-    fontWeight: "500", // Slightly bolder for better readability
+    fontWeight: "500",
   },
   nonUserMessageText: {
-    color: "#333",  // Dark text for action/expense messages
+    color: theme.text,
   },
   categoryLabel: {
     fontSize: 11,
-    color: "#666",
+    color: theme.textSecondary,
     fontStyle: "italic",
     marginTop: 2,
     flexShrink: 1,

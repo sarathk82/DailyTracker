@@ -38,8 +38,9 @@ interface AnalyticsData {
 }
 
 export const AnalyticsScreen: React.FC = () => {
-    const { theme, isDark } = useTheme();
-const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const { theme, isDark } = useTheme();
+  const dynamicStyles = getStyles(theme);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [loading, setLoading] = useState(true);
 
@@ -171,9 +172,6 @@ const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   );
 
   if (loading || !analytics) {
-    const dynamicStyles = getStyles(theme);
-
-
     return (
       <SafeAreaView style={dynamicStyles.container}>
         <Text style={dynamicStyles.loadingText}>Loading analytics...</Text>
@@ -194,14 +192,14 @@ const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
             <TouchableOpacity
               key={period}
               style={[
-                styles.periodButton,
-                selectedPeriod === period && styles.periodButtonActive
+                dynamicStyles.periodButton,
+                selectedPeriod === period && dynamicStyles.periodButtonActive
               ]}
               onPress={() => setSelectedPeriod(period)}
             >
               <Text style={[
-                styles.periodButtonText,
-                selectedPeriod === period && styles.periodButtonTextActive
+                dynamicStyles.periodButtonText,
+                selectedPeriod === period && dynamicStyles.periodButtonTextActive
               ]}>
                 {period === 'all' ? 'All Time' : `This ${period.charAt(0).toUpperCase() + period.slice(1)}`}
               </Text>
