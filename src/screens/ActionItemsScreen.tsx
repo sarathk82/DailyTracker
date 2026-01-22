@@ -8,6 +8,7 @@ import {
   Alert,
   Modal,
   TextInput,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -111,11 +112,13 @@ interface EditModalProps {
 const EditModal: React.FC<EditModalProps> = ({ visible, item, onSave, onCancel }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [dueDate, setDueDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (item) {
       setTitle(item.title);
       setDescription(item.description || '');
+      setDueDate(item.dueDate ? new Date(item.dueDate) : null);
     }
   }, [item]);
 
@@ -126,6 +129,7 @@ const EditModal: React.FC<EditModalProps> = ({ visible, item, onSave, onCancel }
       ...item,
       title: title.trim(),
       description: description.trim(),
+      dueDate: dueDate || undefined,
     };
 
     onSave(updatedItem);
@@ -152,6 +156,39 @@ const EditModal: React.FC<EditModalProps> = ({ visible, item, onSave, onCancel }
             placeholder="Description (optional)"
             multiline
           />
+
+          <View style={styles.dueDateContainer}>
+            <Text style={styles.dueDateLabel}>Due Date:</Text>
+            <View style={styles.dueDateInputWrapper}>
+              <input
+                type="date"
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  fontSize: 16,
+                  borderRadius: 8,
+                  border: '1px solid #ddd',
+                  backgroundColor: '#f8f8f8',
+                }}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setDueDate(new Date(e.target.value));
+                  } else {
+                    setDueDate(null);
+                  }
+                }}
+                value={dueDate ? format(dueDate, 'yyyy-MM-dd') : ''}
+              />
+              {dueDate && (
+                <TouchableOpacity
+                  style={styles.clearDateButton}
+                  onPress={() => setDueDate(null)}
+                >
+                  <Text style={styles.clearDateButtonText}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
 
           <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.modalButton} onPress={onCancel}>
@@ -300,6 +337,7 @@ export const ActionItemsScreen: React.FC = () => {
     await StorageService.updateActionItem(updatedItem.id, {
       title: updatedItem.title,
       description: updatedItem.description,
+      dueDate: updatedItem.dueDate,
     });
 
     setActionItems(prev =>
@@ -626,6 +664,33 @@ const styles = StyleSheet.create({
   modalInputLarge: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  dueDateContainer: {
+    marginBottom: 12,
+  },
+  dueDateLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+  },
+  dueDateInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  clearDateButton: {
+    marginLeft: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f44336',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearDateButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   modalButtons: {
     flexDirection: 'row',
