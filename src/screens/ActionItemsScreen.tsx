@@ -63,9 +63,21 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
       )}
 
       <View style={styles.itemFooter}>
-        <Text style={styles.itemDate}>
-          Created: {format(item.createdAt, 'MMM d, yyyy HH:mm')}
-        </Text>
+        <View>
+          <Text style={styles.itemDate}>
+            Created: {format(item.createdAt, 'MMM d, yyyy HH:mm')}
+          </Text>
+          {item.dueDate && (
+            <Text style={[
+              styles.itemDueDate,
+              item.completed && styles.completedText,
+              new Date(item.dueDate) < new Date() && !item.completed && styles.overdue
+            ]}>
+              Due: {format(new Date(item.dueDate), 'MMM d, yyyy')}
+              {new Date(item.dueDate) < new Date() && !item.completed && ' (Overdue)'}
+            </Text>
+          )}
+        </View>
         <View style={styles.itemActions}>
           <TouchableOpacity
             style={styles.actionButton}
@@ -168,7 +180,7 @@ export const ActionItemsScreen: React.FC = () => {
 
   const loadActionItems = useCallback(async () => {
     const items = await StorageService.getActionItems();
-    setActionItems(items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+    setActionItems(items);
   }, []);
 
   // Load action items on initial mount
@@ -193,6 +205,79 @@ export const ActionItemsScreen: React.FC = () => {
         return true;
     }
   });
+
+  // Group items by due date sections
+  const getSectionForItem = (item: ActionItem) => {
+    if (item.completed) return 'completed';
+    
+    if (!item.dueDate) return 'no-date';
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    const dueDate = new Date(item.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    if (dueDate < today) return 'overdue';
+    if (dueDate.getTime() === today.getTime()) return 'today';
+    if (dueDate.getTime() === tomorrow.getTime()) return 'tomorrow';
+    if (dueDate <= nextWeek) return 'this-week';
+    return 'later';
+  };
+
+  const getSectionTitle = (section: string) => {
+    switch (section) {
+      case 'overdue': return '🔴 Overdue';
+      case 'today': return '📅 Due Today';
+      case 'tomorrow': return '📆 Due Tomorrow';
+      case 'this-week': return '📋 Due This Week';
+      case 'later': return '🗓️ Due Later';
+      case 'no-date': return '📝 No Due Date';
+      case 'completed': return '✅ Completed';
+      default: return '';
+    }
+  };
+
+  const getSectionOrder = (section: string) => {
+    const order = ['overdue', 'today', 'tomorrow', 'this-week', 'later', 'no-date', 'completed'];
+    return order.indexOf(section);
+  };
+
+  // Group and sort items
+  const groupedItems = filteredItems.reduce((acc, item) => {
+    const section = getSectionForItem(item);
+    if (!acc[section]) acc[section] = [];
+    acc[section].push(item);
+    return acc;
+  }, {} as Record<string, ActionItem[]>);
+
+  // Sort items within each section by due date
+  Object.keys(groupedItems).forEach(section => {
+    groupedItems[section].sort((a, b) => {
+      if (section === 'completed' || section === 'no-date') {
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      }
+      if (!a.dueDate || !b.dueDate) return 0;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
+  });
+
+  // Create flat list with section headers
+  const sectionsWithItems: Array<{ type: 'header'; title: string } | { type: 'item'; item: ActionItem }> = [];
+  Object.keys(groupedItems)
+    .sort((a, b) => getSectionOrder(a) - getSectionOrder(b))
+    .forEach(section => {
+      sectionsWithItems.push({ type: 'header', title: getSectionTitle(section) });
+      groupedItems[section].forEach(item => {
+        sectionsWithItems.push({ type: 'item', item });
+      });
+    });
 
   const handleToggleComplete = async (id: string) => {
     const item = actionItems.find(item => item.id === id);
@@ -241,14 +326,23 @@ export const ActionItemsScreen: React.FC = () => {
     }
   };
 
-  const renderActionItem = ({ item }: { item: ActionItem }) => (
-    <ActionItemCard
-      item={item}
-      onToggleComplete={handleToggleComplete}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-    />
-  );
+  const renderItem = ({ item }: { item: { type: 'header'; title: string } | { type: 'item'; item: ActionItem } }) => {
+    if (item.type === 'header') {
+      return (
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionHeaderText}>{item.title}</Text>
+        </View>
+      );
+    }
+    return (
+      <ActionItemCard
+        item={item.item}
+        onToggleComplete={handleToggleComplete}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+    );
+  };
 
   const getFilterButtonStyle = (filterType: typeof filter) => [
     styles.filterButton,
@@ -295,7 +389,7 @@ export const ActionItemsScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {filteredItems.length === 0 ? (
+      {sectionsWithItems.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="checkbox-outline" size={64} color="#ccc" />
           <Text style={styles.emptyText}>
@@ -311,9 +405,11 @@ export const ActionItemsScreen: React.FC = () => {
         </View>
       ) : (
         <FlatList
-          data={filteredItems}
-          renderItem={renderActionItem}
-          keyExtractor={(item) => item.id}
+          data={sectionsWithItems}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => 
+            item.type === 'header' ? `header-${index}` : `item-${item.item.id}`
+          }
           style={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -389,6 +485,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
+  sectionHeader: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginTop: 8,
+  },
+  sectionHeaderText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   itemCard: {
     backgroundColor: '#fff',
     marginVertical: 6,
@@ -437,6 +545,16 @@ const styles = StyleSheet.create({
   itemDate: {
     fontSize: 12,
     color: '#999',
+  },
+  itemDueDate: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  overdue: {
+    color: '#f44336',
+    fontWeight: '600',
   },
   itemActions: {
     flexDirection: 'row',

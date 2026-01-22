@@ -221,15 +221,107 @@ export class TextAnalyzer {
         cleanTitle = cleanTitle.substring(1).trim();
       }
       
+      // Extract due date from text
+      const dueDate = this.extractDueDate(text);
+      
       return {
         id: uuid.v4(),
         entryId,
         title: cleanTitle,
         completed: false,
-        createdAt: new Date()
+        createdAt: new Date(),
+        dueDate: dueDate
       };
     }
     return null;
+  }
+
+  static extractDueDate(text: string): Date {
+    const lowerText = text.toLowerCase();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Check for "today"
+    if (/\btoday\b/.test(lowerText)) {
+      return new Date(today);
+    }
+    
+    // Check for "tomorrow"
+    if (/\btomorrow\b/.test(lowerText)) {
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow;
+    }
+    
+    // Check for "day after tomorrow" or "day after"
+    if (/\bday after tomorrow\b/.test(lowerText) || /\bday after\b/.test(lowerText)) {
+      const dayAfter = new Date(today);
+      dayAfter.setDate(dayAfter.getDate() + 2);
+      return dayAfter;
+    }
+    
+    // Check for "next week"
+    if (/\bnext week\b/.test(lowerText)) {
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      return nextWeek;
+    }
+    
+    // Check for specific day names (e.g., "on monday", "next friday")
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    for (let i = 0; i < days.length; i++) {
+      const dayPattern = new RegExp(`\\b(?:on |next )?${days[i]}\\b`, 'i');
+      if (dayPattern.test(lowerText)) {
+        const targetDay = i;
+        const currentDay = today.getDay();
+        let daysUntil = targetDay - currentDay;
+        if (daysUntil <= 0) daysUntil += 7; // Next week if day has passed
+        const targetDate = new Date(today);
+        targetDate.setDate(targetDate.getDate() + daysUntil);
+        return targetDate;
+      }
+    }
+    
+    // Check for date patterns like "on Jan 25", "on 25th", "January 25"
+    // Format: Month DD or DD Month
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 
+                       'july', 'august', 'september', 'october', 'november', 'december'];
+    const monthShort = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 
+                       'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    
+    // Try to match "Month DD" or "DD Month" patterns
+    for (let i = 0; i < monthNames.length; i++) {
+      const monthPattern = new RegExp(`\\b(?:on )?(?:${monthNames[i]}|${monthShort[i]})[\\s,]+([0-3]?\\d)(?:st|nd|rd|th)?\\b`, 'i');
+      const dayMonthPattern = new RegExp(`\\b(?:on )?([0-3]?\\d)(?:st|nd|rd|th)?[\\s,]+(?:${monthNames[i]}|${monthShort[i]})\\b`, 'i');
+      
+      let match = lowerText.match(monthPattern);
+      if (!match) match = lowerText.match(dayMonthPattern);
+      
+      if (match) {
+        const day = parseInt(match[1]);
+        if (day >= 1 && day <= 31) {
+          const targetDate = new Date(today.getFullYear(), i, day);
+          // If date is in the past, assume next year
+          if (targetDate < today) {
+            targetDate.setFullYear(targetDate.getFullYear() + 1);
+          }
+          return targetDate;
+        }
+      }
+    }
+    
+    // Check for relative days like "in 3 days", "after 5 days"
+    const relativeDaysPattern = /\b(?:in|after)\s+(\d+)\s+days?\b/i;
+    const relativeDaysMatch = lowerText.match(relativeDaysPattern);
+    if (relativeDaysMatch) {
+      const daysToAdd = parseInt(relativeDaysMatch[1]);
+      const targetDate = new Date(today);
+      targetDate.setDate(targetDate.getDate() + daysToAdd);
+      return targetDate;
+    }
+    
+    // Default to today if no date found
+    return new Date(today);
   }
 
   static extractExpenseInfo(text: string, entryId: string): Expense | null {
