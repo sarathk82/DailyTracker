@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "description": "Time and money are the most important resources in our lives. This app that allows you to be mindful in how you  are spending both in the pursuit of your goals.",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/smpljournal.png",
     "userInterfaceStyle": "light",
     "platforms": ["ios", "android", "web"],
     "experiments": {
@@ -25,8 +25,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.sarathk82.smpljournal",
-      "versionCode": 1
+      "package": "com.sarathk82.smpljournal"
     },
     "web": {
       "favicon": "./assets/favicon.png",
