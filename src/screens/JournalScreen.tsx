@@ -26,6 +26,7 @@ import { MinimalEntryItem } from "../components/MinimalEntryItem";
 import { SettingsScreen } from "./SettingsScreen";
 import { EditModal } from "../components/EditModal";
 import { isDesktop } from "../utils/platform";
+import { useAuth } from "../contexts/AuthContext";
 
 // Custom UUID function since react-native-uuid causes crashes
 const uuid = {
@@ -38,6 +39,11 @@ const uuid = {
 };
 export const JournalScreen: React.FC<{}> = () => {
   const { theme, isDark } = useTheme();
+  const authContext = useAuth();
+  const { user, logout } = authContext || { user: null, logout: null };
+  
+  console.log('JournalScreen - User:', user ? user.email : 'not logged in');
+  
   const [entries, setEntries] = useState<Entry[]>([]);
   const [inputText, setInputText] = useState("");
   const [isMarkdown, setIsMarkdown] = useState(true);
@@ -1109,6 +1115,29 @@ export const JournalScreen: React.FC<{}> = () => {
       <View style={[dynamicStyles.header, { zIndex: 10000 }]}>
         <Text style={dynamicStyles.headerTitle}>Daily Journal</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 10001 }}>
+          {user && (
+            <TouchableOpacity
+              style={[dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10005, backgroundColor: '#f44336' }]}
+              onPress={async () => {
+                console.log('Quick logout pressed');
+                if (logout) {
+                  Alert.alert('Logout', 'Sign out?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Logout', onPress: async () => {
+                      try {
+                        await logout();
+                        console.log('Logged out successfully');
+                      } catch (e: any) {
+                        Alert.alert('Error', e.message);
+                      }
+                    }}
+                  ]);
+                }
+              }}
+            >
+              <Text style={dynamicStyles.settingsButtonText}>🚪</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10004 }]}
             onPress={addSingleTestEntry}
