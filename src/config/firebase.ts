@@ -1,22 +1,24 @@
 // Firebase configuration
-// Replace these values with your Firebase project settings from:
-// https://console.firebase.google.com -> Project Settings -> General -> Your apps
+import { initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getAnalytics } from 'firebase/analytics';
+import { Platform } from 'react-native';
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: "YOUR_MEASUREMENT_ID" // Optional
+  apiKey: "AIzaSyAcKWMQHjUtAq9Bu-W57JI0E6vipRH3WkY",
+  authDomain: "smpl-journal.firebaseapp.com",
+  projectId: "smpl-journal",
+  storageBucket: "smpl-journal.firebasestorage.app",
+  messagingSenderId: "290585147080",
+  appId: "1:290585147080:web:215f6530a93fc6ec0f57fd",
+  measurementId: "G-C2ENYKTYXW"
 };
 
-// Instructions:
-// 1. Go to https://console.firebase.google.com
-// 2. Create a new project or select existing one
-// 3. Add a Web app
-// 4. Copy the config values and paste above
-// 5. Enable Authentication (Email/Password, Google)
-// 6. Enable Firestore Database
-// 7. Set security rules (see SYNC_IMPLEMENTATION.md)
+// Initialize Firebase
+export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+// Analytics only on web
+export const analytics = Platform.OS === 'web' ? getAnalytics(app) : null;
