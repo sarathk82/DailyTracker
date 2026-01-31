@@ -25,8 +25,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.sarathk82.smpljournal",
-      "versionCode": 11
+      "package": "com.sarathk82.smpljournal"
     },
     "web": {
       "favicon": "./assets/favicon.png",
