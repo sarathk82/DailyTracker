@@ -17,8 +17,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import Markdown from 'react-native-markdown-display';
 
-import { ActionItem } from '../types';
+import { ActionItem, Entry } from '../types';
 import { StorageService } from '../utils/storage';
+import { EditModal as UnifiedEditModal } from '../components/EditModal';
 
 interface ActionItemCardProps {
   item: ActionItem;
@@ -109,125 +110,19 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
   );
 };
 
-interface EditModalProps {
-  visible: boolean;
-  item: ActionItem | null;
-  onSave: (item: ActionItem) => void;
-  onCancel: () => void;
-  theme: any;
-  dynamicStyles: any;
-}
-
-const EditModal: React.FC<EditModalProps> = ({ visible, item, onSave, onCancel, theme, dynamicStyles }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState<Date | null>(null);
-
-  useEffect(() => {
-    if (item) {
-      setTitle(item.title);
-      setDescription(item.description || '');
-      setDueDate(item.dueDate ? new Date(item.dueDate) : null);
-    }
-  }, [item]);
-
-  const handleSave = () => {
-    if (!item || !title.trim()) return;
-
-    const updatedItem: ActionItem = {
-      ...item,
-      title: title.trim(),
-      description: description.trim(),
-      dueDate: dueDate || undefined,
-    };
-
-    onSave(updatedItem);
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={dynamicStyles.modalContainer}>
-        <View style={dynamicStyles.modalContent}>
-          <Text style={dynamicStyles.modalTitle}>Edit Action Item</Text>
-
-          <TextInput
-            style={dynamicStyles.modalInput}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Title"
-            multiline
-          />
-
-          <TextInput
-            style={[dynamicStyles.modalInput, dynamicStyles.modalInputLarge]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Description (optional)"
-            multiline
-          />
-
-          <View style={dynamicStyles.dueDateContainer}>
-            <Text style={dynamicStyles.dueDateLabel}>Due Date:</Text>
-            <View style={dynamicStyles.dueDateInputWrapper}>
-              <input
-                type="date"
-                style={{
-                  flex: 1,
-                  padding: 12,
-                  fontSize: 16,
-                  borderRadius: 8,
-                  border: '1px solid #ddd',
-                  backgroundColor: theme.input,
-                }}
-                onChange={(e) => {
-                  if (e.target.value) {
-                    setDueDate(new Date(e.target.value));
-                  } else {
-                    setDueDate(null);
-                  }
-                }}
-                value={dueDate ? format(dueDate, 'yyyy-MM-dd') : ''}
-              />
-              {dueDate && (
-                <TouchableOpacity
-                  style={dynamicStyles.clearDateButton}
-                  onPress={() => setDueDate(null)}
-                >
-                  <Text style={dynamicStyles.clearDateButtonText}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          <View style={dynamicStyles.modalButtons}>
-            <TouchableOpacity style={dynamicStyles.modalButton} onPress={onCancel}>
-              <Text style={dynamicStyles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[dynamicStyles.modalButton, dynamicStyles.modalButtonPrimary]}
-              onPress={handleSave}
-            >
-              <Text style={[dynamicStyles.modalButtonText, dynamicStyles.modalButtonTextPrimary]}>
-                Save
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
 export const ActionItemsScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [editingItem, setEditingItem] = useState<ActionItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
   const loadActionItems = useCallback(async () => {
     const items = await StorageService.getActionItems();
+    const allEntries = await StorageService.getEntries();
     setActionItems(items);
+    setEntries(allEntries);
   }, []);
 
   // Load action items on initial mount
@@ -342,17 +237,8 @@ export const ActionItemsScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleSaveEdit = async (updatedItem: ActionItem) => {
-    await StorageService.updateActionItem(updatedItem.id, {
-      title: updatedItem.title,
-      description: updatedItem.description,
-      dueDate: updatedItem.dueDate,
-    });
-
-    setActionItems(prev =>
-      prev.map(item => (item.id === updatedItem.id ? updatedItem : item))
-    );
-
+  const handleSaveEdit = async () => {
+    await loadActionItems();
     setModalVisible(false);
     setEditingItem(null);
   };
@@ -466,16 +352,15 @@ export const ActionItemsScreen: React.FC = () => {
         />
       )}
 
-      <EditModal
+      <UnifiedEditModal
         visible={modalVisible}
-        item={editingItem}
-        onSave={handleSaveEdit}
-        onCancel={() => {
+        entry={editingItem ? entries.find(e => e.id === editingItem.entryId) || null : null}
+        actionItem={editingItem}
+        onClose={() => {
           setModalVisible(false);
           setEditingItem(null);
         }}
-        theme={theme}
-        dynamicStyles={dynamicStyles}
+        onSave={handleSaveEdit}
       />
     </SafeAreaView>
   );

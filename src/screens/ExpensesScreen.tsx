@@ -16,9 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 
-import { Expense } from '../types';
+import { Expense, Entry } from '../types';
 import { StorageService } from '../utils/storage';
 import { TextAnalyzer } from '../utils/textAnalysis';
+import { EditModal as UnifiedEditModal } from '../components/EditModal';
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -73,158 +74,11 @@ const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onEdit, onDelete, th
   );
 };
 
-interface EditExpenseModalProps {
-  visible: boolean;
-  expense: Expense | null;
-  onSave: (expense: Expense) => void;
-  onCancel: () => void;
-  theme: any;
-  dynamicStyles: any;
-}
-
-const EditExpenseModal: React.FC<EditExpenseModalProps> = ({
-  visible,
-  expense,
-  onSave,
-  onCancel,
-  theme,
-  dynamicStyles,
-}) => {
-  const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState('USD');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-
-  const currencies = ['USD', 'INR', 'EUR', 'GBP'];
-  const categories = [
-    'Food', 'Transportation', 'Shopping', 'Entertainment', 'Bills',
-    'Healthcare', 'Education', 'Travel', 'Other'
-  ];
-
-  useEffect(() => {
-    if (expense) {
-      setAmount(expense.amount.toString());
-      setCurrency(expense.currency);
-      setDescription(expense.description);
-      setCategory(expense.category || '');
-    }
-  }, [expense]);
-
-  const handleSave = () => {
-    if (!expense || !amount.trim() || !description.trim()) return;
-
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      Alert.alert('Invalid Amount', 'Please enter a valid amount greater than 0');
-      return;
-    }
-
-    const updatedExpense: Expense = {
-      ...expense,
-      amount: numericAmount,
-      currency,
-      description: description.trim(),
-      category: category.trim() || undefined,
-    };
-
-    onSave(updatedExpense);
-  };
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={dynamicStyles.modalContainer}>
-        <View style={dynamicStyles.modalContent}>
-          <Text style={dynamicStyles.modalTitle}>Edit Expense</Text>
-
-          <TextInput
-            style={dynamicStyles.modalInput}
-            value={amount}
-            onChangeText={setAmount}
-            placeholder="Amount"
-            keyboardType="numeric"
-          />
-
-          <View style={dynamicStyles.currencyContainer}>
-            <Text style={dynamicStyles.inputLabel}>Currency:</Text>
-            <View style={dynamicStyles.currencyOptions}>
-              {currencies.map((curr) => (
-                <TouchableOpacity
-                  key={curr}
-                  style={[
-                    dynamicStyles.currencyButton,
-                    currency === curr && dynamicStyles.currencyButtonActive,
-                  ]}
-                  onPress={() => setCurrency(curr)}
-                >
-                  <Text
-                    style={[
-                      dynamicStyles.currencyButtonText,
-                      currency === curr && dynamicStyles.currencyButtonTextActive,
-                    ]}
-                  >
-                    {curr}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <TextInput
-            style={[dynamicStyles.modalInput, dynamicStyles.modalInputLarge]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Description"
-            multiline
-          />
-
-          <View style={dynamicStyles.categoryContainer}>
-            <Text style={dynamicStyles.inputLabel}>Category (optional):</Text>
-            <View style={dynamicStyles.categoryOptions}>
-              {categories.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    dynamicStyles.categoryButton,
-                    category === cat && dynamicStyles.categoryButtonActive,
-                  ]}
-                  onPress={() => setCategory(category === cat ? '' : cat)}
-                >
-                  <Text
-                    style={[
-                      dynamicStyles.categoryButtonText,
-                      category === cat && dynamicStyles.categoryButtonTextActive,
-                    ]}
-                  >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={dynamicStyles.modalButtons}>
-            <TouchableOpacity style={dynamicStyles.modalButton} onPress={onCancel}>
-              <Text style={dynamicStyles.modalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[dynamicStyles.modalButton, dynamicStyles.modalButtonPrimary]}
-              onPress={handleSave}
-            >
-              <Text style={[dynamicStyles.modalButtonText, dynamicStyles.modalButtonTextPrimary]}>
-                Save
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-};
-
 export const ExpensesScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const dynamicStyles = getStyles(theme);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [filter, setFilter] = useState<'all' | 'thisMonth'>('all');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -232,7 +86,9 @@ export const ExpensesScreen: React.FC = () => {
 
   const loadExpenses = useCallback(async () => {
     const expenseList = await StorageService.getExpenses();
+    const allEntries = await StorageService.getEntries();
     setExpenses(expenseList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+    setEntries(allEntries);
   }, []);
 
   // Load expenses on initial mount
@@ -333,18 +189,8 @@ export const ExpensesScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleSaveEdit = async (updatedExpense: Expense) => {
-    await StorageService.updateExpense(updatedExpense.id, {
-      amount: updatedExpense.amount,
-      currency: updatedExpense.currency,
-      description: updatedExpense.description,
-      category: updatedExpense.category,
-    });
-
-    setExpenses(prev =>
-      prev.map(expense => (expense.id === updatedExpense.id ? updatedExpense : expense))
-    );
-
+  const handleSaveEdit = async () => {
+    await loadExpenses();
     setModalVisible(false);
     setEditingExpense(null);
   };
@@ -524,16 +370,15 @@ export const ExpensesScreen: React.FC = () => {
         )
       )}
 
-      <EditExpenseModal
+      <UnifiedEditModal
         visible={modalVisible}
+        entry={editingExpense ? entries.find(e => e.id === editingExpense.entryId) || null : null}
         expense={editingExpense}
-        onSave={handleSaveEdit}
-        onCancel={() => {
+        onClose={() => {
           setModalVisible(false);
           setEditingExpense(null);
         }}
-        theme={theme}
-        dynamicStyles={dynamicStyles}
+        onSave={handleSaveEdit}
       />
     </SafeAreaView>
   );

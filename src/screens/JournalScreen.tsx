@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from '../contexts/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 // import { Ionicons } from "@expo/vector-icons";
 import Markdown from "react-native-markdown-display";
 import { format } from "date-fns";
@@ -23,6 +24,7 @@ import { TextAnalyzer } from "../utils/textAnalysis";
 import { MessageBubble } from "../components/MessageBubble";
 import { MinimalEntryItem } from "../components/MinimalEntryItem";
 import { SettingsScreen } from "./SettingsScreen";
+import { EditModal } from "../components/EditModal";
 import { isDesktop } from "../utils/platform";
 
 // Custom UUID function since react-native-uuid causes crashes
@@ -70,10 +72,6 @@ export const JournalScreen: React.FC<{}> = () => {
   
   // Edit modal state
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
-  const [editText, setEditText] = useState("");
-  const [editAmount, setEditAmount] = useState("");
-  const [editCategory, setEditCategory] = useState("");
-  const [editDueDate, setEditDueDate] = useState<Date | null>(null);
 
   // Test entries for different scenarios
   const testEntries = [
@@ -366,11 +364,20 @@ export const JournalScreen: React.FC<{}> = () => {
     }
   }, []);
 
+  // Load data on initial mount
   useEffect(() => {
     loadEntries();
     loadSettings();
     loadExpensesAndActions();
   }, [loadEntries, loadSettings, loadExpensesAndActions]);
+
+  // Refresh data when screen comes into focus (e.g., after editing in another tab)
+  useFocusEffect(
+    useCallback(() => {
+      loadEntries();
+      loadExpensesAndActions();
+    }, [loadEntries, loadExpensesAndActions])
+  );
 
   const showToast = (message: string) => {
     alert(message);
@@ -697,107 +704,11 @@ export const JournalScreen: React.FC<{}> = () => {
 
   const handleEditEntry = (entry: Entry) => {
     setEditingEntry(entry);
-    setEditText(entry.text.replace(/^✅\s*/, '')); // Remove checkmark if present
-    
-    // Pre-fill expense details if it's an expense
-    if (entry.type === "expense") {
-      const expense = expenses.find(e => e.entryId === entry.id);
-      if (expense) {
-        setEditAmount(expense.amount.toString());
-        setEditCategory(expense.category || "");
-      }
-    }
-    
-    // Load action item details if it's an action
-    if (entry.type === "action") {
-      const actionItem = actionItems.find(a => a.entryId === entry.id);
-      if (actionItem && actionItem.dueDate) {
-        setEditDueDate(new Date(actionItem.dueDate));
-      } else {
-        // Default to today if no due date exists
-        setEditDueDate(new Date());
-      }
-    }
   };
 
   const handleSaveEdit = async () => {
-    if (!editingEntry || !editText.trim()) return;
-    
-    // Validate amount for expense entries
-    if (editingEntry.type === "expense") {
-      if (!editAmount || !editAmount.trim()) {
-        Alert.alert('Amount Required', 'Please enter an amount for the expense');
-        return;
-      }
-      const amount = parseFloat(editAmount);
-      if (isNaN(amount) || amount <= 0) {
-        Alert.alert('Invalid Amount', 'Please enter a valid amount greater than 0');
-        return;
-      }
-    }
-    
-    try {
-      // Update entry text, type, and preserve markdown flag
-      const currentEntries = await StorageService.getEntries();
-      const updatedEntries = currentEntries.map(e => 
-        e.id === editingEntry.id ? { ...e, text: editText.trim(), type: editingEntry.type, isMarkdown: editingEntry.isMarkdown } : e
-      );
-      await StorageService.saveEntries(updatedEntries);
-      
-      // Update expense details if it's an expense
-      if (editingEntry.type === "expense") {
-        const expense = expenses.find(e => e.entryId === editingEntry.id);
-        if (expense && editAmount) {
-          const amount = parseFloat(editAmount);
-          if (!isNaN(amount) && amount > 0) {
-            await StorageService.updateExpense(expense.id, {
-              amount,
-              category: editCategory || expense.category,
-              description: editText.trim(),
-            });
-          }
-        }
-      }
-      
-      // Update or create action item if it's an action
-      if (editingEntry.type === "action") {
-        // Extract due date from text if changed, otherwise use editDueDate
-        const extractedDueDate = TextAnalyzer.extractDueDate(editText.trim());
-        const dueDate = extractedDueDate || editDueDate || new Date();
-        
-        let actionItem = actionItems.find(a => a.entryId === editingEntry.id);
-        if (actionItem) {
-          // Update existing action item
-          await StorageService.updateActionItem(actionItem.id, {
-            title: editText.trim(),
-            dueDate: dueDate,
-          });
-        } else {
-          // Create new action item if it doesn't exist
-          const newActionItem = {
-            id: uuid.v4(),
-            entryId: editingEntry.id,
-            title: editText.trim(),
-            completed: false,
-            createdAt: new Date(),
-            dueDate: dueDate,
-            autoDetected: false
-          };
-          await StorageService.addActionItem(newActionItem);
-        }
-      }
-      
-      // Reload data and close modal
-      await loadEntries();
-      await loadExpensesAndActions();
-      setEditingEntry(null);
-      setEditText("");
-      setEditAmount("");
-      setEditCategory("");
-      setEditDueDate(null);
-    } catch (error) {
-      console.error('Error updating entry:', error);
-    }
+    await loadEntries();
+    await loadExpensesAndActions();
   };
 
   const updateEntryType = async (entryId: string, newType: Entry["type"]) => {
@@ -1449,182 +1360,14 @@ export const JournalScreen: React.FC<{}> = () => {
         </Modal>
       )}
       
-      {editingEntry && (
-        <Modal
-          visible={!!editingEntry}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={() => {
-            setEditingEntry(null);
-            setEditText("");
-            setEditAmount("");
-            setEditCategory("");
-            setEditDueDate(null);
-          }}
-        >
-          <View style={dynamicStyles.editModalOverlay}>
-            <View style={dynamicStyles.editModalContent}>
-              <Text style={dynamicStyles.editModalTitle}>Edit Entry</Text>
-              
-              <Text style={dynamicStyles.editLabel}>Text:</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <TouchableOpacity
-                  style={[
-                    dynamicStyles.markdownToggle,
-                    editingEntry.isMarkdown && dynamicStyles.markdownToggleActive
-                  ]}
-                  onPress={() => setEditingEntry({ ...editingEntry, isMarkdown: !editingEntry.isMarkdown })}
-                >
-                  <Text style={dynamicStyles.markdownToggleText}>
-                    {editingEntry.isMarkdown ? '✅ Markdown' : '❌ Plain Text'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={dynamicStyles.editTextInput}
-                value={editText}
-                onChangeText={setEditText}
-                placeholder="Entry text"
-                multiline
-                maxLength={1000}
-              />
-              
-              <Text style={dynamicStyles.editLabel}>Category:</Text>
-              <View style={dynamicStyles.categoryButtons}>
-                <TouchableOpacity
-                  style={[
-                    dynamicStyles.categoryButton,
-                    editingEntry.type === 'log' && dynamicStyles.categoryButtonActive
-                  ]}
-                  onPress={async () => {
-                    if (editingEntry.type !== 'log') {
-                      await removeCategory(editingEntry);
-                      setEditingEntry({ ...editingEntry, type: 'log' });
-                    }
-                  }}
-                >
-                  <Text style={dynamicStyles.categoryButtonText}>📝 Log</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    dynamicStyles.categoryButton,
-                    editingEntry.type === 'expense' && dynamicStyles.categoryButtonActive
-                  ]}
-                  onPress={async () => {
-                    if (editingEntry.type !== 'expense') {
-                      // Remove existing categorization
-                      if (editingEntry.type === 'action') {
-                        await removeCategory(editingEntry);
-                      }
-                      // Try to extract amount from text first
-                      const expenseInfo = TextAnalyzer.extractExpenseInfo(editText, editingEntry.id);
-                      if (expenseInfo) {
-                        setEditAmount(expenseInfo.amount.toString());
-                        setEditCategory(expenseInfo.category || "");
-                      } else {
-                        // No amount found in text, leave empty for manual entry
-                        setEditAmount("");
-                        setEditCategory("");
-                      }
-                      setEditingEntry({ ...editingEntry, type: 'expense' });
-                    }
-                  }}
-                >
-                  <Text style={dynamicStyles.categoryButtonText}>💰 Expense</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    dynamicStyles.categoryButton,
-                    editingEntry.type === 'action' && dynamicStyles.categoryButtonActive
-                  ]}
-                  onPress={async () => {
-                    if (editingEntry.type !== 'action') {
-                      // Remove existing categorization
-                      if (editingEntry.type === 'expense') {
-                        await removeCategory(editingEntry);
-                        setEditAmount("");
-                        setEditCategory("");
-                      }
-                      setEditingEntry({ ...editingEntry, type: 'action' });
-                    }
-                  }}
-                >
-                  <Text style={dynamicStyles.categoryButtonText}>✅ Task</Text>
-                </TouchableOpacity>
-              </View>
-              
-              {editingEntry.type === "expense" && (
-                <>
-                  <Text style={dynamicStyles.editLabel}>Amount:</Text>
-                  <TextInput
-                    style={dynamicStyles.editInput}
-                    value={editAmount}
-                    onChangeText={setEditAmount}
-                    placeholder="Enter amount"
-                    keyboardType="decimal-pad"
-                  />
-                  
-                  <Text style={dynamicStyles.editLabel}>Category (optional):</Text>
-                  <TextInput
-                    style={dynamicStyles.editInput}
-                    value={editCategory}
-                    onChangeText={setEditCategory}
-                    placeholder="Food, Transportation, etc."
-                  />
-                </>
-              )}
-
-              {editingEntry.type === "action" && (
-                <>
-                  <Text style={dynamicStyles.editLabel}>Due Date:</Text>
-                  <View style={{ marginBottom: 12 }}>
-                    {Platform.OS === 'web' && (
-                      <input
-                        type="date"
-                        style={{
-                          width: '100%',
-                          padding: 12,
-                          fontSize: 16,
-                          borderRadius: 8,
-                          border: '1px solid #ddd',
-                          backgroundColor: theme.input,
-                        }}
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            setEditDueDate(new Date(e.target.value));
-                          }
-                        }}
-                        value={editDueDate ? format(editDueDate, 'yyyy-MM-dd') : ''}
-                      />
-                    )}
-                  </View>
-                </>
-              )}
-              
-              <View style={dynamicStyles.editModalButtons}>
-                <TouchableOpacity
-                  style={[dynamicStyles.editModalButton, dynamicStyles.editModalButtonCancel]}
-                  onPress={() => {
-                    setEditingEntry(null);
-                    setEditText("");
-                    setEditAmount("");
-                    setEditCategory("");
-                    setEditDueDate(null);
-                  }}
-                >
-                  <Text style={dynamicStyles.editModalButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[dynamicStyles.editModalButton, dynamicStyles.editModalButtonSave]}
-                  onPress={handleSaveEdit}
-                >
-                  <Text style={[dynamicStyles.editModalButtonText, { color: theme.surface }]}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
+      <EditModal
+        visible={!!editingEntry}
+        entry={editingEntry}
+        expense={editingEntry ? expenses.find(e => e.entryId === editingEntry.id) : null}
+        actionItem={editingEntry ? actionItems.find(a => a.entryId === editingEntry.id) : null}
+        onClose={() => setEditingEntry(null)}
+        onSave={handleSaveEdit}
+      />
       
       {/* Date Picker Modal */}
       {showDatePicker && (
