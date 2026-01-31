@@ -94,7 +94,7 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
             activeOpacity={0.7}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="pencil" size={18} color="#666" />
+            <Ionicons name="pencil" size={18} color={theme.text} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[dynamicStyles.actionButton, dynamicStyles.deleteButton]}
@@ -504,10 +504,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     minHeight: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 8,
+    backgroundColor: theme.input,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
+    borderColor: theme.border,
   },
   deleteButton: {
     backgroundColor: '#f44336',

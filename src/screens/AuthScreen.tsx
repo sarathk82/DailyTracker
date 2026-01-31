@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
@@ -172,17 +173,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
           <View style={dynamicStyles.content}>
             {/* Logo/Branding */}
             <View style={dynamicStyles.logoContainer}>
-              <Text style={dynamicStyles.logo}>📝</Text>
+              <Image 
+                source={require('../../assets/smpljournal.png')} 
+                style={dynamicStyles.logoImage}
+                resizeMode="contain"
+              />
               <Text style={dynamicStyles.appName}>Smpl Journal</Text>
+              <Text style={dynamicStyles.tagline}>Reimagine Journaling</Text>
             </View>
 
-            <Text style={dynamicStyles.title}>
-              {isSignUp ? 'Create Account' : 'Welcome Back'}
-            </Text>
-            <Text style={dynamicStyles.subtitle}>
-              {isSignUp
-                ? 'Start journaling with end-to-end encryption'
-                : 'Sign in to continue your journey'}
+            <Text style={dynamicStyles.welcomeText}>
+              {isSignUp ? 'Join thousands of users and transform your daily journaling experience' : 'Welcome Back'}
             </Text>
 
             {isSignUp && (
@@ -316,17 +317,33 @@ const getStyles = (theme: any) =>
     },
     logoContainer: {
       alignItems: 'center',
-      marginBottom: 32,
+      marginBottom: 40,
     },
-    logo: {
-      fontSize: 64,
-      marginBottom: 8,
+    logoImage: {
+      width: 100,
+      height: 100,
+      marginBottom: 16,
     },
     appName: {
-      fontSize: 32,
+      fontSize: 36,
       fontWeight: 'bold',
       color: theme.primary,
-      letterSpacing: 1,
+      letterSpacing: 1.5,
+      marginBottom: 4,
+    },
+    tagline: {
+      fontSize: 14,
+      color: theme.textSecondary,
+      fontStyle: 'italic',
+      marginTop: 4,
+    },
+    welcomeText: {
+      fontSize: 18,
+      color: theme.text,
+      marginBottom: 32,
+      textAlign: 'center',
+      lineHeight: 26,
+      paddingHorizontal: 20,
     },
     title: {
       fontSize: 28,
