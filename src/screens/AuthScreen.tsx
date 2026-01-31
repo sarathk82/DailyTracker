@@ -22,7 +22,7 @@ interface AuthScreenProps {
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const { theme } = useTheme();
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -43,7 +43,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     setLoading(true);
     try {
       await signIn(email, password);
-      onAuthSuccess();
+      onAuthSuccess?.();
     } catch (error: any) {
       Alert.alert('Sign In Failed', error.message);
     } finally {
@@ -71,7 +71,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     setLoading(true);
     try {
       await signUp(email, password, displayName);
-      onAuthSuccess();
+      onAuthSuccess?.();
     } catch (error: any) {
       Alert.alert('Sign Up Failed', error.message);
     } finally {
@@ -95,6 +95,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       setIsForgotPassword(false);
     } catch (error: any) {
       Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      onAuthSuccess?.();
+    } catch (error: any) {
+      Alert.alert('Google Sign In Failed', error.message);
     } finally {
       setLoading(false);
     }
@@ -158,13 +170,19 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
       >
         <ScrollView contentContainerStyle={dynamicStyles.scrollContent}>
           <View style={dynamicStyles.content}>
+            {/* Logo/Branding */}
+            <View style={dynamicStyles.logoContainer}>
+              <Text style={dynamicStyles.logo}>📝</Text>
+              <Text style={dynamicStyles.appName}>Smpl Journal</Text>
+            </View>
+
             <Text style={dynamicStyles.title}>
               {isSignUp ? 'Create Account' : 'Welcome Back'}
             </Text>
             <Text style={dynamicStyles.subtitle}>
               {isSignUp
-                ? 'Sign up to sync your data across devices'
-                : 'Sign in to access your data'}
+                ? 'Start journaling with end-to-end encryption'
+                : 'Sign in to continue your journey'}
             </Text>
 
             {isSignUp && (
@@ -239,6 +257,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
               <View style={dynamicStyles.dividerLine} />
             </View>
 
+            {/* Google Sign In Button */}
+            <TouchableOpacity
+              style={[dynamicStyles.button, dynamicStyles.googleButton]}
+              onPress={handleGoogleSignIn}
+              disabled={loading}
+            >
+              <View style={dynamicStyles.googleButtonContent}>
+                <Text style={dynamicStyles.googleIcon}>G</Text>
+                <Text style={dynamicStyles.googleButtonText}>
+                  Continue with Google
+                </Text>
+              </View>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={dynamicStyles.linkButton}
               onPress={() => setIsSignUp(!isSignUp)}
@@ -282,6 +314,20 @@ const getStyles = (theme: any) =>
       width: '100%',
       alignSelf: 'center',
     },
+    logoContainer: {
+      alignItems: 'center',
+      marginBottom: 32,
+    },
+    logo: {
+      fontSize: 64,
+      marginBottom: 8,
+    },
+    appName: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: theme.primary,
+      letterSpacing: 1,
+    },
     title: {
       fontSize: 28,
       fontWeight: 'bold',
@@ -313,6 +359,27 @@ const getStyles = (theme: any) =>
     },
     primaryButton: {
       backgroundColor: theme.primary,
+    },
+    googleButton: {
+      backgroundColor: theme.surface,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    googleButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    googleIcon: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: '#4285F4',
+      marginRight: 12,
+    },
+    googleButtonText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.text,
     },
     buttonText: {
       fontSize: 16,

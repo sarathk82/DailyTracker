@@ -9,6 +9,10 @@ import {
   User as FirebaseUser,
   sendPasswordResetEmail,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
@@ -26,6 +30,7 @@ interface AuthContextType {
   masterKey: string | null;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -140,6 +145,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+
+      // Check if user exists in Firestore
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        // First time Google sign-in - create user with default encryption
+        const defaultPassword = firebaseUser.uid; // Use UID as password for Google users
+        const salt = generateSalt();
+        const key = generateMasterKey(defaultPassword, salt);
+
+        await setDoc(userDocRef, {
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          encryptionSalt: salt,
+          provider: 'google',
+          createdAt: new Date().toISOString(),
+          lastSync: new Date().toISOString(),
+        });
+
+        await AsyncStorage.setItem('masterKey', key);
+        setMasterKey(key);
+      } else {
+        // Existing user - retrieve encryption key
+        const userData = userDoc.data();
+        const salt = userData.encryptionSalt;
+        const defaultPassword = firebaseUser.uid;
+        const key = generateMasterKey(defaultPassword, salt);
+
+        await AsyncStorage.setItem('masterKey', key);
+        setMasterKey(key);
+      }
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      throw new Error(error.message || 'Failed to sign in with Google');
+    }
+  };
+
   const resetPassword = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -155,6 +203,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     masterKey,
     signUp,
     signIn,
+    signInWithGoogle,
     logout,
     resetPassword,
   };
