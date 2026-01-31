@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StorageService } from '../utils/storage';
 import { SettingsData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const defaultSettings: SettingsData = {
   isMarkdownEnabled: true,
@@ -49,6 +50,8 @@ export const SettingsScreen: React.FC<{
   onRestore?: () => void;
 }> = ({ onClose, onExportText, onExportJSON, onImport, onBackup, onRestore }) => {
   const { theme, isDark, setThemeMode, themeMode } = useTheme();
+  const authContext = useAuth();
+  const { logout, user } = authContext || { logout: null, user: null };
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLayoutModal, setShowLayoutModal] = useState(false);
@@ -349,7 +352,58 @@ export const SettingsScreen: React.FC<{
             <Text style={[dynamicStyles.arrow, dynamicStyles.dangerText]}>›</Text>
           </TouchableOpacity>
         </View>
+{user && (
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Account</Text>
+            
+            <View style={dynamicStyles.settingItem}>
+              <View style={dynamicStyles.settingInfo}>
+                <Text style={dynamicStyles.settingLabel}>Signed in as</Text>
+                <Text style={dynamicStyles.settingDescription}>
+                  {user.email}
+                </Text>
+              </View>
+            </View>
 
+            <TouchableOpacity 
+              style={[dynamicStyles.settingItem, dynamicStyles.dangerSettingItem]} 
+              onPress={async () => {
+                if (!logout) {
+                  Alert.alert('Error', 'Logout feature not available');
+                  return;
+                }
+                Alert.alert(
+                  'Logout',
+                  'Are you sure you want to logout?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { 
+                      text: 'Logout', 
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await logout();
+                        } catch (error: any) {
+                          Alert.alert('Error', error.message || 'Failed to logout');
+                        }
+                      }
+                    }
+                  ]
+                );
+              }}
+            >
+              <View style={dynamicStyles.settingInfo}>
+                <Text style={[dynamicStyles.settingLabel, dynamicStyles.dangerText]}>Logout</Text>
+                <Text style={dynamicStyles.settingDescription}>
+                  Sign out of your account
+                </Text>
+              </View>
+              <Text style={[dynamicStyles.arrow, dynamicStyles.dangerText]}>›</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        
         <View style={dynamicStyles.section}>
           <Text style={dynamicStyles.sectionTitle}>About</Text>
           <View style={dynamicStyles.settingItem}>
