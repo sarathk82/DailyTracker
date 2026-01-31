@@ -382,38 +382,26 @@ export const SettingsScreen: React.FC<{
               <TouchableOpacity 
                 style={[dynamicStyles.settingItem, dynamicStyles.dangerSettingItem]} 
                 onPress={async () => {
-                  console.log('Logout button pressed!');
+                  console.log('Settings logout button pressed - user:', user?.email);
                   if (!logout) {
-                    console.log('Logout function not available');
-                    Alert.alert('Error', 'Logout feature not available');
+                    console.error('Logout function not available');
+                    alert('Error: Logout feature not available');
                     return;
                   }
-                  console.log('Showing logout confirmation dialog');
-                  Alert.alert(
-                    'Logout',
-                    'Are you sure you want to logout?',
-                    [
-                      { 
-                        text: 'Cancel', 
-                        style: 'cancel',
-                        onPress: () => console.log('Logout cancelled')
-                      },
-                      { 
-                        text: 'Logout', 
-                        style: 'destructive',
-                        onPress: async () => {
-                          console.log('Logout confirmed, executing logout...');
-                          try {
-                            await logout();
-                            console.log('Logout successful!');
-                          } catch (error: any) {
-                            console.error('Logout error:', error);
-                            Alert.alert('Error', error.message || 'Failed to logout');
-                          }
-                        }
-                      }
-                    ]
-                  );
+                  
+                  const confirmed = window.confirm('Sign out from ' + (user?.email || 'account') + '?');
+                  console.log('User confirmed logout:', confirmed);
+                  
+                  if (confirmed) {
+                    try {
+                      console.log('Executing logout...');
+                      await logout();
+                      console.log('Logout successful!');
+                    } catch (error: any) {
+                      console.error('Logout error:', error);
+                      alert('Error: ' + (error.message || 'Failed to logout'));
+                    }
+                  }
                 }}
               >
                 <View style={dynamicStyles.settingInfo}>

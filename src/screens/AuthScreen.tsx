@@ -178,13 +178,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 style={dynamicStyles.logoImage}
                 resizeMode="contain"
               />
-              <Text style={dynamicStyles.appName}>Smpl Journal</Text>
-              <Text style={dynamicStyles.tagline}>Reimagine Journaling</Text>
             </View>
 
-            <Text style={dynamicStyles.welcomeText}>
-              {isSignUp ? 'Join thousands of users and transform your daily journaling experience' : 'Welcome Back'}
-            </Text>
+            {isSignUp && (
+              <Text style={dynamicStyles.welcomeText}>
+                Join thousands of users and transform your daily journaling experience
+              </Text>
+            )}
 
             {isSignUp && (
               <TextInput
@@ -300,7 +300,7 @@ const getStyles = (theme: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: '#ffffff', // White background
     },
     keyboardView: {
       flex: 1,
@@ -317,29 +317,30 @@ const getStyles = (theme: any) =>
     },
     logoContainer: {
       alignItems: 'center',
-      marginBottom: 40,
+      marginBottom: 48,
     },
     logoImage: {
-      width: 100,
-      height: 100,
-      marginBottom: 16,
+      width: 180,
+      height: 180,
+      marginBottom: 0,
     },
     appName: {
       fontSize: 36,
       fontWeight: 'bold',
-      color: theme.primary,
+      color: '#7c4dff', // Purple accent
       letterSpacing: 1.5,
       marginBottom: 4,
     },
     tagline: {
-      fontSize: 14,
-      color: theme.textSecondary,
+      fontSize: 16,
+      color: '#3498db', // Blue
       fontStyle: 'italic',
-      marginTop: 4,
+      marginTop: 8,
+      letterSpacing: 0.5,
     },
     welcomeText: {
       fontSize: 18,
-      color: theme.text,
+      color: '#555', // Dark grey
       marginBottom: 32,
       textAlign: 'center',
       lineHeight: 26,
@@ -348,24 +349,24 @@ const getStyles = (theme: any) =>
     title: {
       fontSize: 28,
       fontWeight: 'bold',
-      color: theme.text,
+      color: '#333',
       marginBottom: 8,
       textAlign: 'center',
     },
     subtitle: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: '#666',
       marginBottom: 32,
       textAlign: 'center',
     },
     input: {
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: '#ddd',
       borderRadius: 12,
       padding: 16,
       fontSize: 16,
-      color: theme.text,
-      backgroundColor: theme.input,
+      color: '#333',
+      backgroundColor: '#f8f9fa',
       marginBottom: 16,
     },
     button: {
@@ -375,12 +376,16 @@ const getStyles = (theme: any) =>
       marginTop: 8,
     },
     primaryButton: {
-      backgroundColor: theme.primary,
+      backgroundColor: '#5b7fb8', // Blue button matching logo
+      shadowColor: '#5b7fb8',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
     },
     googleButton: {
-      backgroundColor: theme.surface,
+      backgroundColor: '#ffffff',
       borderWidth: 1,
-      borderColor: theme.border,
+      borderColor: '#ddd',
     },
     googleButtonContent: {
       flexDirection: 'row',
@@ -396,12 +401,12 @@ const getStyles = (theme: any) =>
     googleButtonText: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.text,
+      color: '#333',
     },
     buttonText: {
       fontSize: 16,
       fontWeight: '600',
-      color: theme.surface,
+      color: '#ffffff',
     },
     linkButton: {
       padding: 12,
@@ -409,7 +414,7 @@ const getStyles = (theme: any) =>
     },
     linkText: {
       fontSize: 14,
-      color: theme.primary,
+      color: '#3498db', // Blue for links
       fontWeight: '500',
     },
     divider: {
@@ -420,16 +425,16 @@ const getStyles = (theme: any) =>
     dividerLine: {
       flex: 1,
       height: 1,
-      backgroundColor: theme.border,
+      backgroundColor: '#ddd',
     },
     dividerText: {
       marginHorizontal: 16,
       fontSize: 14,
-      color: theme.textSecondary,
+      color: '#999',
     },
     disclaimer: {
       fontSize: 12,
-      color: theme.textSecondary,
+      color: '#999',
       textAlign: 'center',
       marginTop: 16,
       fontStyle: 'italic',

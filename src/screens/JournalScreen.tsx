@@ -756,7 +756,7 @@ export const JournalScreen: React.FC<{}> = () => {
         const expense = allExpenses.find(e => e.entryId === entry.id);
         const action = allActionItems.find(a => a.entryId === entry.id);
         
-        let icon = '📝';
+        let icon = '✏️';
         if (entry.type === 'expense' || expense) icon = '💰';
         else if (entry.type === 'action' || action) icon = '✅';
         
@@ -1113,31 +1113,8 @@ export const JournalScreen: React.FC<{}> = () => {
   return (
     <SafeAreaView style={dynamicStyles.container}>
       <View style={[dynamicStyles.header, { zIndex: 10000 }]}>
-        <Text style={dynamicStyles.headerTitle}>Daily Journal</Text>
+        <Text style={dynamicStyles.headerTitle}>Smpl Journal</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 10001 }}>
-          {user && (
-            <TouchableOpacity
-              style={[dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10005, backgroundColor: '#f44336' }]}
-              onPress={async () => {
-                console.log('Quick logout pressed');
-                if (logout) {
-                  Alert.alert('Logout', 'Sign out?', [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Logout', onPress: async () => {
-                      try {
-                        await logout();
-                        console.log('Logged out successfully');
-                      } catch (e: any) {
-                        Alert.alert('Error', e.message);
-                      }
-                    }}
-                  ]);
-                }
-              }}
-            >
-              <Text style={dynamicStyles.settingsButtonText}>🚪</Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
             style={[dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10004 }]}
             onPress={addSingleTestEntry}

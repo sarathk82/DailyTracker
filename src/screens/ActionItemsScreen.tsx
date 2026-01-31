@@ -94,7 +94,7 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
             activeOpacity={0.7}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons name="pencil" size={18} color={theme.text} />
+            <Text style={{ fontSize: 18 }}>✏️</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[dynamicStyles.actionButton, dynamicStyles.deleteButton]}

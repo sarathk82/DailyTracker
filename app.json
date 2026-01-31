@@ -28,7 +28,7 @@
       "package": "com.sarathk82.smpljournal"
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./assets/smpljournal.png",
       "bundler": "metro"
     },
     "owner": "sarathk82",
