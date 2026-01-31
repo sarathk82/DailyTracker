@@ -1,0 +1,163 @@
+import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { initializeApp } from 'firebase/app';
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User as FirebaseUser,
+  sendPasswordResetEmail,
+  updateProfile,
+} from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { firebaseConfig } from '../config/firebase';
+import { generateSalt, generateMasterKey } from '../utils/encryption';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+export const db = getFirestore(app);
+
+interface AuthContextType {
+  user: FirebaseUser | null;
+  loading: boolean;
+  masterKey: string | null;
+  signUp: (email: string, password: string, displayName: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [masterKey, setMasterKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      
+      if (firebaseUser) {
+        // Try to load cached master key
+        const cachedKey = await AsyncStorage.getItem('masterKey');
+        if (cachedKey) {
+          setMasterKey(cachedKey);
+        }
+      } else {
+        setMasterKey(null);
+        await AsyncStorage.removeItem('masterKey');
+      }
+      
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const signUp = async (email: string, password: string, displayName: string) => {
+    try {
+      // Create Firebase user
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+
+      // Update display name
+      await updateProfile(firebaseUser, { displayName });
+
+      // Generate encryption salt
+      const salt = generateSalt();
+      const key = generateMasterKey(password, salt);
+
+      // Store user metadata in Firestore
+      await setDoc(doc(db, 'users', firebaseUser.uid), {
+        email,
+        displayName,
+        encryptionSalt: salt,
+        createdAt: new Date().toISOString(),
+        lastSync: new Date().toISOString(),
+      });
+
+      // Cache master key locally
+      await AsyncStorage.setItem('masterKey', key);
+      setMasterKey(key);
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      throw new Error(error.message || 'Failed to create account');
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      // Sign in with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+
+      // Get user's encryption salt from Firestore
+      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+      
+      if (!userDoc.exists()) {
+        throw new Error('User data not found');
+      }
+
+      const userData = userDoc.data();
+      const salt = userData.encryptionSalt;
+
+      // Generate master key from password
+      const key = generateMasterKey(password, salt);
+
+      // Cache master key locally
+      await AsyncStorage.setItem('masterKey', key);
+      setMasterKey(key);
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      throw new Error(error.message || 'Failed to sign in');
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      await AsyncStorage.removeItem('masterKey');
+      setMasterKey(null);
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      throw new Error(error.message || 'Failed to log out');
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      throw new Error(error.message || 'Failed to send reset email');
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    loading,
+    masterKey,
+    signUp,
+    signIn,
+    logout,
+    resetPassword,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};

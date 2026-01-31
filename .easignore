@@ -1,0 +1,16 @@
+# Exclude unnecessary files from EAS Build
+node_modules
+.git
+.github
+coverage
+web-build
+dist
+*.bak*
+__tests__
+.jest
+.eslintignore
+.gitignore
+README.md
+DEPLOYMENT.md
+deploy.sh
+public-deploy.sh
