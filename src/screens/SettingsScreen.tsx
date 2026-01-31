@@ -379,22 +379,32 @@ export const SettingsScreen: React.FC<{
             <TouchableOpacity 
               style={[dynamicStyles.settingItem, dynamicStyles.dangerSettingItem]} 
               onPress={async () => {
+                console.log('Logout button pressed!');
                 if (!logout) {
+                  console.log('Logout function not available');
                   Alert.alert('Error', 'Logout feature not available');
                   return;
                 }
+                console.log('Showing logout confirmation dialog');
                 Alert.alert(
                   'Logout',
                   'Are you sure you want to logout?',
                   [
-                    { text: 'Cancel', style: 'cancel' },
+                    { 
+                      text: 'Cancel', 
+                      style: 'cancel',
+                      onPress: () => console.log('Logout cancelled')
+                    },
                     { 
                       text: 'Logout', 
                       style: 'destructive',
                       onPress: async () => {
+                        console.log('Logout confirmed, executing logout...');
                         try {
                           await logout();
+                          console.log('Logout successful!');
                         } catch (error: any) {
+                          console.error('Logout error:', error);
                           Alert.alert('Error', error.message || 'Failed to logout');
                         }
                       }
