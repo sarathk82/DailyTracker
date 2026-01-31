@@ -252,25 +252,36 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
               </TouchableOpacity>
             )}
 
-            <View style={dynamicStyles.divider}>
-              <View style={dynamicStyles.dividerLine} />
-              <Text style={dynamicStyles.dividerText}>OR</Text>
-              <View style={dynamicStyles.dividerLine} />
-            </View>
+            {Platform.OS === 'web' && (
+              <>
+                <View style={dynamicStyles.divider}>
+                  <View style={dynamicStyles.dividerLine} />
+                  <Text style={dynamicStyles.dividerText}>OR</Text>
+                  <View style={dynamicStyles.dividerLine} />
+                </View>
 
-            {/* Google Sign In Button */}
-            <TouchableOpacity
-              style={[dynamicStyles.button, dynamicStyles.googleButton]}
-              onPress={handleGoogleSignIn}
-              disabled={loading}
-            >
-              <View style={dynamicStyles.googleButtonContent}>
-                <Text style={dynamicStyles.googleIcon}>G</Text>
-                <Text style={dynamicStyles.googleButtonText}>
-                  Continue with Google
-                </Text>
-              </View>
-            </TouchableOpacity>
+                {/* Google Sign In Button - Web Only */}
+                <TouchableOpacity
+                  style={[dynamicStyles.button, dynamicStyles.googleButton]}
+                  onPress={handleGoogleSignIn}
+                  disabled={loading}
+                >
+                  <View style={dynamicStyles.googleButtonContent}>
+                    <Text style={dynamicStyles.googleIcon}>G</Text>
+                    <Text style={dynamicStyles.googleButtonText}>
+                      Continue with Google
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {Platform.OS !== 'web' && (
+              <Text style={dynamicStyles.mobileNote}>
+                💡 Google Sign-In works on web version: smpl-journal.web.app{'\n'}
+                Use email/password on mobile for now
+              </Text>
+            )}
 
             <TouchableOpacity
               style={dynamicStyles.linkButton}
@@ -416,6 +427,14 @@ const getStyles = (theme: any) =>
       fontSize: 14,
       color: '#3498db', // Blue for links
       fontWeight: '500',
+    },
+    mobileNote: {
+      fontSize: 12,
+      color: '#666',
+      textAlign: 'center',
+      marginVertical: 20,
+      paddingHorizontal: 20,
+      lineHeight: 18,
     },
     divider: {
       flexDirection: 'row',

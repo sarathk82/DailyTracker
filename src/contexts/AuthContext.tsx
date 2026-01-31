@@ -147,6 +147,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInWithGoogle = async () => {
     try {
+      // Check if running on web or mobile
+      const isWeb = typeof window !== 'undefined' && window.document;
+      
+      if (!isWeb) {
+        // Mobile - show error for now, needs OAuth implementation
+        throw new Error('Google Sign-In on mobile is not yet supported. Please use email/password for now.');
+      }
+      
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const firebaseUser = result.user;
