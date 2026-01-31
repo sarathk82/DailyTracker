@@ -1,9 +1,10 @@
 {
   "expo": {
-    "name": "DailyTracker",
-    "slug": "daily-tracker",
+    "name": "Smpl Journal",
+    "slug": "smpl-journal",
     "version": "1.0.0",
     "orientation": "portrait",
+    "description": "Time and money are the most important resources in our lives. This app that allows you to be mindful in how you  are spending both in the pursuit of your goals.",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "platforms": ["ios", "android", "web"],
@@ -17,24 +18,25 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.dailytracker"
+      "bundleIdentifier": "com.sarathk82.smpljournal"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.dailytracker"
+      "package": "com.sarathk82.smpljournal",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "webpack"
+      "bundler": "metro"
     },
+    "owner": "sarathk82",
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "fb0afca1-7b22-4e29-997d-817dd76b35a1"
       }
-    },
-    "owner": "your-username"
+    }
   }
 }
