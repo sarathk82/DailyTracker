@@ -50,9 +50,20 @@ export const SettingsScreen: React.FC<{
   onRestore?: () => void;
 }> = ({ onClose, onExportText, onExportJSON, onImport, onBackup, onRestore }) => {
   const { theme, isDark, setThemeMode, themeMode } = useTheme();
-  const authContext = useAuth();
+  
+  let authContext;
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    console.log('Auth context not available:', error);
+    authContext = { logout: null, user: null };
+  }
+  
   const { logout, user } = authContext || { logout: null, user: null };
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
+
+  console.log('SettingsScreen - User:', user ? user.email : 'not logged in');
+  console.log('SettingsScreen - Logout function:', logout ? 'available' : 'not available');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLayoutModal, setShowLayoutModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
