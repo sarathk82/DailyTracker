@@ -17,7 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { validatePassword } from '../utils/encryption';
 
 interface AuthScreenProps {
-  onAuthSuccess: () => void;
+  onAuthSuccess?: () => void;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
