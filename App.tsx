@@ -6,7 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { JournalScreen, ActionItemsScreen, ExpensesScreen, AnalyticsScreen } from './src/screens';
-import AuthScreen from './src/screens/AuthScreen';
+import { AuthScreen } from './src/screens/AuthScreen';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
@@ -89,9 +89,7 @@ function AppNavigator() {
           />
           <Tab.Screen
             name="Expenses"
-          uthProvider>
-          <AppNavigator />
-        </AuthProviderExpensesScreen}
+            component={ExpensesScreen}
             options={{
               tabBarLabel: 'Expenses'
             }}
@@ -113,7 +111,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppNavigator />
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

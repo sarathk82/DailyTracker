@@ -14,7 +14,7 @@ import {
 import { db } from '../contexts/AuthContext';
 import { encryptData, decryptData } from '../utils/encryption';
 import { Entry, Expense, ActionItem } from '../types';
-import { StorageService } from './storage';
+import { StorageService } from '../utils/storage';
 
 /**
  * Cloud sync service with end-to-end encryption
