@@ -364,17 +364,31 @@ export const SettingsScreen: React.FC<{
           </TouchableOpacity>
         </View>
 
-        {/* Always show Account section for debugging */}
         <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>Account</Text>
+          <Text style={dynamicStyles.sectionTitle}>Cloud Sync (Optional)</Text>
           
+          <View style={[dynamicStyles.infoBox, { backgroundColor: isDark ? '#1a3a52' : '#e3f2fd', borderLeftColor: '#2196F3' }]}>
+            <Text style={[dynamicStyles.infoIcon, { fontSize: 20 }]}>☁️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[dynamicStyles.infoTitle, { color: isDark ? '#90caf9' : '#0D47A1' }]}>Optional Cloud Sync</Text>
+              <Text style={[dynamicStyles.infoText, { color: isDark ? '#b3d4fc' : '#0D47A1' }]}>
+                {user 
+                  ? 'You are signed in. Your data can sync to the cloud.'
+                  : 'Sign in to enable cloud backup and sync across devices. The app works perfectly without it!'}
+              </Text>
+            </View>
+          </View>
+
           {user ? (
             <>
               <View style={dynamicStyles.settingItem}>
                 <View style={dynamicStyles.settingInfo}>
-                  <Text style={dynamicStyles.settingLabel}>Signed in as</Text>
+                  <Text style={dynamicStyles.settingLabel}>✓ Signed in as</Text>
                   <Text style={dynamicStyles.settingDescription}>
                     {user.email}
+                  </Text>
+                  <Text style={[dynamicStyles.settingDescription, { color: theme.success, marginTop: 4 }]}>
+                    Cloud sync enabled
                   </Text>
                 </View>
               </View>
@@ -382,47 +396,76 @@ export const SettingsScreen: React.FC<{
               <TouchableOpacity 
                 style={[dynamicStyles.settingItem, dynamicStyles.dangerSettingItem]} 
                 onPress={async () => {
-                  console.log('Settings logout button pressed - user:', user?.email);
                   if (!logout) {
-                    console.error('Logout function not available');
-                    alert('Error: Logout feature not available');
+                    Alert.alert('Error', 'Logout feature not available');
                     return;
                   }
                   
-                  const confirmed = window.confirm('Sign out from ' + (user?.email || 'account') + '?');
-                  console.log('User confirmed logout:', confirmed);
+                  const confirmLogout = () => {
+                    Alert.alert(
+                      'Sign Out',
+                      `Sign out from ${user.email}? Your local data will remain on this device.`,
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { 
+                          text: 'Sign Out', 
+                          style: 'destructive',
+                          onPress: async () => {
+                            try {
+                              await logout();
+                              Alert.alert('Success', 'Signed out successfully');
+                            } catch (error: any) {
+                              Alert.alert('Error', error.message || 'Failed to sign out');
+                            }
+                          }
+                        }
+                      ]
+                    );
+                  };
                   
-                  if (confirmed) {
-                    try {
-                      console.log('Executing logout...');
-                      await logout();
-                      console.log('Logout successful!');
-                    } catch (error: any) {
-                      console.error('Logout error:', error);
-                      alert('Error: ' + (error.message || 'Failed to logout'));
+                  if (Platform.OS === 'web') {
+                    if (window.confirm(`Sign out from ${user.email}? Your local data will remain on this device.`)) {
+                      try {
+                        await logout();
+                        alert('Signed out successfully');
+                      } catch (error: any) {
+                        alert('Error: ' + (error.message || 'Failed to sign out'));
+                      }
                     }
+                  } else {
+                    confirmLogout();
                   }
                 }}
               >
                 <View style={dynamicStyles.settingInfo}>
-                  <Text style={[dynamicStyles.settingLabel, dynamicStyles.dangerText]}>Logout</Text>
+                  <Text style={[dynamicStyles.settingLabel, dynamicStyles.dangerText]}>Sign Out</Text>
                   <Text style={dynamicStyles.settingDescription}>
-                    Sign out of your account
+                    Disconnect from cloud sync
                   </Text>
                 </View>
                 <Text style={[dynamicStyles.arrow, dynamicStyles.dangerText]}>›</Text>
               </TouchableOpacity>
             </>
           ) : (
-            <View style={dynamicStyles.settingItem}>
+            <TouchableOpacity 
+              style={[dynamicStyles.settingItem, { backgroundColor: isDark ? '#1565c0' : '#2196F3' }]}
+              onPress={() => {
+                // Navigate to auth screen
+                Alert.alert(
+                  'Sign In',
+                  'Cloud sync is coming soon! For now, use Export/Import to transfer data between devices.',
+                  [{ text: 'OK' }]
+                );
+              }}
+            >
               <View style={dynamicStyles.settingInfo}>
-                <Text style={dynamicStyles.settingLabel}>Not signed in</Text>
-                <Text style={dynamicStyles.settingDescription}>
-                  User: {user === null ? 'null' : user === undefined ? 'undefined' : 'other'}
-                  {'\n'}Logout: {logout ? 'available' : 'not available'}
+                <Text style={[dynamicStyles.settingLabel, { color: 'white' }]}>Sign In for Cloud Sync</Text>
+                <Text style={[dynamicStyles.settingDescription, { color: 'rgba(255,255,255,0.9)' }]}>
+                  Enable backup and sync across devices (optional)
                 </Text>
               </View>
-            </View>
+              <Text style={[dynamicStyles.arrow, { color: 'white' }]}>›</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -682,6 +725,27 @@ const getStyles = (theme: any) => StyleSheet.create({
     height: 8,
     backgroundColor: theme.background,
     marginVertical: 8,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginVertical: 12,
+    borderLeftWidth: 4,
+  },
+  infoIcon: {
+    marginRight: 12,
+    fontSize: 24,
+  },
+  infoTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  infoText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
 

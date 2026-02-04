@@ -39,8 +39,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+  // Allow optional auth - return null values if not available
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    return {
+      user: null,
+      loading: false,
+      masterKey: null,
+      signUp: async () => { throw new Error('Auth not available'); },
+      signIn: async () => { throw new Error('Auth not available'); },
+      signInWithGoogle: async () => { throw new Error('Auth not available'); },
+      logout: async () => { throw new Error('Auth not available'); },
+      resetPassword: async () => { throw new Error('Auth not available'); },
+    };
   }
   return context;
 };
