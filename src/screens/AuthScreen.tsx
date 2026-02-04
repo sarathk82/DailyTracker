@@ -19,9 +19,10 @@ import { validatePassword } from '../utils/encryption';
 
 interface AuthScreenProps {
   onAuthSuccess?: () => void;
+  onClose?: () => void;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onClose }) => {
   const { theme } = useTheme();
   const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   
@@ -165,6 +166,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
   return (
     <SafeAreaView style={dynamicStyles.container}>
+      {onClose && (
+        <View style={dynamicStyles.closeButtonContainer}>
+          <TouchableOpacity
+            style={dynamicStyles.closeButton}
+            onPress={onClose}
+          >
+            <Text style={dynamicStyles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={dynamicStyles.keyboardView}
@@ -457,5 +468,23 @@ const getStyles = (theme: any) =>
       textAlign: 'center',
       marginTop: 16,
       fontStyle: 'italic',
+    },
+    closeButtonContainer: {
+      alignItems: 'flex-end',
+      paddingHorizontal: 16,
+      paddingTop: 8,
+    },
+    closeButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#f0f0f0',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    closeButtonText: {
+      fontSize: 20,
+      color: '#666',
+      fontWeight: 'bold',
     },
   });

@@ -48,7 +48,8 @@ export const SettingsScreen: React.FC<{
   onImport?: () => void;
   onBackup?: () => void;
   onRestore?: () => void;
-}> = ({ onClose, onExportText, onExportJSON, onImport, onBackup, onRestore }) => {
+  onShowAuth?: () => void;
+}> = ({ onClose, onExportText, onExportJSON, onImport, onBackup, onRestore, onShowAuth }) => {
   const { theme, isDark, setThemeMode, themeMode } = useTheme();
   
   let authContext;
@@ -450,12 +451,15 @@ export const SettingsScreen: React.FC<{
             <TouchableOpacity 
               style={[dynamicStyles.settingItem, { backgroundColor: isDark ? '#1565c0' : '#2196F3' }]}
               onPress={() => {
-                // Navigate to auth screen
-                Alert.alert(
-                  'Sign In',
-                  'Cloud sync is coming soon! For now, use Export/Import to transfer data between devices.',
-                  [{ text: 'OK' }]
-                );
+                if (onShowAuth) {
+                  onShowAuth();
+                } else {
+                  Alert.alert(
+                    'Sign In',
+                    'Cloud sync is coming soon! For now, use Export/Import to transfer data between devices.',
+                    [{ text: 'OK' }]
+                  );
+                }
               }}
             >
               <View style={dynamicStyles.settingInfo}>

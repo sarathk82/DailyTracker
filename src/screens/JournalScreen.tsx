@@ -24,6 +24,7 @@ import { TextAnalyzer } from "../utils/textAnalysis";
 import { MessageBubble } from "../components/MessageBubble";
 import { MinimalEntryItem } from "../components/MinimalEntryItem";
 import { SettingsScreen } from "./SettingsScreen";
+import { AuthScreen } from "./AuthScreen";
 import { EditModal } from "../components/EditModal";
 import { isDesktop } from "../utils/platform";
 import { useAuth } from "../contexts/AuthContext";
@@ -65,6 +66,7 @@ export const JournalScreen: React.FC<{}> = () => {
   // Settings state (will be loaded from storage)
   const [enterToSend, setEnterToSend] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [layoutStyle, setLayoutStyle] = useState('chat');
   
   // Search functionality
@@ -1458,6 +1460,28 @@ export const JournalScreen: React.FC<{}> = () => {
             onImport={importData}
             onBackup={createBackup}
             onRestore={restoreFromBackup}
+            onShowAuth={() => {
+              setShowSettings(false);
+              setShowAuth(true);
+            }}
+          />
+        </Modal>
+      )}
+      
+      {showAuth && (
+        <Modal
+          visible={showAuth}
+          animationType="slide"
+          presentationStyle="formSheet"
+        >
+          <AuthScreen 
+            onClose={() => {
+              setShowAuth(false);
+            }}
+            onAuthSuccess={() => {
+              setShowAuth(false);
+              Alert.alert('Success', 'Signed in successfully! Cloud sync is now enabled.');
+            }}
           />
         </Modal>
       )}
