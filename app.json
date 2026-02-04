@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Smpl Journal",
-    "slug": "smpl-journal",
+    "slug": "daily-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "description": "Time and money are the most important resources in our lives. This app that allows you to be mindful in how you  are spending both in the pursuit of your goals.",
@@ -25,7 +25,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.sarathk82.smpljournal"
+      "package": "com.sarathk82.smpljournal",
+      "buildToolsVersion": "35.0.0",
+      "compileSdkVersion": 35,
+      "targetSdkVersion": 35,
+      "kotlinVersion": "2.1.0"
     },
     "web": {
       "favicon": "./assets/smpljournal.png",
