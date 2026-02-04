@@ -145,7 +145,7 @@ export class SyncService {
     const encrypted = encryptData(entry, masterKey);
     await setDoc(doc(db, 'users', userId, 'entries', entry.id), {
       encryptedData: encrypted,
-      createdAt: entry.createdAt.toISOString(),
+      createdAt: entry.timestamp.toISOString(),
       updatedAt: new Date().toISOString(),
     });
   }

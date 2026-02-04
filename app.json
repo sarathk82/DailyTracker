@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Smpl Journal",
-    "slug": "daily-tracker",
+    "slug": "smpl-journal",
     "version": "1.0.0",
     "orientation": "portrait",
     "description": "Time and money are the most important resources in our lives. This app that allows you to be mindful in how you  are spending both in the pursuit of your goals.",

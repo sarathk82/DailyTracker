@@ -99,7 +99,13 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     try {
       setThemeModeState(mode);
       const settings = await StorageService.getSettings();
-      await StorageService.saveSettings({ ...settings, theme: mode });
+      await StorageService.saveSettings({
+        isMarkdownEnabled: settings?.isMarkdownEnabled ?? false,
+        enterToSend: settings?.enterToSend ?? true,
+        systemCurrency: settings?.systemCurrency ?? 'USD',
+        layoutStyle: settings?.layoutStyle ?? 'default',
+        theme: mode,
+      });
     } catch (error) {
       console.error('Error saving theme:', error);
     }

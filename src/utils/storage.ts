@@ -1,19 +1,115 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Entry, ActionItem, Expense, SettingsData } from '../types';
+import { encryptData, decryptData, generateSalt } from './encryption';
+import CryptoJS from 'crypto-js';
 
 const ENTRIES_KEY = '@daily_tracker_entries';
 const ACTION_ITEMS_KEY = '@daily_tracker_action_items';
 const EXPENSES_KEY = '@daily_tracker_expenses';
 const SETTINGS_KEY = '@daily_tracker_settings';
 const BACKUP_KEY = '@daily_tracker_backup';
+const ENCRYPTION_KEY_STORAGE = '@daily_tracker_encryption_key';
+const ENCRYPTION_ENABLED_KEY = '@daily_tracker_encryption_enabled';
+
+// Generate a device-specific encryption key
+const generateDeviceKey = (): string => {
+  // Use device-specific info + random salt for the key
+  const deviceInfo = `${navigator.userAgent || 'device'}-${Date.now()}`;
+  const salt = generateSalt();
+  return CryptoJS.PBKDF2(deviceInfo, salt, {
+    keySize: 256 / 32,
+    iterations: 1000 // Lower iterations for local encryption (not for password derivation)
+  }).toString();
+};
+
+let cachedEncryptionKey: string | null = null;
+let encryptionEnabled: boolean = true; // Default to enabled
+
+// Get or create the local encryption key
+const getLocalEncryptionKey = async (): Promise<string> => {
+  if (cachedEncryptionKey) {
+    return cachedEncryptionKey;
+  }
+  
+  try {
+    let key = await AsyncStorage.getItem(ENCRYPTION_KEY_STORAGE);
+    if (!key) {
+      // Generate new key on first use
+      key = generateDeviceKey();
+      await AsyncStorage.setItem(ENCRYPTION_KEY_STORAGE, key);
+      await AsyncStorage.setItem(ENCRYPTION_ENABLED_KEY, 'true');
+    }
+    cachedEncryptionKey = key;
+    return key;
+  } catch (error) {
+    console.error('Error getting encryption key:', error);
+    // Fallback to a generated key (won't persist, but prevents crashes)
+    return generateDeviceKey();
+  }
+};
+
+// Check if encryption is enabled
+const isEncryptionEnabled = async (): Promise<boolean> => {
+  try {
+    const enabled = await AsyncStorage.getItem(ENCRYPTION_ENABLED_KEY);
+    encryptionEnabled = enabled !== 'false'; // Default to true if not set
+    return encryptionEnabled;
+  } catch (error) {
+    console.error('Error checking encryption status:', error);
+    return true; // Default to enabled
+  }
+};
+
+// Encrypt data before storing
+const encryptIfEnabled = async (data: any): Promise<string> => {
+  const enabled = await isEncryptionEnabled();
+  if (!enabled) {
+    return JSON.stringify(data);
+  }
+  
+  try {
+    const key = await getLocalEncryptionKey();
+    return encryptData(data, key);
+  } catch (error) {
+    console.error('Encryption failed, storing unencrypted:', error);
+    return JSON.stringify(data);
+  }
+};
+
+// Decrypt data after retrieving
+const decryptIfNeeded = async (dataString: string): Promise<any> => {
+  if (!dataString) return null;
+  
+  // Try to detect if data is encrypted (encrypted data won't start with { or [)
+  const isLikelyEncrypted = !dataString.trim().startsWith('{') && !dataString.trim().startsWith('[');
+  
+  if (!isLikelyEncrypted) {
+    // Data is not encrypted, parse as JSON
+    return JSON.parse(dataString);
+  }
+  
+  try {
+    const key = await getLocalEncryptionKey();
+    return decryptData(dataString, key);
+  } catch (error) {
+    console.error('Decryption failed, trying to parse as JSON:', error);
+    // Fallback to parsing as JSON (for backward compatibility)
+    try {
+      return JSON.parse(dataString);
+    } catch (parseError) {
+      console.error('Failed to parse data:', parseError);
+      return null;
+    }
+  }
+};
 
 export class StorageService {
   // Entries
   static async getEntries(): Promise<Entry[]> {
     try {
-      const jsonValue = await AsyncStorage.getItem(ENTRIES_KEY);
-      if (jsonValue != null) {
-        const entries = JSON.parse(jsonValue);
+      const encryptedValue = await AsyncStorage.getItem(ENTRIES_KEY);
+      if (encryptedValue != null) {
+        const entries = await decryptIfNeeded(encryptedValue);
         // Convert timestamp strings back to Date objects and ensure type preservation
         const restoredEntries = entries.map((entry: any) => ({
           ...entry,
@@ -46,8 +142,8 @@ export class StorageService {
 
   static async saveEntries(entries: Entry[]): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(entries);
-      await AsyncStorage.setItem(ENTRIES_KEY, jsonValue);
+      const encryptedValue = await encryptIfEnabled(entries);
+      await AsyncStorage.setItem(ENTRIES_KEY, encryptedValue);
     } catch (e) {
       console.error('Error saving entries:', e);
     }
@@ -66,9 +162,9 @@ export class StorageService {
   // Action Items
   static async getActionItems(): Promise<ActionItem[]> {
     try {
-      const jsonValue = await AsyncStorage.getItem(ACTION_ITEMS_KEY);
-      if (jsonValue != null) {
-        const actionItems = JSON.parse(jsonValue);
+      const encryptedValue = await AsyncStorage.getItem(ACTION_ITEMS_KEY);
+      if (encryptedValue != null) {
+        const actionItems = await decryptIfNeeded(encryptedValue);
         return actionItems.map((item: any) => ({
           ...item,
           createdAt: new Date(item.createdAt),
@@ -84,8 +180,8 @@ export class StorageService {
 
   static async saveActionItems(actionItems: ActionItem[]): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(actionItems);
-      await AsyncStorage.setItem(ACTION_ITEMS_KEY, jsonValue);
+      const encryptedValue = await encryptIfEnabled(actionItems);
+      await AsyncStorage.setItem(ACTION_ITEMS_KEY, encryptedValue);
     } catch (e) {
       console.error('Error saving action items:', e);
     }
@@ -127,9 +223,9 @@ export class StorageService {
   // Expenses
   static async getExpenses(): Promise<Expense[]> {
     try {
-      const jsonValue = await AsyncStorage.getItem(EXPENSES_KEY);
-      if (jsonValue != null) {
-        const expenses = JSON.parse(jsonValue);
+      const encryptedValue = await AsyncStorage.getItem(EXPENSES_KEY);
+      if (encryptedValue != null) {
+        const expenses = await decryptIfNeeded(encryptedValue);
         const mappedExpenses = expenses.map((expense: any) => ({
           ...expense,
           createdAt: new Date(expense.createdAt),
@@ -145,8 +241,8 @@ export class StorageService {
 
   static async saveExpenses(expenses: Expense[]): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(expenses);
-      await AsyncStorage.setItem(EXPENSES_KEY, jsonValue);
+      const encryptedValue = await encryptIfEnabled(expenses);
+      await AsyncStorage.setItem(EXPENSES_KEY, encryptedValue);
     } catch (e) {
       console.error('Error saving expenses:', e);
     }
@@ -188,8 +284,8 @@ export class StorageService {
   // Settings
   static async getSettings(): Promise<SettingsData | null> {
     try {
-      const jsonValue = await AsyncStorage.getItem(SETTINGS_KEY);
-      return jsonValue != null ? JSON.parse(jsonValue) : null;
+      const encryptedValue = await AsyncStorage.getItem(SETTINGS_KEY);
+      return encryptedValue != null ? await decryptIfNeeded(encryptedValue) : null;
     } catch (e) {
       console.error('Error getting settings:', e);
       return null;
@@ -198,8 +294,8 @@ export class StorageService {
 
   static async saveSettings(settings: SettingsData): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(settings);
-      await AsyncStorage.setItem(SETTINGS_KEY, jsonValue);
+      const encryptedValue = await encryptIfEnabled(settings);
+      await AsyncStorage.setItem(SETTINGS_KEY, encryptedValue);
     } catch (e) {
       console.error('Error saving settings:', e);
     }
@@ -208,8 +304,8 @@ export class StorageService {
   // Backup & Restore
   static async saveBackup(backup: any): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(backup);
-      await AsyncStorage.setItem(BACKUP_KEY, jsonValue);
+      const encryptedValue = await encryptIfEnabled(backup);
+      await AsyncStorage.setItem(BACKUP_KEY, encryptedValue);
     } catch (e) {
       console.error('Error saving backup:', e);
     }
@@ -217,9 +313,9 @@ export class StorageService {
 
   static async getBackup(): Promise<any> {
     try {
-      const jsonValue = await AsyncStorage.getItem(BACKUP_KEY);
-      if (jsonValue != null) {
-        const backup = JSON.parse(jsonValue);
+      const encryptedValue = await AsyncStorage.getItem(BACKUP_KEY);
+      if (encryptedValue != null) {
+        const backup = await decryptIfNeeded(encryptedValue);
         // Restore date objects
         return {
           ...backup,
@@ -242,6 +338,43 @@ export class StorageService {
     } catch (e) {
       console.error('Error getting backup:', e);
       return null;
+    }
+  }
+
+  // Encryption management
+  static async isEncryptionEnabled(): Promise<boolean> {
+    return await isEncryptionEnabled();
+  }
+
+  static async setEncryptionEnabled(enabled: boolean): Promise<void> {
+    try {
+      await AsyncStorage.setItem(ENCRYPTION_ENABLED_KEY, enabled ? 'true' : 'false');
+      encryptionEnabled = enabled;
+    } catch (error) {
+      console.error('Error setting encryption status:', error);
+    }
+  }
+
+  static async reEncryptAllData(): Promise<void> {
+    try {
+      // Get all data
+      const entries = await this.getEntries();
+      const actionItems = await this.getActionItems();
+      const expenses = await this.getExpenses();
+      const settings = await this.getSettings();
+      const backup = await this.getBackup();
+
+      // Re-save all data (will use current encryption settings)
+      await this.saveEntries(entries);
+      await this.saveActionItems(actionItems);
+      await this.saveExpenses(expenses);
+      if (settings) await this.saveSettings(settings);
+      if (backup) await this.saveBackup(backup);
+
+      console.log('All data re-encrypted successfully');
+    } catch (error) {
+      console.error('Error re-encrypting data:', error);
+      throw error;
     }
   }
 }

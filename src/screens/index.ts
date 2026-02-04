@@ -4,4 +4,5 @@ export { ExpensesScreen } from './ExpensesScreen';
 export { AnalyticsScreen } from './AnalyticsScreen';
 export { SettingsScreen } from './SettingsScreen';
 export { LayoutSelectionScreen } from './LayoutSelectionScreen';
+export { DevicePairingScreen } from './DevicePairingScreen';
 export { default as TestScreen } from './TestScreen';

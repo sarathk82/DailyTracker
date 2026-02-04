@@ -27,11 +27,19 @@ import { SettingsScreen } from "./SettingsScreen";
 import { EditModal } from "../components/EditModal";
 import { isDesktop } from "../utils/platform";
 import { useAuth } from "../contexts/AuthContext";
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 // Custom UUID function since react-native-uuid causes crashes
+// Uses crypto-based random values for better uniqueness
 const uuid = {
   v4: () => {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    // Use timestamp + random to ensure uniqueness across devices
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 15) + 
+                   Math.random().toString(36).substring(2, 15);
+    return `${timestamp}-${random}-xxxx-4xxx-yxxx-xxxxxxxxxxxx`.replace(/[xy]/g, function(c) {
       var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);
     });
@@ -221,8 +229,14 @@ export const JournalScreen: React.FC<{}> = () => {
 
   const loadEntries = useCallback(async () => {
     const savedEntries = await StorageService.getEntries();
+    
+    // Deduplicate entries by ID (in case of sync issues)
+    const uniqueEntries = Array.from(
+      new Map(savedEntries.map(entry => [entry.id, entry])).values()
+    );
+    
     // Sort entries by timestamp to maintain chronological order
-    const sortedEntries = savedEntries.sort((a, b) => {
+    const sortedEntries = uniqueEntries.sort((a, b) => {
       // If timestamps are within 2 seconds of each other, maintain user-system alternation
       const timeDiff = Math.abs(a.timestamp.getTime() - b.timestamp.getTime());
       if (timeDiff < 2000) {
@@ -346,9 +360,19 @@ export const JournalScreen: React.FC<{}> = () => {
         StorageService.getActionItems()
       ]);
       
+      // Deduplicate expenses by ID (in case of sync issues)
+      const uniqueExpenses = Array.from(
+        new Map(savedExpenses.map(expense => [expense.id, expense])).values()
+      );
+      
+      // Deduplicate action items by ID (in case of sync issues)
+      const uniqueActionItems = Array.from(
+        new Map(savedActionItems.map(item => [item.id, item])).values()
+      );
+      
       // Migration: Set due dates for action items that don't have one
       let needsUpdate = false;
-      const updatedActionItems = savedActionItems.map(item => {
+      const updatedActionItems = uniqueActionItems.map(item => {
         if (!item.dueDate) {
           needsUpdate = true;
           return { ...item, dueDate: item.createdAt || new Date() };
@@ -361,10 +385,10 @@ export const JournalScreen: React.FC<{}> = () => {
         await StorageService.saveActionItems(updatedActionItems);
         setActionItems(updatedActionItems);
       } else {
-        setActionItems(savedActionItems);
+        setActionItems(updatedActionItems);
       }
       
-      setExpenses(savedExpenses);
+      setExpenses(uniqueExpenses);
     } catch (error) {
       console.error('Error loading expenses and action items:', error);
     }
@@ -744,7 +768,7 @@ export const JournalScreen: React.FC<{}> = () => {
       const allActionItems = await StorageService.getActionItems();
       
       let text = '='.repeat(50) + '\n';
-      text += 'DAILYTRACKER EXPORT\n';
+      text += 'SMPL JOURNAL EXPORT\n';
       text += format(new Date(), 'MMMM dd, yyyy - hh:mm a') + '\n';
       text += '='.repeat(50) + '\n\n';
       
@@ -777,19 +801,26 @@ export const JournalScreen: React.FC<{}> = () => {
         text += '\n' + '-'.repeat(50) + '\n\n';
       });
       
-      // Create blob and download
       if (Platform.OS === 'web') {
+        // Web: Create blob and download
         const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `dailytracker-export-${format(new Date(), 'yyyy-MM-dd')}.txt`;
+        link.download = `smpl-journal-export-${format(new Date(), 'yyyy-MM-dd')}.txt`;
         link.click();
         URL.revokeObjectURL(url);
         showToast('Exported successfully');
       } else {
-        // For mobile, we'll need to use expo-sharing or similar
-        showToast('Export available on web only');
+        // Mobile: Save to file system and share
+        const fileName = `smpl-journal-export-${format(new Date(), 'yyyy-MM-dd')}.txt`;
+        const file = new FileSystem.File(FileSystem.Paths.cache, fileName);
+        await file.write(text);
+        await Sharing.shareAsync(file.uri, {
+          mimeType: 'text/plain',
+          dialogTitle: 'Export Journal Data',
+        });
+        showToast('Export completed');
       }
     } catch (error) {
       console.error('Export error:', error);
@@ -814,16 +845,25 @@ export const JournalScreen: React.FC<{}> = () => {
       const json = JSON.stringify(data, null, 2);
       
       if (Platform.OS === 'web') {
+        // Web: Create blob and download
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `dailytracker-export-${format(new Date(), 'yyyy-MM-dd')}.json`;
+        link.download = `smpl-journal-export-${format(new Date(), 'yyyy-MM-dd')}.json`;
         link.click();
         URL.revokeObjectURL(url);
         showToast('Exported successfully');
       } else {
-        showToast('Export available on web only');
+        // Mobile: Save to file system and share
+        const fileName = `smpl-journal-export-${format(new Date(), 'yyyy-MM-dd')}.json`;
+        const file = new FileSystem.File(FileSystem.Paths.cache, fileName);
+        await file.write(json);
+        await Sharing.shareAsync(file.uri, {
+          mimeType: 'application/json',
+          dialogTitle: 'Export Journal Data',
+        });
+        showToast('Export completed');
       }
     } catch (error) {
       console.error('Export error:', error);
@@ -833,67 +873,123 @@ export const JournalScreen: React.FC<{}> = () => {
 
   const importData = async () => {
     try {
-      if (Platform.OS !== 'web') {
-        showToast('Import available on web only');
-        return;
-      }
-
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.json';
-      
-      input.onchange = async (e: any) => {
-        const file = e.target.files[0];
-        if (!file) return;
+      if (Platform.OS === 'web') {
+        // Web: Use file input
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
         
-        const reader = new FileReader();
-        reader.onload = async (event: any) => {
-          try {
-            const data = JSON.parse(event.target.result);
-            
-            if (!data.entries || !Array.isArray(data.entries)) {
-              showToast('Invalid file format');
-              return;
+        input.onchange = async (e: any) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          
+          const reader = new FileReader();
+          reader.onload = async (event: any) => {
+            try {
+              const data = JSON.parse(event.target.result);
+              
+              if (!data.entries || !Array.isArray(data.entries)) {
+                showToast('Invalid file format');
+                return;
+              }
+              
+              // Confirm before importing
+              const confirmed = window.confirm(
+                `Import ${data.entries.length} entries? This will merge with existing data.`
+              );
+              
+              if (!confirmed) return;
+              
+              // Get existing data
+              const existingEntries = await StorageService.getEntries();
+              const existingExpenses = await StorageService.getExpenses();
+              const existingActionItems = await StorageService.getActionItems();
+              
+              // Merge data (avoid duplicates by ID)
+              const existingEntryIds = new Set(existingEntries.map(e => e.id));
+              const newEntries = data.entries.filter((e: Entry) => !existingEntryIds.has(e.id));
+              
+              const existingExpenseIds = new Set(existingExpenses.map(e => e.id));
+              const newExpenses = (data.expenses || []).filter((e: Expense) => !existingExpenseIds.has(e.id));
+              
+              const existingActionIds = new Set(existingActionItems.map(a => a.id));
+              const newActionItems = (data.actionItems || []).filter((a: ActionItem) => !existingActionIds.has(a.id));
+              
+              // Save merged data
+              await StorageService.saveEntries([...existingEntries, ...newEntries]);
+              await StorageService.saveExpenses([...existingExpenses, ...newExpenses]);
+              await StorageService.saveActionItems([...existingActionItems, ...newActionItems]);
+              
+              await loadEntries();
+              await loadExpensesAndActions();
+              showToast(`Imported ${newEntries.length} new entries`);
+            } catch (error) {
+              console.error('Import error:', error);
+              showToast('Import failed - invalid file');
             }
-            
-            // Confirm before importing
-            const confirmed = window.confirm(
-              `Import ${data.entries.length} entries? This will merge with existing data.`
-            );
-            
-            if (!confirmed) return;
-            
-            // Get existing data
-            const existingEntries = await StorageService.getEntries();
-            const existingExpenses = await StorageService.getExpenses();
-            const existingActionItems = await StorageService.getActionItems();
-            
-            // Merge data (avoid duplicates by ID)
-            const existingEntryIds = new Set(existingEntries.map(e => e.id));
-            const newEntries = data.entries.filter((e: Entry) => !existingEntryIds.has(e.id));
-            
-            const existingExpenseIds = new Set(existingExpenses.map(e => e.id));
-            const newExpenses = (data.expenses || []).filter((e: Expense) => !existingExpenseIds.has(e.id));
-            
-            const existingActionIds = new Set(existingActionItems.map(a => a.id));
-            const newActionItems = (data.actionItems || []).filter((a: ActionItem) => !existingActionIds.has(a.id));
-            
-            // Save merged data
-            await StorageService.saveEntries([...existingEntries, ...newEntries]);
-            await StorageService.saveExpenses([...existingExpenses, ...newExpenses]);
-            await StorageService.saveActionItems([...existingActionItems, ...newActionItems]);
-            
-            await loadEntries();
-            showToast(`Imported ${newEntries.length} new entries`);
-          } catch (error) {
-            console.error('Import error:', error);
-            showToast('Import failed - invalid file');
-          }
+          };
+          reader.readAsText(file);
         };
-        reader.readAsText(file);
-      };
-      
-      input.click();
+        
+        input.click();
+      } else {
+        // Mobile: Use document picker
+        const result = await DocumentPicker.getDocumentAsync({
+          type: 'application/json',
+          copyToCacheDirectory: true,
+        });
+        
+        if (result.canceled) return;
+        
+        const fileUri = result.assets[0].uri;
+        const file = new FileSystem.File(fileUri);
+        const fileContent = await file.text();
+        
+        const data = JSON.parse(fileContent);
+        
+        if (!data.entries || !Array.isArray(data.entries)) {
+          showToast('Invalid file format');
+          return;
+        }
+        
+        // Confirm before importing
+        const confirmed = await new Promise<boolean>(resolve => {
+          Alert.alert(
+            'Import Data',
+            `Import ${data.entries.length} entries? This will merge with existing data.`,
+            [
+              { text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+              { text: 'Import', onPress: () => resolve(true) }
+            ]
+          );
+        });
+        
+        if (!confirmed) return;
+        
+        // Get existing data
+        const existingEntries = await StorageService.getEntries();
+        const existingExpenses = await StorageService.getExpenses();
+        const existingActionItems = await StorageService.getActionItems();
+        
+        // Merge data (avoid duplicates by ID)
+        const existingEntryIds = new Set(existingEntries.map(e => e.id));
+        const newEntries = data.entries.filter((e: Entry) => !existingEntryIds.has(e.id));
+        
+        const existingExpenseIds = new Set(existingExpenses.map(e => e.id));
+        const newExpenses = (data.expenses || []).filter((e: Expense) => !existingExpenseIds.has(e.id));
+        
+        const existingActionIds = new Set(existingActionItems.map(a => a.id));
+        const newActionItems = (data.actionItems || []).filter((a: ActionItem) => !existingActionIds.has(a.id));
+        
+        // Save merged data
+        await StorageService.saveEntries([...existingEntries, ...newEntries]);
+        await StorageService.saveExpenses([...existingExpenses, ...newExpenses]);
+        await StorageService.saveActionItems([...existingActionItems, ...newActionItems]);
+        
+        await loadEntries();
+        await loadExpensesAndActions();
+        showToast(`Imported ${newEntries.length} new entries`);
+      }
     } catch (error) {
       console.error('Import error:', error);
       showToast('Import failed');
@@ -1796,6 +1892,53 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+  },
+  datePickerContent: {
+    backgroundColor: theme.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  datePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  datePickerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.text,
+  },
+  datePickerClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.input,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  datePickerCloseText: {
+    fontSize: 20,
+    color: theme.text,
+    fontWeight: 'bold',
+  },
+  datePickerQuickButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickDateButton: {
+    flex: 1,
+    backgroundColor: theme.primary,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  quickDateButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
