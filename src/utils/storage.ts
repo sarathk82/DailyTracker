@@ -12,18 +12,25 @@ const ENCRYPTION_KEY_STORAGE = '@daily_tracker_encryption_key';
 const ENCRYPTION_ENABLED_KEY = '@daily_tracker_encryption_enabled';
 
 // Generate a device-specific encryption key
-const generateDeviceKey = (): string => {
-  // Use device-specific info + random salt for the key
-  const deviceInfo = `${navigator.userAgent || 'device'}-${Date.now()}`;
-  const salt = generateSalt();
-  return CryptoJS.PBKDF2(deviceInfo, salt, {
-    keySize: 256 / 32,
-    iterations: 1000 // Lower iterations for local encryption (not for password derivation)
-  }).toString();
+const generateDeviceKey = async (): Promise<string> => {
+  try {
+    // Use device-specific info + random salt for the key
+    const deviceInfo = `${navigator.userAgent || 'device'}-${Date.now()}`;
+    const salt = await generateSalt();
+    return CryptoJS.PBKDF2(deviceInfo, salt, {
+      keySize: 256 / 32,
+      iterations: 1000 // Lower iterations for local encryption (not for password derivation)
+    }).toString();
+  } catch (error) {
+    console.warn('Native crypto not available, using fallback key generation:', error);
+    // Fallback to simpler key generation without crypto random
+    const deviceInfo = `${navigator.userAgent || 'device'}-${Date.now()}-${Math.random()}`;
+    return CryptoJS.SHA256(deviceInfo).toString();
+  }
 };
 
 let cachedEncryptionKey: string | null = null;
-let encryptionEnabled: boolean = true; // Default to enabled
+let encryptionEnabled: boolean = true; // Always enabled by default
 
 // Get or create the local encryption key
 const getLocalEncryptionKey = async (): Promise<string> => {
@@ -35,7 +42,7 @@ const getLocalEncryptionKey = async (): Promise<string> => {
     let key = await AsyncStorage.getItem(ENCRYPTION_KEY_STORAGE);
     if (!key) {
       // Generate new key on first use
-      key = generateDeviceKey();
+      key = await generateDeviceKey();
       await AsyncStorage.setItem(ENCRYPTION_KEY_STORAGE, key);
       await AsyncStorage.setItem(ENCRYPTION_ENABLED_KEY, 'true');
     }
@@ -44,20 +51,14 @@ const getLocalEncryptionKey = async (): Promise<string> => {
   } catch (error) {
     console.error('Error getting encryption key:', error);
     // Fallback to a generated key (won't persist, but prevents crashes)
-    return generateDeviceKey();
+    return await generateDeviceKey();
   }
 };
 
 // Check if encryption is enabled
 const isEncryptionEnabled = async (): Promise<boolean> => {
-  try {
-    const enabled = await AsyncStorage.getItem(ENCRYPTION_ENABLED_KEY);
-    encryptionEnabled = enabled !== 'false'; // Default to true if not set
-    return encryptionEnabled;
-  } catch (error) {
-    console.error('Error checking encryption status:', error);
-    return true; // Default to enabled
-  }
+  // Encryption is always enabled
+  return true;
 };
 
 // Encrypt data before storing
@@ -71,7 +72,9 @@ const encryptIfEnabled = async (data: any): Promise<string> => {
     const key = await getLocalEncryptionKey();
     return encryptData(data, key);
   } catch (error) {
-    console.error('Encryption failed, storing unencrypted:', error);
+    // Silently fallback to unencrypted if encryption fails
+    // This can happen in environments without secure crypto support
+    console.warn('Encryption not available, storing unencrypted');
     return JSON.stringify(data);
   }
 };

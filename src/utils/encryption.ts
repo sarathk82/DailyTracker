@@ -1,4 +1,5 @@
 import CryptoJS from 'crypto-js';
+import * as Crypto from 'expo-crypto';
 
 /**
  * Encryption utilities for end-to-end encrypted cloud sync
@@ -26,8 +27,21 @@ export function generateMasterKey(password: string, salt: string): string {
  * Generate a random salt for new users
  * @returns Random hex string
  */
-export function generateSalt(): string {
-  return CryptoJS.lib.WordArray.random(128 / 8).toString();
+export async function generateSalt(): Promise<string> {
+  try {
+    // Use expo-crypto for secure random generation
+    const randomBytes = await Crypto.getRandomBytesAsync(16); // 128 bits
+    return Array.from(randomBytes)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  } catch (error) {
+    console.warn('Crypto.getRandomBytesAsync failed, using fallback:', error);
+    // Fallback using timestamp and Math.random
+    const timestamp = Date.now().toString(36);
+    const random1 = Math.random().toString(36).substring(2);
+    const random2 = Math.random().toString(36).substring(2);
+    return CryptoJS.SHA256(`${timestamp}-${random1}-${random2}`).toString().substring(0, 32);
+  }
 }
 
 /**

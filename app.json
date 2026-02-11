@@ -32,6 +32,9 @@
       "bundler": "metro"
     },
     "owner": "sarathk82",
+    "updates": {
+      "enabled": false
+    },
     "extra": {
       "eas": {
         "projectId": "fb0afca1-7b22-4e29-997d-817dd76b35a1"

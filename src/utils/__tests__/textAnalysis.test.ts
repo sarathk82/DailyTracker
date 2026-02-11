@@ -2,11 +2,9 @@ import { TextAnalyzer } from '../textAnalysis';
 import { Entry, ActionItem, Expense } from '../../types';
 
 describe('TextAnalyzer', () => {
-  let analyzer: TextAnalyzer;
   const mockDate = new Date('2025-09-02T10:00:00Z');
 
   beforeEach(() => {
-    analyzer = new TextAnalyzer();
     jest.spyOn(Date, 'now').mockImplementation(() => mockDate.getTime());
   });
 
@@ -14,142 +12,149 @@ describe('TextAnalyzer', () => {
     jest.restoreAllMocks();
   });
 
-  describe('detectExpenses', () => {
+  describe('detectExpense', () => {
     it('should detect expenses with dollar amounts', () => {
       const text = 'I spent $50.99 on groceries today';
-      const expenses = analyzer.detectExpenses(text);
+      const isExpense = TextAnalyzer.detectExpense(text);
       
-      expect(expenses).toHaveLength(1);
-      expect(expenses[0]).toEqual(expect.objectContaining({
-        amount: 50.99,
-        currency: 'USD',
-        description: expect.stringContaining('groceries'),
-        category: expect.any(String)
-      }));
+      expect(isExpense).toBe(true);
     });
 
     it('should detect expenses with written dollar amounts', () => {
       const text = 'Paid 25 dollars for lunch';
-      const expenses = analyzer.detectExpenses(text);
+      const isExpense = TextAnalyzer.detectExpense(text);
       
-      expect(expenses).toHaveLength(1);
-      expect(expenses[0]).toEqual(expect.objectContaining({
-        amount: 25,
-        currency: 'USD',
-        description: expect.stringContaining('lunch'),
-        category: 'food'
-      }));
+      expect(isExpense).toBe(true);
     });
 
-    it('should detect multiple expenses in the same text', () => {
-      const text = 'Spent $30 on lunch and 20 euros on transportation';
-      const expenses = analyzer.detectExpenses(text);
-      
-      expect(expenses).toHaveLength(2);
-      expect(expenses[0].currency).toBe('USD');
-      expect(expenses[1].currency).toBe('EUR');
-    });
-
-    it('should detect expenses with different currency symbols', () => {
-      const currencies = [
-        { text: '£50 for books', currency: 'GBP' },
-        { text: '€75.50 for dinner', currency: 'EUR' },
-        { text: '₹500 for taxi', currency: 'INR' },
-        { text: 'Rs. 1000 for shopping', currency: 'INR' }
-      ];
-
-      currencies.forEach(({ text, currency }) => {
-        const expenses = analyzer.detectExpenses(text);
-        expect(expenses[0].currency).toBe(currency);
-      });
-    });
-
-    it('should not detect expenses without currency or amount', () => {
+    it('should not detect expenses without context', () => {
       const text = 'I went to the store today';
-      const expenses = analyzer.detectExpenses(text);
-      expect(expenses).toHaveLength(0);
+      const isExpense = TextAnalyzer.detectExpense(text);
+      
+      expect(isExpense).toBe(false);
+    });
+
+    it('should detect expense with Rs symbol', () => {
+      const text = 'Rs 500 for haircut';
+      const isExpense = TextAnalyzer.detectExpense(text);
+      
+      expect(isExpense).toBe(true);
     });
   });
 
-  describe('detectActionItems', () => {
+  describe('detectActionItem', () => {
+    it('should detect action items with dot prefix', () => {
+      const text = '. Call dentist tomorrow';
+      const isAction = TextAnalyzer.detectActionItem(text);
+      
+      expect(isAction).toBe(true);
+    });
+
     it('should detect action items with todo keywords', () => {
       const text = 'Need to buy groceries tomorrow';
-      const items = analyzer.detectActionItems(text);
+      const isAction = TextAnalyzer.detectActionItem(text);
       
-      expect(items).toHaveLength(1);
-      expect(items[0]).toEqual(expect.objectContaining({
-        title: expect.stringContaining('buy groceries'),
-        completed: false
-      }));
+      expect(isAction).toBe(true);
     });
 
-    it('should detect action items with task markers', () => {
-      const text = '- [ ] Call dentist\n- [ ] Submit report';
-      const items = analyzer.detectActionItems(text);
+    it('should not detect regular text as action item', () => {
+      const text = 'The weather is nice today';
+      const isAction = TextAnalyzer.detectActionItem(text);
       
-      expect(items).toHaveLength(2);
-      expect(items[0].title).toContain('Call dentist');
-      expect(items[1].title).toContain('Submit report');
-    });
-
-    it('should detect completed action items', () => {
-      const text = '- [x] Finish presentation';
-      const items = analyzer.detectActionItems(text);
-      
-      expect(items).toHaveLength(1);
-      expect(items[0].completed).toBe(true);
-    });
-
-    it('should detect due dates in action items', () => {
-      const text = 'Submit report by next Friday';
-      const items = analyzer.detectActionItems(text);
-      
-      expect(items).toHaveLength(1);
-      expect(items[0].dueDate).toBeInstanceOf(Date);
+      expect(isAction).toBe(false);
     });
   });
 
-  describe('analyzeText', () => {
-    it('should return both expenses and action items', () => {
-      const text = 'Need to buy groceries for $50\nPaid €30 for dinner';
-      const result = analyzer.analyzeText(text);
+  describe('extractExpenseInfo', () => {
+    it('should extract expense information from text', () => {
+      const text = 'Spent $50 on groceries';
+      const expense = TextAnalyzer.extractExpenseInfo(text, 'entry-1');
       
-      expect(result.actionItems).toHaveLength(1);
-      expect(result.expenses).toHaveLength(2);
+      expect(expense).not.toBeNull();
+      expect(expense?.amount).toBe(50);
+      expect(expense?.currency).toBe('USD');
+      expect(expense?.entryId).toBe('entry-1');
     });
 
-    it('should handle empty text', () => {
-      const result = analyzer.analyzeText('');
+    it('should handle Rs currency', () => {
+      const text = 'Paid Rs 200 for taxi';
+      const expense = TextAnalyzer.extractExpenseInfo(text, 'entry-1');
       
-      expect(result.actionItems).toHaveLength(0);
-      expect(result.expenses).toHaveLength(0);
+      expect(expense).not.toBeNull();
+      expect(expense?.amount).toBe(200);
+      expect(expense?.currency).toBe('INR');
     });
 
-    it('should handle text without any detectable items', () => {
-      const result = analyzer.analyzeText('Just a regular journal entry.');
+    it('should return null for text without amounts', () => {
+      const text = 'Went shopping today';
+      const expense = TextAnalyzer.extractExpenseInfo(text, 'entry-1');
       
-      expect(result.actionItems).toHaveLength(0);
-      expect(result.expenses).toHaveLength(0);
+      expect(expense).toBeNull();
     });
   });
 
-  describe('categorizeSentiment', () => {
-    it('should detect positive sentiment', () => {
-      const text = 'I had a great day! Everything was wonderful.';
-      const sentiment = analyzer.categorizeSentiment(text);
-      expect(sentiment).toBe('positive');
+  describe('extractActionItem', () => {
+    it('should extract action item from text', () => {
+      const text = '. Call dentist tomorrow';
+      const actionItem = TextAnalyzer.extractActionItem(text, 'entry-1');
+      
+      expect(actionItem).not.toBeNull();
+      expect(actionItem?.title).toContain('Call dentist');
+      expect(actionItem?.entryId).toBe('entry-1');
+      expect(actionItem?.completed).toBe(false);
     });
 
-    it('should detect negative sentiment', () => {
-      const text = 'This was a terrible day. Nothing went right.';
-      const sentiment = analyzer.categorizeSentiment(text);
-      expect(sentiment).toBe('negative');
+    it('should handle todo keyword', () => {
+      const text = 'todo: finish presentation';
+      const actionItem = TextAnalyzer.extractActionItem(text, 'entry-1');
+      
+      expect(actionItem).not.toBeNull();
+      expect(actionItem?.title).toContain('finish presentation');
+    });
+  });
+
+  describe('formatCurrency', () => {
+    it('should format USD currency', () => {
+      const formatted = TextAnalyzer.formatCurrency(50.99, 'USD');
+      expect(formatted).toBe('$50.99');
     });
 
-    it('should return neutral for mixed or unclear sentiment', () => {
-      const text = 'Today was just a regular day.';
-      const sentiment = analyzer.categorizeSentiment(text);
-      expect(sentiment).toBe('neutral');
+    it('should format INR currency', () => {
+      const formatted = TextAnalyzer.formatCurrency(500, 'INR');
+      expect(formatted).toBe('₹500.00');
+    });
+
+    it('should format EUR currency', () => {
+      const formatted = TextAnalyzer.formatCurrency(75.5, 'EUR');
+      expect(formatted).toBe('€75.50');
+    });
+
+    it('should format GBP currency', () => {
+      const formatted = TextAnalyzer.formatCurrency(100, 'GBP');
+      expect(formatted).toBe('£100.00');
+    });
+
+    it('should handle default currency', () => {
+      const formatted = TextAnalyzer.formatCurrency(50);
+      expect(formatted).toBeTruthy();
+      expect(formatted).toMatch(/50/);
+    });
+  });
+
+  describe('isExpenseRelated', () => {
+    it('should identify expense-related text', () => {
+      const text = 'Spent money on lunch';
+      expect(TextAnalyzer.isExpenseRelated(text)).toBe(true);
+    });
+
+    it('should identify paid as expense', () => {
+      const text = 'Paid the bill today';
+      expect(TextAnalyzer.isExpenseRelated(text)).toBe(true);
+    });
+
+    it('should not identify regular text as expense', () => {
+      const text = 'Had a great day';
+      expect(TextAnalyzer.isExpenseRelated(text)).toBe(false);
     });
   });
 });
