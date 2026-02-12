@@ -1,16 +1,77 @@
 # Exclude unnecessary files from EAS Build
-node_modules
-.git
-.github
-coverage
-web-build
-dist
-*.bak*
-__tests__
-.jest
-.eslintignore
+
+# Version control
+.git/
+.github/
 .gitignore
+
+# Dependencies (will be installed during build)
+node_modules/
+
+# Build outputs
+coverage/
+web-build/
+dist/
+.expo/
+.firebase/
+
+# Documentation
+*.md
 README.md
 DEPLOYMENT.md
+WEB_DEPLOYMENT.md
+FIREBASE_SETUP.md
+IMPLEMENTATION_SUMMARY.md
+SYNC_IMPLEMENTATION.md
+LOCAL_LLM_README.md
+
+# Scripts
 deploy.sh
 public-deploy.sh
+*.sh
+
+# Backup files
+*.bak
+*.bak*
+App.tsx.bak
+
+# Test files
+__tests__/
+**/__tests__/
+*.test.ts
+*.test.tsx
+*.test.js
+*.test.jsx
+**/*.test.ts
+**/*.test.tsx
+coverage/
+jest.config.js
+setupTests.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Config files not needed for build
+.eslintrc*
+.prettierrc*
+.editorconfig
+.npmrc
+
+# Firebase local files
+.firebaserc
+firebase.json
+firestore.rules
+firestore.indexes.json
+
+# Web-specific
+webpack.config.js
+index.web.ts
+public/
+qr-code.html
+
+# Hooks
+eas-hooks/

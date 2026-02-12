@@ -25,7 +25,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.sarathk82.smpljournal"
+      "package": "com.sarathk82.smpljournal",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "favicon": "./assets/smpljournal.png",
