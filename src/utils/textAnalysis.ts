@@ -261,6 +261,34 @@ export class TextAnalyzer {
     }
   }
 
+  static async extractActionItemAsync(text: string, entryId: string): Promise<ActionItem | null> {
+    if (this.useLLM) {
+      const result = await LLMClassificationService.classifyText(text);
+      
+      if (result.type === 'action') {
+        // Clean up the title - remove leading dot if present
+        let cleanTitle = text.trim();
+        if (cleanTitle.startsWith('.')) {
+          cleanTitle = cleanTitle.substring(1).trim();
+        }
+        
+        // Use LLM-extracted due date if available, otherwise extract ourselves
+        const dueDate = result.extractedData?.dueDate || this.extractDueDate(text);
+        
+        return {
+          id: uuid.v4(),
+          entryId,
+          title: cleanTitle,
+          completed: false,
+          createdAt: new Date(),
+          dueDate: dueDate
+        };
+      }
+    }
+    
+    return this.extractActionItem(text, entryId);
+  }
+
   static extractActionItem(text: string, entryId: string): ActionItem | null {
     if (this.detectActionItem(text)) {
       // Clean up the title - remove leading dot if present

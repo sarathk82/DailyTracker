@@ -452,9 +452,12 @@ export const JournalScreen: React.FC<{}> = () => {
       // Clear input immediately for better UX
       setInputText("");
       
+      // Use async LLM classification if enabled
+      const autoDetectedAction = await TextAnalyzer.detectActionItemAsync(trimmedInput);
+      const autoDetectedExpense = await TextAnalyzer.detectExpenseAsync(trimmedInput);
+      
       // Convert dot-prefix to checkbox format for display
       let displayText = trimmedInput;
-      const autoDetectedAction = TextAnalyzer.detectActionItem(trimmedInput);
       if (autoDetectedAction || forceAction) {
         displayText = convertDotToCheckbox(trimmedInput);
       }
@@ -476,9 +479,8 @@ export const JournalScreen: React.FC<{}> = () => {
       let expenseError = false;
       
       // Check for expense (auto-detect OR user explicitly marked it)
-      const autoDetectedExpense = TextAnalyzer.detectExpense(trimmedInput);
       if (autoDetectedExpense || forceExpense) {
-        expenseInfo = TextAnalyzer.extractExpenseInfo(trimmedInput, entry.id);
+        expenseInfo = await TextAnalyzer.extractExpenseInfoAsync(trimmedInput, entry.id);
         if (expenseInfo) {
           expenseInfo.autoDetected = autoDetectedExpense && !forceExpense;
           await StorageService.addExpense(expenseInfo);
@@ -502,7 +504,7 @@ export const JournalScreen: React.FC<{}> = () => {
             autoDetected: false
           };
         } else {
-          actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
+          actionItem = await TextAnalyzer.extractActionItemAsync(trimmedInput, entry.id);
           if (actionItem) {
             actionItem.autoDetected = autoDetectedAction && !forceAction;
           }
