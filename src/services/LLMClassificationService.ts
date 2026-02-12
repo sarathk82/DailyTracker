@@ -55,9 +55,12 @@ export class LLMClassificationService {
         /\bdeadline\b|\bdue\b|\bappointment\b|\bmeeting\b/i,
         /\bcall\b|\bemail\b|\bcontact\b|\bfollow up\b/i,
         /\bfinish\b|\bcomplete\b|\bstart\b|\bsubmit\b/i,
+        /\b(?:go|going)\s+(?:to|for)\b/i,  // "go to", "going to", "going for"
+        /\b(?:tomorrow|today|tonight|later|soon|this week|next week)\b/i,  // Temporal indicators
       ],
       keywords: ['todo', 'task', 'need', 'should', 'must', 'reminder', 'remember',
-                 'deadline', 'due', 'appointment', 'meeting', 'call', 'email', 'finish'],
+                 'deadline', 'due', 'appointment', 'meeting', 'call', 'email', 'finish',
+                 'tomorrow', 'today', 'tonight', 'later', 'go', 'going', 'visit', 'attend'],
       weight: 1.0,
     },
   ];
