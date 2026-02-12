@@ -1,4 +1,5 @@
 import { Entry, Expense, ActionItem } from '../types';
+import { LLMClassificationService, ClassificationResult } from '../services/LLMClassificationService';
 
 // Custom UUID function since react-native-uuid causes crashes
 const uuid = {
@@ -11,6 +12,37 @@ const uuid = {
 };
 
 export class TextAnalyzer {
+  // Flag to enable/disable LLM classification
+  // Default to TRUE in this feature branch for local LLM testing
+  private static useLLM: boolean = true;
+
+  /**
+   * Enable LLM-based classification (local model, no API needed)
+   */
+  static enableLLM(apiKey?: string, options?: { apiEndpoint?: string; model?: string }) {
+    this.useLLM = true;
+    // Local LLM doesn't need configuration, but kept for compatibility
+    LLMClassificationService.configure({
+      apiKey: apiKey || 'local',
+      ...options,
+    });
+    console.log('Local LLM classification enabled');
+  }
+
+  /**
+   * Disable LLM and use regex patterns
+   */
+  static disableLLM() {
+    this.useLLM = false;
+  }
+
+  /**
+   * Check if LLM is enabled
+   */
+  static isLLMEnabled(): boolean {
+    return this.useLLM;
+  }
+
   // Currency patterns - simplified to detect any numeric amount
   private static readonly CURRENCY_PATTERNS = [
     // Any number with optional decimal places
@@ -44,10 +76,26 @@ export class TextAnalyzer {
   // Only dot-prefix detection is used for action items
   // Format: ". task description" becomes an action item
 
+  static async detectActionItemAsync(text: string): Promise<boolean> {
+    if (this.useLLM) {
+      const result = await LLMClassificationService.classifyText(text);
+      return result.type === 'action';
+    }
+    return this.detectActionItem(text);
+  }
+
   static detectActionItem(text: string): boolean {
     // Only detect action items that start with a dot (simple and explicit)
     const startsWithDot = /^\s*\.\s*\S/.test(text);
     return startsWithDot;
+  }
+
+  static async detectExpenseAsync(text: string): Promise<boolean> {
+    if (this.useLLM) {
+      const result = await LLMClassificationService.classifyText(text);
+      return result.type === 'expense';
+    }
+    return this.detectExpense(text);
   }
 
   static detectExpense(text: string): boolean {
@@ -343,6 +391,29 @@ export class TextAnalyzer {
     
     // Default to today if no date found
     return new Date(today);
+  }
+
+  static async extractExpenseInfoAsync(text: string, entryId: string): Promise<Expense | null> {
+    if (this.useLLM) {
+      const result = await LLMClassificationService.classifyText(text);
+      
+      if (result.type === 'expense' && result.extractedData) {
+        const amount = result.extractedData.amount || this.extractAmount(text)?.value;
+        if (!amount) return null;
+
+        return {
+          id: uuid.v4(),
+          entryId,
+          amount,
+          currency: result.extractedData.currency || this.getSystemCurrency(),
+          description: text.trim(),
+          category: result.extractedData.category || 'Other',
+          createdAt: new Date()
+        };
+      }
+    }
+    
+    return this.extractExpenseInfo(text, entryId);
   }
 
   static extractExpenseInfo(text: string, entryId: string): Expense | null {

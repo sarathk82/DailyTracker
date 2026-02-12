@@ -9,6 +9,8 @@ import {
   Modal,
   TextInput,
   Platform,
+  Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
@@ -117,6 +119,9 @@ export const ActionItemsScreen: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [editingItem, setEditingItem] = useState<ActionItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  
+  // Keyboard handling state
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const loadActionItems = useCallback(async () => {
     const items = await StorageService.getActionItems();
@@ -136,6 +141,27 @@ export const ActionItemsScreen: React.FC = () => {
       loadActionItems();
     }, [loadActionItems])
   );
+
+  // Keyboard listeners for better Android handling
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
 
   const filteredItems = actionItems.filter(item => {
     switch (filter) {

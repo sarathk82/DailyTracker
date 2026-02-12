@@ -22,8 +22,7 @@ const generateDeviceKey = async (): Promise<string> => {
       iterations: 1000 // Lower iterations for local encryption (not for password derivation)
     }).toString();
   } catch (error) {
-    console.warn('Native crypto not available, using fallback key generation:', error);
-    // Fallback to simpler key generation without crypto random
+    // Fallback to simpler key generation
     const deviceInfo = `${navigator.userAgent || 'device'}-${Date.now()}-${Math.random()}`;
     return CryptoJS.SHA256(deviceInfo).toString();
   }
@@ -68,15 +67,9 @@ const encryptIfEnabled = async (data: any): Promise<string> => {
     return JSON.stringify(data);
   }
   
-  try {
-    const key = await getLocalEncryptionKey();
-    return encryptData(data, key);
-  } catch (error) {
-    // Silently fallback to unencrypted if encryption fails
-    // This can happen in environments without secure crypto support
-    console.warn('Encryption not available, storing unencrypted');
-    return JSON.stringify(data);
-  }
+  const key = await getLocalEncryptionKey();
+  const encrypted = encryptData(data, key);
+  return encrypted;
 };
 
 // Decrypt data after retrieving

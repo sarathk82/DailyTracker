@@ -16,7 +16,7 @@ interface MinimalEntryItemProps {
   layoutStyles: any;
 }
 
-export const MinimalEntryItem: React.FC<MinimalEntryItemProps> = ({
+export const MinimalEntryItem: React.FC<MinimalEntryItemProps> = React.memo(({
   item,
   expense,
   actionItem,
@@ -156,7 +156,7 @@ export const MinimalEntryItem: React.FC<MinimalEntryItemProps> = ({
       </Animated.View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   deleteIndicator: {

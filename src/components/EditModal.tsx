@@ -8,6 +8,9 @@ import {
   StyleSheet,
   Platform,
   Alert,
+  KeyboardAvoidingView,
+  Keyboard,
+  ScrollView,
 } from 'react-native';
 import { format } from 'date-fns';
 import { useTheme } from '../contexts/ThemeContext';
@@ -48,6 +51,28 @@ export const EditModal: React.FC<EditModalProps> = ({
   const [editAmount, setEditAmount] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editDueDate, setEditDueDate] = useState<Date | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Track keyboard height
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   // Initialize form when entry changes
   useEffect(() => {
@@ -197,161 +222,172 @@ export const EditModal: React.FC<EditModalProps> = ({
       transparent={true}
       onRequestClose={handleClose}
     >
-      <View style={dynamicStyles.editModalOverlay}>
-        <View style={dynamicStyles.editModalContent}>
-          <Text style={dynamicStyles.editModalTitle}>Edit Entry</Text>
-          
-          <Text style={dynamicStyles.editLabel}>Text:</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <TouchableOpacity
-              style={[
-                dynamicStyles.markdownToggle,
-                editingEntry.isMarkdown && dynamicStyles.markdownToggleActive
-              ]}
-              onPress={() => setEditingEntry({ ...editingEntry, isMarkdown: !editingEntry.isMarkdown })}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={dynamicStyles.editModalOverlay}>
+          <View style={dynamicStyles.editModalContent}>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 20 }}
             >
-              <Text style={dynamicStyles.markdownToggleText}>
-                {editingEntry.isMarkdown ? '✅ Markdown' : '❌ Plain Text'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <TextInput
-            style={dynamicStyles.editTextInput}
-            value={editText}
-            onChangeText={setEditText}
-            placeholder="Entry text"
-            placeholderTextColor={theme.placeholder}
-            multiline
-            maxLength={1000}
-          />
-          
-          <Text style={dynamicStyles.editLabel}>Category:</Text>
-          <View style={dynamicStyles.categoryButtons}>
-            <TouchableOpacity
-              style={[
-                dynamicStyles.categoryButton,
-                editingEntry.type === 'log' && dynamicStyles.categoryButtonActive
-              ]}
-              onPress={async () => {
-                if (editingEntry.type !== 'log') {
-                  await removeCategory(editingEntry);
-                  setEditingEntry({ ...editingEntry, type: 'log' });
-                }
-              }}
-            >
-              <Text style={dynamicStyles.categoryButtonText}>📝 Log</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                dynamicStyles.categoryButton,
-                editingEntry.type === 'expense' && dynamicStyles.categoryButtonActive
-              ]}
-              onPress={async () => {
-                if (editingEntry.type !== 'expense') {
-                  if (editingEntry.type === 'action') {
-                    await removeCategory(editingEntry);
-                  }
-                  const expenseInfo = TextAnalyzer.extractExpenseInfo(editText, editingEntry.id);
-                  if (expenseInfo) {
-                    setEditAmount(expenseInfo.amount.toString());
-                    setEditCategory(expenseInfo.category || "");
-                  } else {
-                    setEditAmount("");
-                    setEditCategory("");
-                  }
-                  setEditingEntry({ ...editingEntry, type: 'expense' });
-                }
-              }}
-            >
-              <Text style={dynamicStyles.categoryButtonText}>💰 Expense</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                dynamicStyles.categoryButton,
-                editingEntry.type === 'action' && dynamicStyles.categoryButtonActive
-              ]}
-              onPress={async () => {
-                if (editingEntry.type !== 'action') {
-                  if (editingEntry.type === 'expense') {
-                    await removeCategory(editingEntry);
-                    setEditAmount("");
-                    setEditCategory("");
-                  }
-                  setEditingEntry({ ...editingEntry, type: 'action' });
-                }
-              }}
-            >
-              <Text style={dynamicStyles.categoryButtonText}>✅ Task</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {editingEntry.type === 'expense' && (
-            <>
-              <Text style={dynamicStyles.editLabel}>Amount:</Text>
+              <Text style={dynamicStyles.editModalTitle}>Edit Entry</Text>
+              
+              <Text style={dynamicStyles.editLabel}>Text:</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <TouchableOpacity
+                  style={[
+                    dynamicStyles.markdownToggle,
+                    editingEntry.isMarkdown && dynamicStyles.markdownToggleActive
+                  ]}
+                  onPress={() => setEditingEntry({ ...editingEntry, isMarkdown: !editingEntry.isMarkdown })}
+                >
+                  <Text style={dynamicStyles.markdownToggleText}>
+                    {editingEntry.isMarkdown ? '✅ Markdown' : '❌ Plain Text'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <TextInput
-                style={dynamicStyles.editInput}
-                value={editAmount}
-                onChangeText={setEditAmount}
-                placeholder="Enter amount"
+                style={dynamicStyles.editTextInput}
+                value={editText}
+                onChangeText={setEditText}
+                placeholder="Entry text"
                 placeholderTextColor={theme.placeholder}
-                keyboardType="decimal-pad"
+                multiline
+                maxLength={1000}
               />
               
-              <Text style={dynamicStyles.editLabel}>Category (optional):</Text>
-              <TextInput
-                style={dynamicStyles.editInput}
-                value={editCategory}
-                onChangeText={setEditCategory}
-                placeholder="Food, Transportation, etc."
-                placeholderTextColor={theme.placeholder}
-              />
-            </>
-          )}
-
-          {editingEntry.type === 'action' && (
-            <>
-              <Text style={dynamicStyles.editLabel}>Due Date:</Text>
-              <View style={{ marginBottom: 12 }}>
-                {Platform.OS === 'web' && (
-                  <input
-                    type="date"
-                    style={{
-                      width: '100%',
-                      padding: 12,
-                      fontSize: 16,
-                      borderRadius: 8,
-                      border: '1px solid #ddd',
-                      backgroundColor: theme.input,
-                      color: theme.text,
-                    }}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setEditDueDate(new Date(e.target.value));
+              <Text style={dynamicStyles.editLabel}>Category:</Text>
+              <View style={dynamicStyles.categoryButtons}>
+                <TouchableOpacity
+                  style={[
+                    dynamicStyles.categoryButton,
+                    editingEntry.type === 'log' && dynamicStyles.categoryButtonActive
+                  ]}
+                  onPress={async () => {
+                    if (editingEntry.type !== 'log') {
+                      await removeCategory(editingEntry);
+                      setEditingEntry({ ...editingEntry, type: 'log' });
+                    }
+                  }}
+                >
+                  <Text style={dynamicStyles.categoryButtonText}>📝 Log</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    dynamicStyles.categoryButton,
+                    editingEntry.type === 'expense' && dynamicStyles.categoryButtonActive
+                  ]}
+                  onPress={async () => {
+                    if (editingEntry.type !== 'expense') {
+                      if (editingEntry.type === 'action') {
+                        await removeCategory(editingEntry);
                       }
-                    }}
-                    value={editDueDate ? format(editDueDate, 'yyyy-MM-dd') : ''}
-                  />
-                )}
+                      const expenseInfo = TextAnalyzer.extractExpenseInfo(editText, editingEntry.id);
+                      if (expenseInfo) {
+                        setEditAmount(expenseInfo.amount.toString());
+                        setEditCategory(expenseInfo.category || "");
+                      } else {
+                        setEditAmount("");
+                        setEditCategory("");
+                      }
+                      setEditingEntry({ ...editingEntry, type: 'expense' });
+                    }
+                  }}
+                >
+                  <Text style={dynamicStyles.categoryButtonText}>💰 Expense</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    dynamicStyles.categoryButton,
+                    editingEntry.type === 'action' && dynamicStyles.categoryButtonActive
+                  ]}
+                  onPress={async () => {
+                    if (editingEntry.type !== 'action') {
+                      if (editingEntry.type === 'expense') {
+                        await removeCategory(editingEntry);
+                        setEditAmount("");
+                        setEditCategory("");
+                      }
+                      setEditingEntry({ ...editingEntry, type: 'action' });
+                    }
+                  }}
+                >
+                  <Text style={dynamicStyles.categoryButtonText}>✅ Task</Text>
+                </TouchableOpacity>
               </View>
-            </>
-          )}
-          
-          <View style={dynamicStyles.editModalButtons}>
-            <TouchableOpacity
-              style={[dynamicStyles.editModalButton, dynamicStyles.editModalButtonCancel]}
-              onPress={handleClose}
-            >
-              <Text style={dynamicStyles.editModalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[dynamicStyles.editModalButton, dynamicStyles.editModalButtonSave]}
-              onPress={handleSave}
-            >
-              <Text style={[dynamicStyles.editModalButtonText, { color: theme.surface }]}>Save</Text>
-            </TouchableOpacity>
-          </View>
+              
+                  {editingEntry.type === 'expense' && (
+                <>
+                  <Text style={dynamicStyles.editLabel}>Amount:</Text>
+                  <TextInput
+                    style={dynamicStyles.editInput}
+                    value={editAmount}
+                    onChangeText={setEditAmount}
+                    placeholder="Enter amount"
+                    placeholderTextColor={theme.placeholder}
+                    keyboardType="decimal-pad"
+                  />
+                  
+                  <Text style={dynamicStyles.editLabel}>Category (optional):</Text>
+                  <TextInput
+                    style={dynamicStyles.editInput}
+                    value={editCategory}
+                    onChangeText={setEditCategory}
+                    placeholder="Food, Transportation, etc."
+                    placeholderTextColor={theme.placeholder}
+                  />
+                </>
+              )}
+
+                  {editingEntry.type === 'action' && (
+                <>
+                  <Text style={dynamicStyles.editLabel}>Due Date:</Text>
+                  <View style={{ marginBottom: 12 }}>
+                    {Platform.OS === 'web' && (
+                      <input
+                        type="date"
+                        style={{
+                          width: '100%',
+                          padding: 12,
+                          fontSize: 16,
+                          borderRadius: 8,
+                          border: '1px solid #ddd',
+                          backgroundColor: theme.input,
+                          color: theme.text,
+                        }}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setEditDueDate(new Date(e.target.value));
+                          }
+                        }}
+                        value={editDueDate ? format(editDueDate, 'yyyy-MM-dd') : ''}
+                      />
+                    )}
+                  </View>
+                </>
+              )}
+              
+                  <View style={dynamicStyles.editModalButtons}>
+                <TouchableOpacity
+                  style={[dynamicStyles.editModalButton, dynamicStyles.editModalButtonCancel]}
+                  onPress={handleClose}
+                >
+                  <Text style={dynamicStyles.editModalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[dynamicStyles.editModalButton, dynamicStyles.editModalButtonSave]}
+                  onPress={handleSave}
+                >
+                  <Text style={[dynamicStyles.editModalButtonText, { color: theme.surface }]}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
         </View>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

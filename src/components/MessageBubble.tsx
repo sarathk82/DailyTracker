@@ -18,7 +18,7 @@ interface MessageBubbleProps {
   actionItem?: ActionItem;
 }
 
-export const MessageBubble: React.FC<MessageBubbleProps> = ({
+export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   entry,
   onLongPress,
   onEdit,
@@ -262,7 +262,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       </View>
     </View>
   );
-};
+});
 
 const getStyles = (theme: any) => StyleSheet.create({
   userMessageContainer: {

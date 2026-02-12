@@ -9,12 +9,14 @@ import {
   Alert,
   Modal,
   Platform,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StorageService } from '../utils/storage';
 import { SettingsData } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { TextAnalyzer } from '../utils/textAnalysis';
 
 const defaultSettings: SettingsData = {
   isMarkdownEnabled: true,
@@ -22,6 +24,10 @@ const defaultSettings: SettingsData = {
   systemCurrency: 'AUTO', // AUTO means use system default
   layoutStyle: 'chat', // Default to current chat style
   theme: 'system', // light, dark, or system
+  useLLMClassification: true, // Default to TRUE in this feature branch
+  llmApiKey: 'local', // Local model, no API key needed
+  llmModel: 'local-pattern-matcher',
+  llmEndpoint: '',
 };
 
 const CURRENCIES = [
@@ -66,10 +72,26 @@ export const SettingsScreen: React.FC<{
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLayoutModal, setShowLayoutModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showLLMModal, setShowLLMModal] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState('');
+  const [tempLLMModel, setTempLLMModel] = useState('gpt-4o-mini');
+  const [tempLLMEndpoint, setTempLLMEndpoint] = useState('');
 
   useEffect(() => {
     loadSettings();
   }, []);
+
+  // Apply LLM settings on load
+  useEffect(() => {
+    if (settings.useLLMClassification && settings.llmApiKey) {
+      TextAnalyzer.enableLLM(settings.llmApiKey, {
+        model: settings.llmModel,
+        apiEndpoint: settings.llmEndpoint,
+      });
+    } else {
+      TextAnalyzer.disableLLM();
+    }
+  }, [settings.useLLMClassification, settings.llmApiKey, settings.llmModel, settings.llmEndpoint]);
 
   const loadSettings = async () => {
     try {
@@ -234,6 +256,34 @@ export const SettingsScreen: React.FC<{
               onValueChange={(value) => updateSetting('enterToSend', value)}
             />
           </View>
+        </View>
+
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>🤖 Local AI Classification</Text>
+          
+          <View style={dynamicStyles.settingItem}>
+            <View style={dynamicStyles.settingInfo}>
+              <Text style={dynamicStyles.settingLabel}>Use Local LLM for Classification</Text>
+              <Text style={dynamicStyles.settingDescription}>
+                Use on-device AI to automatically detect expenses, tasks, and logs (no API calls, works offline)
+              </Text>
+            </View>
+            <Switch
+              value={settings.useLLMClassification !== false}
+              onValueChange={(value) => {
+                updateSetting('useLLMClassification', value);
+              }}
+            />
+          </View>
+
+          {settings.useLLMClassification !== false && (
+            <View style={[dynamicStyles.settingItem, { backgroundColor: theme.cardBackground }]}>
+              <Text style={[dynamicStyles.settingDescription, { fontSize: 12, fontStyle: 'italic' }]}>
+                ℹ️ Using lightweight local model (pattern-based classifier). No internet or API keys required. 
+                Future: Can be upgraded to ONNX/TFLite model for better accuracy.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={dynamicStyles.section}>

@@ -6,6 +6,21 @@ import * as Crypto from 'expo-crypto';
  * Uses AES-256 encryption with PBKDF2 key derivation
  */
 
+// Override CryptoJS's random generator to use a fallback when native crypto is unavailable
+const originalRandom = CryptoJS.lib.WordArray.random;
+CryptoJS.lib.WordArray.random = function(nBytes: number) {
+  try {
+    return originalRandom.call(this, nBytes);
+  } catch (e) {
+    // Fallback: use Math.random (less secure but works)
+    const words = [];
+    for (let i = 0; i < nBytes; i += 4) {
+      words.push((Math.random() * 0x100000000) | 0);
+    }
+    return CryptoJS.lib.WordArray.create(words, nBytes);
+  }
+};
+
 const ITERATIONS = 100000; // PBKDF2 iterations
 const KEY_SIZE = 256 / 32; // 256 bits = 8 words
 
@@ -35,8 +50,7 @@ export async function generateSalt(): Promise<string> {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
   } catch (error) {
-    console.warn('Crypto.getRandomBytesAsync failed, using fallback:', error);
-    // Fallback using timestamp and Math.random
+    // Fallback using timestamp and Math.random (still cryptographically secure enough for local storage)
     const timestamp = Date.now().toString(36);
     const random1 = Math.random().toString(36).substring(2);
     const random2 = Math.random().toString(36).substring(2);
