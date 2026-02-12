@@ -562,16 +562,11 @@ export const JournalScreen: React.FC<{}> = () => {
       }
       
       // Scroll to bottom (offset 0 for inverted list) to show the new message
-      // Use multiple attempts with longer delays for mobile
-      setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 100);
-      setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 300);
-      setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 500);
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+        }, 50);
+      });
       
       // Refocus the text input for better UX
       setTimeout(() => {
@@ -1249,20 +1244,32 @@ export const JournalScreen: React.FC<{}> = () => {
     return (item as Entry).id;
   }, []);
 
+  // Memoize inline styles to prevent VirtualizedList performance warning
+  const headerStyle = useMemo(() => [dynamicStyles.header, { zIndex: 10000 }], [dynamicStyles.header]);
+  const headerButtonsStyle = useMemo(() => ({ flexDirection: 'row' as const, alignItems: 'center' as const, zIndex: 10001 }), []);
+  const testButtonStyle = useMemo(() => [dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10004 }], [dynamicStyles.settingsButton]);
+  const searchButtonStyle = useMemo(() => [dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10002 }], [dynamicStyles.settingsButton]);
+  const settingsButtonStyle = useMemo(() => [dynamicStyles.settingsButton, { zIndex: 10003 }], [dynamicStyles.settingsButton]);
+
   return (
     <SafeAreaView style={dynamicStyles.container}>
-      <View style={[dynamicStyles.header, { zIndex: 10000 }]}>
+      <KeyboardAvoidingView 
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        style={dynamicStyles.container}
+      >
+      <View style={headerStyle}>
         <Text style={dynamicStyles.headerTitle}>Smpl Journal</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 10001 }}>
+        <View style={headerButtonsStyle}>
           <TouchableOpacity
-            style={[dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10004 }]}
+            style={testButtonStyle}
             onPress={addSingleTestEntry}
           >
             <Text style={dynamicStyles.settingsButtonText}>🧪</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10002 }]}
+            style={searchButtonStyle}
             onPress={() => {
               setShowSearch(!showSearch);
             }}
@@ -1271,7 +1278,7 @@ export const JournalScreen: React.FC<{}> = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[dynamicStyles.settingsButton, { zIndex: 10003 }]}
+            style={settingsButtonStyle}
             onPress={() => {
               setShowSettings(true);
             }}
@@ -1420,11 +1427,7 @@ export const JournalScreen: React.FC<{}> = () => {
         }}
       />
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
-        <View style={dynamicStyles.inputContainer}>
+      <View style={dynamicStyles.inputContainer}>
           <View style={dynamicStyles.quickActionsRow}>
           <TouchableOpacity
             style={[
@@ -1487,8 +1490,7 @@ export const JournalScreen: React.FC<{}> = () => {
             }}>▶</Text>
           </TouchableOpacity>
         </View>
-        </View>
-      </KeyboardAvoidingView>
+      </View>
       
       {showSettings && (
         <Modal
@@ -1639,6 +1641,7 @@ export const JournalScreen: React.FC<{}> = () => {
           </TouchableOpacity>
         </Modal>
       )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
