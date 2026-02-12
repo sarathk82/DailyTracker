@@ -264,9 +264,6 @@ export const SettingsScreen: React.FC<{
           <View style={dynamicStyles.settingItem}>
             <View style={dynamicStyles.settingInfo}>
               <Text style={dynamicStyles.settingLabel}>Use Local LLM for Classification</Text>
-              <Text style={dynamicStyles.settingDescription}>
-                Use on-device AI to automatically detect expenses, tasks, and logs (no API calls, works offline)
-              </Text>
             </View>
             <Switch
               value={settings.useLLMClassification !== false}
@@ -275,15 +272,6 @@ export const SettingsScreen: React.FC<{
               }}
             />
           </View>
-
-          {settings.useLLMClassification !== false && (
-            <View style={[dynamicStyles.settingItem, { backgroundColor: theme.cardBackground }]}>
-              <Text style={[dynamicStyles.settingDescription, { fontSize: 12, fontStyle: 'italic' }]}>
-                ℹ️ Using lightweight local model (pattern-based classifier). No internet or API keys required. 
-                Future: Can be upgraded to ONNX/TFLite model for better accuracy.
-              </Text>
-            </View>
-          )}
         </View>
 
         <View style={dynamicStyles.section}>
