@@ -11,13 +11,16 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import QRCode from 'react-native-qrcode-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
 import { P2PSyncService, PairedDevice } from '../services/P2PSyncService';
 import { CameraView, Camera } from 'expo-camera';
+import { useNavigation } from '@react-navigation/native';
 
 export const DevicePairingScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { theme } = useTheme();
   const [deviceId, setDeviceId] = useState<string>('');
   const [pairingCode, setPairingCode] = useState<string>('');
@@ -28,10 +31,8 @@ export const DevicePairingScreen: React.FC = () => {
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [isWebScanning, setIsWebScanning] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const webScannerRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const alertShownRef = useRef(false);
 
   const dynamicStyles = getStyles(theme);
 
@@ -39,130 +40,34 @@ export const DevicePairingScreen: React.FC = () => {
     initializeP2P();
     loadPairedDevices();
 
-    // Setup sync callback
+    // Setup sync callback to reload data and navigate to Journal
     P2PSyncService.onSync((data) => {
       setSyncing(false);
-      Alert.alert('Sync Complete', `Synced ${data.entries.length} entries`);
+      console.log('✅ Sync received:', data.entries.length, 'entries,', data.expenses.length, 'expenses,', data.actionItems.length, 'tasks');
+      
+      // Navigate to Journal tab first
+      setTimeout(() => {
+        (navigation as any).navigate('Journal');
+      }, 100);
+      
+      // Show success message
+      Alert.alert(
+        'Sync Complete ✓',
+        `${data.entries.length} entries\n${data.expenses.length} expenses\n${data.actionItems.length} tasks`,
+        [{ text: 'OK' }]
+      );
     });
 
     P2PSyncService.onPeerOnline((deviceId) => {
-      Alert.alert('Device Online', 'Paired device is now online');
+      console.log('🟢 Device connected:', deviceId);
+      // Just log, don't show alert to avoid alert stacking
     });
 
-    // Cleanup timeout on unmount
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-
+    // Cleanup and disconnect on unmount
     return () => {
       P2PSyncService.disconnect();
     };
   }, []);
-
-  // Web scanner effect
-  useEffect(() => {
-    if (Platform.OS === 'web' && isWebScanning && showScanner) {
-      // Dynamically import html5-qrcode only on web
-      import('html5-qrcode').then(({ Html5Qrcode }) => {
-        const html5QrCode = new Html5Qrcode("qr-reader");
-        
-        html5QrCode.start(
-          { facingMode: "environment" }, // Use back camera
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 }
-          },
-          async (decodedText) => {
-            // QR Code scanned successfully - prevent duplicate scans
-            if (isScanning) {
-              console.log('Already processing a scan, ignoring duplicate');
-              return;
-            }
-            
-            console.log('Processing QR code scan (web)...');
-            
-            // Clear any existing timeout
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
-              timeoutRef.current = null;
-            }
-            
-            setIsScanning(true);
-            html5QrCode.stop();
-            setShowScanner(false);
-            setIsWebScanning(false);
-            
-            const resetState = () => {
-              setIsScanning(false);
-              setLoading(false);
-              if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
-                timeoutRef.current = null;
-              }
-            };
-            
-            try {
-              setLoading(true);
-              await P2PSyncService.pairDevice(decodedText);
-              await loadPairedDevices();
-              console.log('Device paired successfully (web), showing alert');
-              
-              Alert.alert(
-                'Device Paired',
-                'Device paired successfully! Both devices must be running the app. Click "Sync Now" to transfer data.',
-                [{ 
-                  text: 'OK', 
-                  onPress: () => {
-                    console.log('Alert dismissed by user (web)');
-                    resetState();
-                  } 
-                }]
-              );
-              
-              // Fallback: reset after 2 seconds in case alert is dismissed another way
-              timeoutRef.current = setTimeout(() => {
-                console.log('Fallback timeout: resetting state (web)');
-                resetState();
-              }, 2000);
-            } catch (error: any) {
-              console.error('Pairing error (web):', error.message);
-              Alert.alert('Pairing Error', error.message, [
-                { 
-                  text: 'OK', 
-                  onPress: () => {
-                    console.log('Error alert dismissed by user (web)');
-                    resetState();
-                  } 
-                }
-              ]);
-              
-              // Fallback: reset after 1.5 seconds
-              timeoutRef.current = setTimeout(() => {
-                console.log('Fallback timeout: resetting state after error (web)');
-                resetState();
-              }, 1500);
-            }
-          },
-          (errorMessage) => {
-            // Scanning errors (can be ignored - happens continuously)
-          }
-        ).catch((err) => {
-          console.error('Failed to start scanner:', err);
-          Alert.alert('Camera Error', 'Could not access camera. Please try manual entry.');
-          setShowScanner(false);
-          setIsWebScanning(false);
-          setShowManualInput(true);
-        });
-
-        // Cleanup function
-        return () => {
-          html5QrCode.stop().catch(err => console.error('Error stopping scanner:', err));
-        };
-      });
-    }
-  }, [isWebScanning, showScanner]);
 
   const initializeP2P = async () => {
     try {
@@ -199,50 +104,30 @@ export const DevicePairingScreen: React.FC = () => {
   };
 
   const handleScanQRCode = async () => {
+    // Only allow scanning on mobile apps
     if (Platform.OS === 'web') {
-      // Check if mobile browser (has camera support)
-      const isMobileBrowser = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isMobileBrowser) {
-        // Mobile web browser - try to use camera
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-          stream.getTracks().forEach(track => track.stop()); // Stop the test stream
-          setShowScanner(true);
-          setIsWebScanning(true);
-        } catch (error) {
-          // Camera not available or permission denied - fall back to manual input
-          Alert.alert(
-            'Camera Not Available',
-            'Please allow camera access or use manual entry',
-            [
-              { text: 'Manual Entry', onPress: () => setShowManualInput(true) },
-              { text: 'Cancel', style: 'cancel' }
-            ]
-          );
-        }
-      } else {
-        // Desktop browser - show manual input
-        setShowManualInput(true);
-      }
+      Alert.alert(
+        'Not Available',
+        'QR code scanning is only available on mobile apps. On desktop, you display the QR code for mobile to scan.'
+      );
+      return;
+    }
+    
+    // Native mobile: Request camera permission and show scanner
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    setHasPermission(status === 'granted');
+    
+    if (status === 'granted') {
+      setShowScanner(true);
     } else {
-      // Native mobile: Request camera permission and show scanner
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-      
-      if (status === 'granted') {
-        setShowScanner(true);
-        setIsWebScanning(false);
-      } else {
-        Alert.alert(
-          'Camera Permission Required',
-          'Please enable camera access to scan QR codes',
-          [
-            { text: 'Manual Entry', onPress: () => setShowManualInput(true) },
-            { text: 'Cancel', style: 'cancel' }
-          ]
-        );
-      }
+      Alert.alert(
+        'Camera Permission Required',
+        'Please enable camera access to scan QR codes. You can also try manual entry.',
+        [
+          { text: 'Manual Entry', onPress: () => setShowManualInput(true) },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
     }
   };
 
@@ -254,72 +139,88 @@ export const DevicePairingScreen: React.FC = () => {
     }
     
     console.log('Processing QR code scan...');
-    
-    // Clear any existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+    console.log('Raw QR data:', data);
+    console.log('QR data length:', data.length);
+    console.log('QR data type:', typeof data);
     
     setIsScanning(true);
     setShowScanner(false);
-    
-    const resetState = () => {
-      setIsScanning(false);
-      setLoading(false);
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-        timeoutRef.current = null;
-      }
-    };
+    setLoading(true);
     
     try {
-      setLoading(true);
-      await P2PSyncService.pairDevice(data);
-      await loadPairedDevices();
-      console.log('Device paired successfully, showing alert');
-      
-      Alert.alert(
-        'Device Paired',
-        'Device paired successfully! Use Export/Import to sync data between devices (P2P sync only works on web browsers).',
-        [{ 
-          text: 'OK', 
-          onPress: () => {
-            console.log('Alert dismissed by user');
-            resetState();
-          } 
-        }]
-      );
-      
-      // Fallback: reset after 2 seconds in case alert is dismissed another way
-      timeoutRef.current = setTimeout(() => {
-        console.log('Fallback timeout: resetting state');
-        resetState();
-      }, 2000);
-    } catch (error: any) {
-      console.error('Pairing error:', error.message);
-      
-      // Show user-friendly error message
-      let errorMessage = error.message;
-      if (errorMessage.includes('WebRTC') || errorMessage.includes('browser')) {
-        errorMessage = 'P2P sync is not available in mobile apps. Use Export/Import feature to sync data between devices.';
+      // Validate and parse JSON first
+      let pairingData;
+      try {
+        pairingData = JSON.parse(data);
+        console.log('Parsed pairing data:', pairingData);
+      } catch (parseError) {
+        throw new Error('Invalid QR code format. Please scan the QR code from the desktop app.');
       }
       
-      Alert.alert('Pairing Info', errorMessage, [
-        { 
-          text: 'OK', 
-          onPress: () => {
-            console.log('Error alert dismissed by user');
-            resetState();
-          } 
-        }
-      ]);
+      // Validate required fields
+      if (!pairingData.deviceId || !pairingData.syncKey) {
+        throw new Error('QR code is missing required information. Please generate a new QR code on desktop.');
+      }
       
-      // Fallback: reset after 1.5 seconds
-      timeoutRef.current = setTimeout(() => {
-        console.log('Fallback timeout: resetting state after error');
-        resetState();
-      }, 1500);
+      // Pair the device
+      console.log('Pairing device...');
+      await P2PSyncService.pairDevice(data);
+      await loadPairedDevices();
+      
+      const pairedDeviceId = pairingData.deviceId;
+      console.log('Device paired, starting sync...');
+      
+      // Sync immediately
+      await P2PSyncService.syncWithDevice(pairedDeviceId);
+      
+      // Success!
+      setLoading(false);
+      setIsScanning(false);
+      
+      // Show alert only once
+      if (!alertShownRef.current) {
+        alertShownRef.current = true;
+        Alert.alert(
+          '✓ Success!',
+          'Your data has been synced to desktop. Check the Journal tab!',
+          [
+            { 
+              text: 'Great!',
+              onPress: () => {
+                alertShownRef.current = false;
+              }
+            }
+          ]
+        );
+      }
+      
+    } catch (error: any) {
+      console.error('Scan and sync error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      
+      setLoading(false);
+      setIsScanning(false);
+      
+      // Show error alert only once
+      if (!alertShownRef.current) {
+        alertShownRef.current = true;
+        Alert.alert(
+          'Sync Error',
+          `${error.message || 'Could not sync'}. Please try the Send button from paired devices list.`,
+          [
+            { 
+              text: 'OK',
+              onPress: () => {
+                alertShownRef.current = false;
+              }
+            }
+          ]
+        );
+      }
     }
   };
 
@@ -348,12 +249,52 @@ export const DevicePairingScreen: React.FC = () => {
     }
   };
 
+  const handleClearAllDevices = async () => {
+    Alert.alert(
+      'Clear All Paired Devices?',
+      'This will remove all device pairings. You can always pair them again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear from storage
+              await AsyncStorage.removeItem('@paired_devices');
+              // Also clear all sync keys
+              const devices = await P2PSyncService.getPairedDevices();
+              for (const device of devices) {
+                await AsyncStorage.removeItem(`@sync_key_${device.id}`);
+              }
+              await loadPairedDevices();
+              Alert.alert('Success', 'All devices cleared');
+            } catch (error: any) {
+              Alert.alert('Error', 'Failed to clear devices: ' + error.message);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleSyncWithDevice = async (deviceId: string) => {
     try {
       setSyncing(true);
+      
+      // Sync works on all platforms now (via Firebase relay for native)
       await P2PSyncService.syncWithDevice(deviceId);
-    } catch (error) {
-      Alert.alert('Sync Failed', 'Could not sync with device');
+      
+      // Success message
+      Alert.alert(
+        '✓ Data Sent',
+        'Your data has been sent successfully! Check your other device.',
+        [{ text: 'OK' }]
+      );
+      setSyncing(false);
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      Alert.alert('Sync Failed', error.message || 'Could not sync with device');
       setSyncing(false);
     }
   };
@@ -379,87 +320,120 @@ export const DevicePairingScreen: React.FC = () => {
         <View style={[dynamicStyles.warningBox, { backgroundColor: '#E3F2FD', borderColor: '#2196F3', marginBottom: 20 }]}>
           <Text style={[dynamicStyles.warningIcon, { fontSize: 24 }]}>ℹ️</Text>
           <View style={dynamicStyles.warningTextContainer}>
-            <Text style={[dynamicStyles.warningTitle, { color: '#0D47A1' }]}>How P2P Sync Works:</Text>
+            <Text style={[dynamicStyles.warningTitle, { color: '#0D47A1' }]}>WhatsApp-Style Sync:</Text>
             <Text style={[dynamicStyles.warningText, { color: '#0D47A1' }]}>
-              1. Both devices must be running the app{'\n'}
-              2. Scan QR code to pair devices{'\n'}
-              3. Click "Sync Now" on device with data to send{'\n'}
-              4. Other device will receive all entries
+              {Platform.OS === 'web' 
+                ? '1. Show QR code below\n2. Scan with mobile app\n3. Data syncs automatically!\n4. Works with any mobile app!' 
+                : '1. Scan desktop QR code\n2. Data syncs automatically!\n3. Like WhatsApp!\n4. Works on native app too!'}
             </Text>
           </View>
         </View>
 
-        {/* QR Code Section */}
-        <View style={dynamicStyles.qrSection}>
-          <Text style={dynamicStyles.sectionTitle}>Show This QR Code</Text>
-          <View style={dynamicStyles.qrContainer}>
-            <QRCode
-              value={pairingCode}
-              size={200}
-              backgroundColor="white"
-              color={theme.primary}
-            />
-          </View>
-          <Text style={dynamicStyles.deviceId}>
-            Device ID: {deviceId.substring(0, 12)}...
-          </Text>
-          
-          {/* Important Notice */}
-          <View style={dynamicStyles.warningBox}>
-            <Text style={dynamicStyles.warningIcon}>⚠️</Text>
-            <View style={dynamicStyles.warningTextContainer}>
-              <Text style={dynamicStyles.warningTitle}>How to pair:</Text>
-              <Text style={dynamicStyles.warningText}>
-                1. On your other device, open Smpl Journal and tap "Scan QR Code to Pair"
-              </Text>
-              <Text style={dynamicStyles.warningText}>
-                2. Point the camera at this QR code
-              </Text>
-              <Text style={dynamicStyles.warningText}>
-                3. Works on native apps AND mobile web browsers!
-              </Text>
+        {/* QR Code Section - Web Only */}
+        {Platform.OS === 'web' && (
+          <View style={dynamicStyles.qrSection}>
+            <Text style={dynamicStyles.sectionTitle}>Show This QR Code to Mobile App</Text>
+            <View style={dynamicStyles.qrContainer}>
+              <QRCode
+                value={pairingCode}
+                size={200}
+                backgroundColor="white"
+                color={theme.primary}
+              />
+            </View>
+            <Text style={dynamicStyles.deviceId}>
+              Device ID: {deviceId.substring(0, 12)}...
+            </Text>
+            
+            {/* Important Notice */}
+            <View style={dynamicStyles.warningBox}>
+              <Text style={dynamicStyles.warningIcon}>📱</Text>
+              <View style={dynamicStyles.warningTextContainer}>
+                <Text style={dynamicStyles.warningTitle}>Automatic Sync:</Text>
+                <Text style={dynamicStyles.warningText}>
+                  Scan this QR code with your mobile app. Data will sync automatically to this desktop - just like WhatsApp!
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
+        )}
+        
+        {/* Mobile Instructions - Mobile Only */}
+        {Platform.OS !== 'web' && (
+          <View style={dynamicStyles.mobileInstructions}>
+            <Text style={dynamicStyles.sectionTitle}>Quick Sync to Desktop</Text>
+            <View style={[dynamicStyles.warningBox, { backgroundColor: '#E8F5E9', borderColor: '#4CAF50' }]}>
+              <Text style={[dynamicStyles.warningIcon, { fontSize: 32 }]}>✓</Text>
+              <View style={dynamicStyles.warningTextContainer}>
+                <Text style={[dynamicStyles.warningTitle, { color: '#2E7D32' }]}>Native App Sync Enabled!</Text>
+                <Text style={[dynamicStyles.warningText, { color: '#2E7D32' }]}>
+                  1. Scan the QR code from your desktop\n2. Data syncs automatically!\n3. Check Journal tab on desktop\n4. That's it - just like WhatsApp!
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
-        {/* Scan Button */}
-        <TouchableOpacity
-          style={dynamicStyles.scanButton}
-          onPress={handleScanQRCode}
-        >
-          <Text style={dynamicStyles.scanButtonText}>
-            📸 Scan QR Code to Pair
-          </Text>
-        </TouchableOpacity>
+        {/* Scan Button - Mobile Only */}
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity
+            style={dynamicStyles.scanButton}
+            onPress={handleScanQRCode}
+          >
+            <Text style={dynamicStyles.scanButtonText}>
+              📸 Scan QR Code from Desktop
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Paired Devices */}
         {pairedDevices.length > 0 && (
           <View style={dynamicStyles.pairedSection}>
-            <Text style={dynamicStyles.sectionTitle}>Paired Devices</Text>
-            {pairedDevices.map((device) => (
-              <View key={device.id} style={dynamicStyles.deviceCard}>
-                <View>
-                  <Text style={dynamicStyles.deviceName}>{device.name}</Text>
-                  <Text style={dynamicStyles.deviceInfo}>
-                    Paired: {new Date(device.pairedAt).toLocaleDateString()}
-                  </Text>
-                  {device.lastSyncAt && (
-                    <Text style={dynamicStyles.deviceInfo}>
-                      Last sync: {new Date(device.lastSyncAt).toLocaleString()}
-                    </Text>
-                  )}
-                </View>
-                <TouchableOpacity
-                  style={dynamicStyles.syncButton}
-                  onPress={() => handleSyncWithDevice(device.id)}
-                  disabled={syncing}
-                >
-                  <Text style={dynamicStyles.syncButtonText}>
-                    {syncing ? '⏳' : '🔄'} Sync
-                  </Text>
+            <View style={dynamicStyles.sectionHeader}>
+              <Text style={dynamicStyles.sectionTitle}>Paired Devices</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity onPress={loadPairedDevices}>
+                  <Text style={{ fontSize: 18 }}>🔄</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleClearAllDevices}>
+                  <Text style={{ fontSize: 18 }}>🗑️</Text>
                 </TouchableOpacity>
               </View>
-            ))}
+            </View>
+            {pairedDevices.map((device) => {
+              const status = P2PSyncService.getConnectionStatus(device.id);
+              const statusMessage = P2PSyncService.getStatusMessage(device.id);
+              const canSync = status === 'connected';
+              
+              return (
+                <View key={device.id} style={dynamicStyles.deviceCard}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={dynamicStyles.deviceName}>{device.name}</Text>
+                    <Text style={dynamicStyles.deviceStatus}>{statusMessage}</Text>
+                    <Text style={dynamicStyles.deviceInfo}>
+                      Paired: {new Date(device.pairedAt).toLocaleDateString()}
+                    </Text>
+                    {device.lastSyncAt && (
+                      <Text style={dynamicStyles.deviceInfo}>
+                        Last sync: {new Date(device.lastSyncAt).toLocaleString()}
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={[
+                      dynamicStyles.syncButton,
+                      !canSync && dynamicStyles.syncButtonDisabled
+                    ]}
+                    onPress={() => handleSyncWithDevice(device.id)}
+                    disabled={syncing || !canSync}
+                  >
+                    <Text style={dynamicStyles.syncButtonText}>
+                      {syncing ? '⏳' : canSync ? '🔄 Send' : Platform.OS === 'web' ? '⏸️ Wait' : '💾 Export'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -470,22 +444,22 @@ export const DevicePairingScreen: React.FC = () => {
             • No login required - completely private
           </Text>
           <Text style={dynamicStyles.infoText}>
-            • Data syncs directly between your devices
+            • Sync from mobile app → desktop web browser
           </Text>
           <Text style={dynamicStyles.infoText}>
-            • No cloud storage - your data never leaves your devices
+            • No cloud storage - direct device-to-device transfer
           </Text>
           <Text style={dynamicStyles.infoText}>
-            • Auto-sync when both devices are online
+            • {Platform.OS === 'web' ? 'Display QR code for mobile to scan' : 'Scan QR code from desktop browser'}
           </Text>
           <Text style={dynamicStyles.infoText}>
-            • Works offline after initial sync
+            • Both devices must be online for P2P sync
           </Text>
         </View>
       </ScrollView>
 
-      {/* QR Scanner Modal */}
-      {showScanner && !isWebScanning && (
+      {/* QR Scanner Modal - Native Mobile Only */}
+      {showScanner && (
         <Modal
           visible={showScanner}
           animationType="slide"
@@ -503,7 +477,7 @@ export const DevicePairingScreen: React.FC = () => {
             </View>
             <CameraView
               style={dynamicStyles.camera}
-              onBarcodeScanned={handleBarCodeScanned}
+              onBarcodeScanned={isScanning ? undefined : handleBarCodeScanned}
               barcodeScannerSettings={{
                 barcodeTypes: ['qr'],
               }}
@@ -513,62 +487,6 @@ export const DevicePairingScreen: React.FC = () => {
                 style={dynamicStyles.manualButton}
                 onPress={() => {
                   setShowScanner(false);
-                  setShowManualInput(true);
-                }}
-              >
-                <Text style={dynamicStyles.manualButtonText}>
-                  Enter Code Manually
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-        </Modal>
-      )}
-
-      {/* Web QR Scanner Modal */}
-      {showScanner && isWebScanning && Platform.OS === 'web' && (
-        <Modal
-          visible={showScanner}
-          animationType="slide"
-          onRequestClose={() => {
-            setShowScanner(false);
-            setIsWebScanning(false);
-          }}
-        >
-          <SafeAreaView style={dynamicStyles.scannerContainer}>
-            <View style={dynamicStyles.scannerHeader}>
-              <Text style={dynamicStyles.scannerTitle}>Scan QR Code</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowScanner(false);
-                  setIsWebScanning(false);
-                }}
-                style={dynamicStyles.closeButton}
-              >
-                <Text style={dynamicStyles.closeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={dynamicStyles.webScannerContainer}>
-              {/* This will be rendered as HTML video element */}
-              {Platform.OS === 'web' && (
-                // @ts-ignore - Web-only HTML element
-                <div 
-                  ref={webScannerRef}
-                  id="qr-reader" 
-                  style={{ 
-                    width: '100%', 
-                    maxWidth: '500px',
-                    margin: '0 auto'
-                  }}
-                />
-              )}
-            </View>
-            <View style={dynamicStyles.scannerFooter}>
-              <TouchableOpacity
-                style={dynamicStyles.manualButton}
-                onPress={() => {
-                  setShowScanner(false);
-                  setIsWebScanning(false);
                   setShowManualInput(true);
                 }}
               >
@@ -663,11 +581,26 @@ const getStyles = (theme: any) =>
       alignItems: 'center',
       marginBottom: 32,
     },
+    mobileInstructions: {
+      marginBottom: 32,
+    },
     sectionTitle: {
       fontSize: 18,
       fontWeight: '600',
       color: theme.text,
       marginBottom: 16,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    deviceStatus: {
+      fontSize: 13,
+      fontWeight: '600',
+      marginBottom: 4,
+      marginTop: 2,
     },
     qrContainer: {
       padding: 20,
@@ -748,6 +681,10 @@ const getStyles = (theme: any) =>
       paddingHorizontal: 16,
       paddingVertical: 8,
       borderRadius: 8,
+    },
+    syncButtonDisabled: {
+      backgroundColor: theme.textSecondary,
+      opacity: 0.6,
     },
     syncButtonText: {
       color: 'white',

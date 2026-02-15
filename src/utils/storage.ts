@@ -13,10 +13,10 @@ const ENCRYPTION_ENABLED_KEY = '@daily_tracker_encryption_enabled';
 
 // Generate a device-specific encryption key
 const generateDeviceKey = (): string => {
-  // Use device-specific info + random salt for the key
+  // Use device-specific info + timestamp-based randomness for the key
   const deviceInfo = `${navigator.userAgent || 'device'}-${Date.now()}`;
-  const salt = generateSalt();
-  return CryptoJS.PBKDF2(deviceInfo, salt, {
+  const randomSalt = Math.random().toString(36) + Date.now().toString(36);
+  return CryptoJS.PBKDF2(deviceInfo, randomSalt, {
     keySize: 256 / 32,
     iterations: 1000 // Lower iterations for local encryption (not for password derivation)
   }).toString();
@@ -37,7 +37,8 @@ const getLocalEncryptionKey = async (): Promise<string> => {
       // Generate new key on first use
       key = generateDeviceKey();
       await AsyncStorage.setItem(ENCRYPTION_KEY_STORAGE, key);
-      await AsyncStorage.setItem(ENCRYPTION_ENABLED_KEY, 'true');
+      // Don't auto-enable encryption - keep it disabled by default
+      // await AsyncStorage.setItem(ENCRYPTION_ENABLED_KEY, 'true');
     }
     cachedEncryptionKey = key;
     return key;
@@ -52,16 +53,20 @@ const getLocalEncryptionKey = async (): Promise<string> => {
 const isEncryptionEnabled = async (): Promise<boolean> => {
   try {
     const enabled = await AsyncStorage.getItem(ENCRYPTION_ENABLED_KEY);
-    encryptionEnabled = enabled !== 'false'; // Default to true if not set
+    encryptionEnabled = enabled === 'true'; // Default to false (disabled) until crypto issues resolved
     return encryptionEnabled;
   } catch (error) {
     console.error('Error checking encryption status:', error);
-    return true; // Default to enabled
+    return false; // Default to disabled until crypto module issue is fixed
   }
 };
 
 // Encrypt data before storing
 const encryptIfEnabled = async (data: any): Promise<string> => {
+  // TEMPORARY: Disable encryption entirely due to crypto module issues in React Native
+  return JSON.stringify(data);
+  
+  /* Encryption disabled until crypto issues resolved
   const enabled = await isEncryptionEnabled();
   if (!enabled) {
     return JSON.stringify(data);
@@ -74,6 +79,7 @@ const encryptIfEnabled = async (data: any): Promise<string> => {
     console.error('Encryption failed, storing unencrypted:', error);
     return JSON.stringify(data);
   }
+  */
 };
 
 // Decrypt data after retrieving
@@ -105,6 +111,67 @@ const decryptIfNeeded = async (dataString: string): Promise<any> => {
 
 export class StorageService {
   // Entries
+  // Deduplicate by ID (keep first occurrence)
+  static async deduplicateEntries(): Promise<void> {
+    const entries = await this.getEntries();
+    const seen = new Set<string>();
+    const unique = entries.filter(entry => {
+      if (seen.has(entry.id)) {
+        return false;
+      }
+      seen.add(entry.id);
+      return true;
+    });
+    
+    if (unique.length < entries.length) {
+      console.log(`[Dedupe] Removed ${entries.length - unique.length} duplicate entries`);
+      await this.saveEntries(unique);
+    }
+  }
+
+  static async deduplicateExpenses(): Promise<void> {
+    const expenses = await this.getExpenses();
+    const seen = new Set<string>();
+    const unique = expenses.filter(exp => {
+      if (seen.has(exp.id)) {
+        return false;
+      }
+      seen.add(exp.id);
+      return true;
+    });
+    
+    if (unique.length < expenses.length) {
+      console.log(`[Dedupe] Removed ${expenses.length - unique.length} duplicate expenses`);
+      await this.saveExpenses(unique);
+    }
+  }
+
+  static async deduplicateActionItems(): Promise<void> {
+    const items = await this.getActionItems();
+    const seen = new Set<string>();
+    const unique = items.filter(item => {
+      if (seen.has(item.id)) {
+        return false;
+      }
+      seen.add(item.id);
+      return true;
+    });
+    
+    if (unique.length < items.length) {
+      console.log(`[Dedupe] Removed ${items.length - unique.length} duplicate action items`);
+      await this.saveActionItems(unique);
+    }
+  }
+
+  static async deduplicateAll(): Promise<void> {
+    console.log('[Dedupe] Starting deduplication...');
+    await this.deduplicateEntries();
+    await this.deduplicateExpenses();
+    await this.deduplicateActionItems();
+    console.log('[Dedupe] Deduplication complete!');
+  }
+
+  // Existing methods
   static async getEntries(): Promise<Entry[]> {
     try {
       const encryptedValue = await AsyncStorage.getItem(ENTRIES_KEY);

@@ -28,6 +28,7 @@ import { AuthScreen } from "./AuthScreen";
 import { EditModal } from "../components/EditModal";
 import { isDesktop } from "../utils/platform";
 import { useAuth } from "../contexts/AuthContext";
+import { P2PSyncService } from '../services/P2PSyncService';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -401,6 +402,25 @@ export const JournalScreen: React.FC<{}> = () => {
     loadEntries();
     loadSettings();
     loadExpensesAndActions();
+    
+    // Deduplicate on startup (web only, one-time cleanup)
+    if (Platform.OS === 'web') {
+      StorageService.deduplicateAll().then(() => {
+        console.log('✅ Startup deduplication complete');
+        // Reload to show deduplicated data
+        loadEntries();
+        loadExpensesAndActions();
+      }).catch(err => {
+        console.error('Deduplication failed:', err);
+      });
+    }
+    
+    // Register P2P sync data refresh callback
+    P2PSyncService.onDataRefresh(() => {
+      console.log('P2P sync data refresh triggered, reloading entries...');
+      loadEntries();
+      loadExpensesAndActions();
+    });
   }, [loadEntries, loadSettings, loadExpensesAndActions]);
 
   // Refresh data when screen comes into focus (e.g., after editing in another tab)
