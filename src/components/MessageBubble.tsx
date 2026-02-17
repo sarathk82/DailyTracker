@@ -93,16 +93,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
     switch (entry.type) {
       case "expense":
         if (expense) {
-          const prefix = expense.autoDetected ? '💰 Auto-categorized as Expense' : '💰 Manually categorized as Expense';
-          return `${prefix}: ${TextAnalyzer.formatCurrency(expense.amount, expense.currency)}`;
+          const prefix = expense.autoDetected ? 'Auto-categorized as Expense' : 'Manually categorized as Expense';
+          const amountStr = TextAnalyzer.formatCurrency(expense.amount, expense.currency);
+          return `${prefix}: ${amountStr}`;
         }
-        return "💰 Expense";
+        return "Expense";
       case "action":
         if (actionItem) {
-          const prefix = actionItem.autoDetected ? '✅ Auto-categorized as Task' : '✅ Manually categorized as Task';
+          const prefix = actionItem.autoDetected ? 'Auto-categorized as Task' : 'Manually categorized as Task';
           return `${prefix}: ${actionItem.title}`;
         }
-        return "✅ Task";
+        return "Task";
       default:
         return null;
     }
@@ -135,12 +136,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   const MessageContent = () => {
     const styles = getStyles(theme);
     return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, width: '100%' }}>
       <View style={styles.messageHeader}>
-        {getIcon()}
-        <Text style={styles.timestamp}>
-          {format(entry.timestamp, "HH:mm")}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {getIcon()}
+          <Text style={styles.timestamp}>
+            {format(entry.timestamp, "HH:mm")}
+          </Text>
+        </View>
         {entry.type !== 'system' && desktop && isHovered && (
           <View style={styles.actionButtons}>
             {onEdit && (
@@ -268,14 +271,16 @@ const getStyles = (theme: any) => StyleSheet.create({
   userMessageContainer: {
     marginVertical: 4,
     alignSelf: 'flex-start',
-    maxWidth: '90%',
-    flexShrink: 0,
+    maxWidth: '85%',
+    flexShrink: 1,
+    flexGrow: 0,
   },
   systemMessageContainer: {
     marginVertical: 4,
     alignSelf: 'flex-end',
-    maxWidth: '90%',
-    flexShrink: 0,
+    maxWidth: '85%',
+    flexShrink: 1,
+    flexGrow: 0,
   },
   bubbleWrapper: {
     position: 'relative',
@@ -300,10 +305,10 @@ const getStyles = (theme: any) => StyleSheet.create({
   messageBubble: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    minWidth: 200,
     maxWidth: '100%',
     alignSelf: 'flex-start',
     borderRadius: 12,
+    flexShrink: 1,
     ...(Platform.OS === 'web' ? {
       boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.18)',
     } : {
@@ -338,7 +343,6 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   systemMessage: {
     backgroundColor: theme.info + '22',
-    marginLeft: '15%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 5,
     borderBottomLeftRadius: 20,
@@ -346,7 +350,6 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   userMessage: {
     backgroundColor: theme.input,
-    marginRight: '15%',
     borderTopLeftRadius: 5,
     borderTopRightRadius: 20,
     borderBottomLeftRadius: 5,
@@ -358,7 +361,6 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignItems: "center",
     marginBottom: 4,
     flexWrap: 'wrap',
-    minWidth: 200,
   },
   actionButtons: {
     flexDirection: "row",
@@ -393,11 +395,13 @@ const getStyles = (theme: any) => StyleSheet.create({
   messageText: {
     fontSize: 15,
     lineHeight: 20,
+    flexWrap: 'wrap',
     ...(Platform.OS === 'web' ? {
       userSelect: 'text',
       WebkitUserSelect: 'text',
-      display: 'inline-block',
-      minWidth: 'fit-content',
+      wordWrap: 'break-word',
+      whiteSpace: 'pre-wrap',
+      overflowWrap: 'break-word',
     } as any : {}),
   },
   userMessageText: {
@@ -408,6 +412,12 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 14,
     textAlign: "left",
     fontWeight: "500",
+    flexWrap: 'wrap',
+    ...(Platform.OS === 'web' ? {
+      wordWrap: 'break-word',
+      whiteSpace: 'pre-wrap',
+      overflowWrap: 'break-word',
+    } as any : {}),
   },
   nonUserMessageText: {
     color: theme.text,

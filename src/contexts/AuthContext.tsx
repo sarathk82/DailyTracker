@@ -95,8 +95,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await updateProfile(firebaseUser, { displayName });
 
       // Generate encryption salt
-      const salt = await generateSalt();
-      const key = generateMasterKey(password, salt);
+      const salt = generateSalt();
+      const key = await generateMasterKey(password, salt);
 
       // Store user metadata in Firestore
       await setDoc(doc(db, 'users', firebaseUser.uid), {
@@ -133,7 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const salt = userData.encryptionSalt;
 
       // Generate master key from password
-      const key = generateMasterKey(password, salt);
+      const key = await generateMasterKey(password, salt);
 
       // Cache master key locally
       await AsyncStorage.setItem('masterKey', key);
@@ -176,8 +176,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!userDoc.exists()) {
         // First time Google sign-in - create user with default encryption
         const defaultPassword = firebaseUser.uid; // Use UID as password for Google users
-        const salt = await generateSalt();
-        const key = generateMasterKey(defaultPassword, salt);
+        const salt = generateSalt();
+        const key = await generateMasterKey(defaultPassword, salt);
 
         await setDoc(userDocRef, {
           email: firebaseUser.email,
@@ -195,7 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userData = userDoc.data();
         const salt = userData.encryptionSalt;
         const defaultPassword = firebaseUser.uid;
-        const key = generateMasterKey(defaultPassword, salt);
+        const key = await generateMasterKey(defaultPassword, salt);
 
         await AsyncStorage.setItem('masterKey', key);
         setMasterKey(key);

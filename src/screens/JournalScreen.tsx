@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
-  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from '../contexts/ThemeContext';
@@ -29,6 +28,7 @@ import { AuthScreen } from "./AuthScreen";
 import { EditModal } from "../components/EditModal";
 import { isDesktop } from "../utils/platform";
 import { useAuth } from "../contexts/AuthContext";
+import { P2PSyncService } from '../services/P2PSyncService';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -52,6 +52,8 @@ export const JournalScreen: React.FC<{}> = () => {
   const authContext = useAuth();
   const { user, logout } = authContext || { user: null, logout: null };
   
+  console.log('JournalScreen - User:', user ? user.email : 'not logged in');
+  
   const [entries, setEntries] = useState<Entry[]>([]);
   const [inputText, setInputText] = useState("");
   const [isMarkdown, setIsMarkdown] = useState(true);
@@ -61,9 +63,6 @@ export const JournalScreen: React.FC<{}> = () => {
   const shouldAutoScrollRef = useRef(false);
   const isInitialLoadRef = useRef(true);
   const hasScrolledToBottomRef = useRef(false);
-  
-  // Keyboard handling state
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   
   // Settings state (will be loaded from storage)
   const [enterToSend, setEnterToSend] = useState(true);
@@ -234,9 +233,40 @@ export const JournalScreen: React.FC<{}> = () => {
   const loadEntries = useCallback(async () => {
     const savedEntries = await StorageService.getEntries();
     
+    // Clean up corrupted emoji data from old messages (migration)
+    const cleanedEntries = savedEntries.map(entry => {
+      if (entry.type === 'system' && entry.text) {
+        // Remove corrupted emoji bytes and clean up the text
+        let cleanText = entry.text;
+        
+        // Remove various corrupted emoji representations
+        cleanText = cleanText.replace(/[\u{D83D}\u{DCA0}\u{2705}\u{1F4B0}]\s*/gu, ''); // Remove emoji unicode
+        cleanText = cleanText.replace(/💰\s*/g, ''); // Remove money bag emoji
+        cleanText = cleanText.replace(/✅\s*/g, ''); // Remove checkmark emoji
+        cleanText = cleanText.replace(/∆¶\s*/g, ''); // Remove corrupted characters
+        cleanText = cleanText.replace(/∆Š\s*/g, ''); // Remove more corrupted characters
+        cleanText = cleanText.replace(/Ŀ\s*/g, ''); // Remove corrupted L
+        cleanText = cleanText.replace(/\s+/g, ' ').trim(); // Clean up multiple spaces
+        
+        // Fix missing 'A' in Auto-categorized
+        cleanText = cleanText.replace(/^uto-categorized/i, 'Auto-categorized');
+        cleanText = cleanText.replace(/\s+uto-categorized/i, ' Auto-categorized');
+        
+        return { ...entry, text: cleanText };
+      }
+      return entry;
+    });
+    
+    // Save cleaned entries back if any were modified
+    const hasChanges = cleanedEntries.some((entry, index) => entry.text !== savedEntries[index].text);
+    if (hasChanges) {
+      console.log('[Migration] Cleaning up corrupted emoji data from old messages...');
+      await StorageService.saveEntries(cleanedEntries);
+    }
+    
     // Deduplicate entries by ID (in case of sync issues)
     const uniqueEntries = Array.from(
-      new Map(savedEntries.map(entry => [entry.id, entry])).values()
+      new Map(cleanedEntries.map(entry => [entry.id, entry])).values()
     );
     
     // Sort entries by timestamp to maintain chronological order
@@ -326,27 +356,6 @@ export const JournalScreen: React.FC<{}> = () => {
     setFilteredEntries(filtered);
   }, [searchQuery, entries, selectedDate, showSearch]);
 
-  // Keyboard listeners for better Android handling
-  useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-      }
-    );
-    const keyboardWillHide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => {
-        setKeyboardHeight(0);
-      }
-    );
-
-    return () => {
-      keyboardWillShow.remove();
-      keyboardWillHide.remove();
-    };
-  }, []);
-
   const getListStyle = (layout: string) => {
     switch (layout) {
       case 'cards':
@@ -424,6 +433,25 @@ export const JournalScreen: React.FC<{}> = () => {
     loadEntries();
     loadSettings();
     loadExpensesAndActions();
+    
+    // Deduplicate on startup (web only, one-time cleanup)
+    if (Platform.OS === 'web') {
+      StorageService.deduplicateAll().then(() => {
+        console.log('✅ Startup deduplication complete');
+        // Reload to show deduplicated data
+        loadEntries();
+        loadExpensesAndActions();
+      }).catch(err => {
+        console.error('Deduplication failed:', err);
+      });
+    }
+    
+    // Register P2P sync data refresh callback
+    P2PSyncService.onDataRefresh(() => {
+      console.log('P2P sync data refresh triggered, reloading entries...');
+      loadEntries();
+      loadExpensesAndActions();
+    });
   }, [loadEntries, loadSettings, loadExpensesAndActions]);
 
   // Refresh data when screen comes into focus (e.g., after editing in another tab)
@@ -449,15 +477,9 @@ export const JournalScreen: React.FC<{}> = () => {
     if (!trimmedInput) return;
 
     try {
-      // Clear input immediately for better UX
-      setInputText("");
-      
-      // Use async LLM classification if enabled
-      const autoDetectedAction = await TextAnalyzer.detectActionItemAsync(trimmedInput);
-      const autoDetectedExpense = await TextAnalyzer.detectExpenseAsync(trimmedInput);
-      
       // Convert dot-prefix to checkbox format for display
       let displayText = trimmedInput;
+      const autoDetectedAction = TextAnalyzer.detectActionItem(trimmedInput);
       if (autoDetectedAction || forceAction) {
         displayText = convertDotToCheckbox(trimmedInput);
       }
@@ -473,26 +495,30 @@ export const JournalScreen: React.FC<{}> = () => {
       // Save the entry first
       await StorageService.addEntry(entry);
       
-      // Process categorization in parallel where possible
-      let expenseInfo = null;
-      let actionItem = null;
-      let expenseError = false;
-      
       // Check for expense (auto-detect OR user explicitly marked it)
+      const autoDetectedExpense = TextAnalyzer.detectExpense(trimmedInput);
       if (autoDetectedExpense || forceExpense) {
-        expenseInfo = await TextAnalyzer.extractExpenseInfoAsync(trimmedInput, entry.id);
+        const expenseInfo = TextAnalyzer.extractExpenseInfo(trimmedInput, entry.id);
         if (expenseInfo) {
+          // Add autoDetected flag
           expenseInfo.autoDetected = autoDetectedExpense && !forceExpense;
           await StorageService.addExpense(expenseInfo);
           await updateEntryType(entry.id, 'expense');
         } else if (forceExpense) {
-          expenseError = true;
+          // User forced expense but no amount found - show alert
+          Alert.alert(
+            "No Amount Found",
+            "Please include a numeric amount in your entry (e.g., 150, Rs200, $50)"
+          );
         }
       }
 
       // Check for action item (auto-detect OR user explicitly marked it)
-      if (!expenseInfo && (autoDetectedAction || forceAction)) {
+      if (autoDetectedAction || forceAction) {
+        // If forceAction is true but no auto-detection, create action item from text
+        let actionItem;
         if (forceAction && !autoDetectedAction) {
+          // Manually create action item from the text, extract due date
           const dueDate = TextAnalyzer.extractDueDate(trimmedInput);
           actionItem = {
             id: uuid.v4(),
@@ -504,7 +530,7 @@ export const JournalScreen: React.FC<{}> = () => {
             autoDetected: false
           };
         } else {
-          actionItem = await TextAnalyzer.extractActionItemAsync(trimmedInput, entry.id);
+          actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
           if (actionItem) {
             actionItem.autoDetected = autoDetectedAction && !forceAction;
           }
@@ -516,21 +542,38 @@ export const JournalScreen: React.FC<{}> = () => {
         }
       }
 
-      // Reload data once
-      await Promise.all([loadEntries(), loadExpensesAndActions()]);
+      // Reload all data to show updated entries with categorization
+      await loadEntries();
+      await loadExpensesAndActions();
 
       // Add system feedback message only in chat view
       if (layoutStyle === 'chat') {
         let systemMessage = '';
+        let wasExpense = false;
+        let wasAction = false;
         
-        if (expenseInfo) {
-          const prefix = expenseInfo.autoDetected ? 'Auto-categorized' : 'Manually categorized';
-          systemMessage = `💰 ${prefix} as Expense: ${TextAnalyzer.formatCurrency(expenseInfo.amount, expenseInfo.currency)}`;
-          if (expenseInfo.category) systemMessage += ` (${expenseInfo.category})`;
-        } else if (actionItem) {
-          const prefix = actionItem.autoDetected ? 'Auto-categorized' : 'Manually categorized';
-          systemMessage = `✅ ${prefix} as Task: ${actionItem.title}`;
-        } else {
+        // Check if it was categorized as expense
+        const expense = await StorageService.getExpenses().then(exps => exps.find(e => e.entryId === entry.id));
+        if (expense) {
+          wasExpense = true;
+          const prefix = expense.autoDetected ? 'Auto-categorized' : 'Manually categorized';
+          const amountStr = TextAnalyzer.formatCurrency(expense.amount, expense.currency);
+          const categoryStr = expense.category ? ` (${expense.category})` : '';
+          systemMessage = `${prefix} as Expense: ${amountStr}${categoryStr}`;
+        }
+        
+        // Check if it was categorized as action (only if not expense)
+        if (!wasExpense) {
+          const actionItem = await StorageService.getActionItems().then(items => items.find(a => a.entryId === entry.id));
+          if (actionItem) {
+            wasAction = true;
+            const prefix = actionItem.autoDetected ? 'Auto-categorized' : 'Manually categorized';
+            systemMessage = `${prefix} as Task: ${actionItem.title}`;
+          }
+        }
+        
+        // Default message if not categorized
+        if (!wasExpense && !wasAction) {
           systemMessage = '✓ Got it!';
         }
 
@@ -547,31 +590,22 @@ export const JournalScreen: React.FC<{}> = () => {
         }
       }
 
-      // Clear force flags
+      // Clear input and force flags after successful processing
+      setInputText("");
       setForceExpense(false);
       setForceAction(false);
       
-      // Show expense error if needed
-      if (expenseError) {
-        setTimeout(() => {
-          Alert.alert(
-            "No Amount Found",
-            "Please include a numeric amount in your entry (e.g., 150, Rs200, $50)"
-          );
-        }, 100);
-      }
-      
       // Scroll to bottom (offset 0 for inverted list) to show the new message
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-        }, 50);
-      });
+      setTimeout(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }, 100);
       
       // Refocus the text input for better UX
       setTimeout(() => {
-        textInputRef.current?.focus();
-      }, 100);
+        if (textInputRef.current) {
+          textInputRef.current.focus();
+        }
+      }, 150);
     } catch (error) {
       console.error('Error processing message:', error);
       showToast('Failed to process message');
@@ -586,7 +620,7 @@ export const JournalScreen: React.FC<{}> = () => {
     setTestIndex(testIndex + 1);
   };
 
-  const handleLongPress = useCallback((entry: Entry) => {
+  const handleLongPress = (entry: Entry) => {
     const options: any[] = [
       {
         text: "Edit Entry",
@@ -629,9 +663,9 @@ export const JournalScreen: React.FC<{}> = () => {
     );
     
     Alert.alert("Entry Options", "What would you like to do with this entry?", options);
-  }, []);
+  };
 
-  const markAsExpense = useCallback(async (entry: Entry) => {
+  const markAsExpense = async (entry: Entry) => {
     if (entry.type === "expense") return;
 
     const expenseInfo = TextAnalyzer.extractExpenseInfo(entry.text, entry.id);
@@ -647,9 +681,9 @@ export const JournalScreen: React.FC<{}> = () => {
         "Could not find amount information in this entry. Please ensure it contains a monetary value."
       );
     }
-  }, []);
+  };
 
-  const markAsActionItem = useCallback(async (entry: Entry) => {
+  const markAsActionItem = async (entry: Entry) => {
     if (entry.type === "action") return;
 
     // Try to extract using TextAnalyzer, but if that fails, create manually
@@ -673,9 +707,9 @@ export const JournalScreen: React.FC<{}> = () => {
     await updateEntryType(entry.id, "action");
     // Reload action items to show updated categorization
     await loadExpensesAndActions();
-  }, []);
+  };
 
-  const removeCategory = useCallback(async (entry: Entry) => {
+  const removeCategory = async (entry: Entry) => {
     try {
       // Remove associated expense or action item
       if (entry.type === "expense") {
@@ -698,9 +732,9 @@ export const JournalScreen: React.FC<{}> = () => {
       console.error('Error removing category:', error);
       showToast('Failed to remove category');
     }
-  }, [expenses, actionItems]);
+  };
 
-  const handleDeleteEntry = useCallback(async (entry: Entry) => {
+  const handleDeleteEntry = async (entry: Entry) => {
     const confirmDelete = async () => {
       try {
         // Delete associated expense or action item first
@@ -750,18 +784,18 @@ export const JournalScreen: React.FC<{}> = () => {
         ]
       );
     }
-  }, [expenses, actionItems]);
+  };
 
-  const handleEditEntry = useCallback((entry: Entry) => {
+  const handleEditEntry = (entry: Entry) => {
     setEditingEntry(entry);
-  }, []);
+  };
 
-  const handleSaveEdit = useCallback(async () => {
+  const handleSaveEdit = async () => {
     await loadEntries();
     await loadExpensesAndActions();
-  }, []);
+  };
 
-  const updateEntryType = useCallback(async (entryId: string, newType: Entry["type"]) => {
+  const updateEntryType = async (entryId: string, newType: Entry["type"]) => {
     try {
       // Get the latest entries from storage instead of using state
       const currentEntries = await StorageService.getEntries();
@@ -778,7 +812,7 @@ export const JournalScreen: React.FC<{}> = () => {
       console.error('Error updating entry type:', error);
       showToast('Failed to update entry type');
     }
-  }, []);
+  };
 
   // Export functions
   const exportAsText = async () => {
@@ -1073,7 +1107,7 @@ export const JournalScreen: React.FC<{}> = () => {
     }
   };
 
-  const renderChatEntry = useCallback((item: Entry, expense?: Expense, actionItem?: ActionItem) => (
+  const renderChatEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <MessageBubble 
       entry={item} 
       onLongPress={handleLongPress}
@@ -1083,9 +1117,9 @@ export const JournalScreen: React.FC<{}> = () => {
       expense={expense}
       actionItem={actionItem}
     />
-  ), [handleLongPress, handleEditEntry, handleDeleteEntry]);
+  );
 
-  const renderCardEntry = useCallback((item: Entry, expense?: Expense, actionItem?: ActionItem) => (
+  const renderCardEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <View style={layoutStyles.cardContainer}>
       <MessageBubble 
         entry={item} 
@@ -1097,9 +1131,9 @@ export const JournalScreen: React.FC<{}> = () => {
         actionItem={actionItem}
       />
     </View>
-  ), [handleLongPress, handleEditEntry, handleDeleteEntry]);
+  );
 
-  const renderListEntry = useCallback((item: Entry, expense?: Expense, actionItem?: ActionItem) => (
+  const renderListEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <View style={layoutStyles.listContainer}>
       <MessageBubble 
         entry={item} 
@@ -1111,9 +1145,9 @@ export const JournalScreen: React.FC<{}> = () => {
         actionItem={actionItem}
       />
     </View>
-  ), [handleLongPress, handleEditEntry, handleDeleteEntry]);
+  );
 
-  const renderTimelineEntry = useCallback((item: Entry, expense?: Expense, actionItem?: ActionItem) => (
+  const renderTimelineEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <View style={layoutStyles.timelineContainer}>
       <View style={layoutStyles.timelineLeft}>
         <View style={layoutStyles.timelineDot} />
@@ -1131,9 +1165,9 @@ export const JournalScreen: React.FC<{}> = () => {
         />
       </View>
     </View>
-  ), [handleLongPress, handleEditEntry, handleDeleteEntry]);
+  );
 
-  const renderMagazineEntry = useCallback((item: Entry, expense?: Expense, actionItem?: ActionItem) => (
+  const renderMagazineEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <View style={layoutStyles.magazineContainer}>
       <MessageBubble 
         entry={item} 
@@ -1145,9 +1179,9 @@ export const JournalScreen: React.FC<{}> = () => {
         actionItem={actionItem}
       />
     </View>
-  ), [handleLongPress, handleEditEntry, handleDeleteEntry]);
+  );
 
-  const renderMinimalEntry = useCallback((item: Entry, expense?: Expense, actionItem?: ActionItem) => (
+  const renderMinimalEntry = (item: Entry, expense?: Expense, actionItem?: ActionItem) => (
     <MinimalEntryItem 
       item={item}
       expense={expense}
@@ -1157,10 +1191,10 @@ export const JournalScreen: React.FC<{}> = () => {
       markdownStyles={markdownStyles}
       layoutStyles={layoutStyles}
     />
-  ), [handleEditEntry, handleDeleteEntry]);
+  );
 
   // Render date separator component
-  const renderDateSeparator = useCallback((dateString: string) => {
+  const renderDateSeparator = (dateString: string) => {
     const date = new Date(dateString);
     const today = new Date();
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
@@ -1181,18 +1215,19 @@ export const JournalScreen: React.FC<{}> = () => {
         <View style={dynamicStyles.dateSeparatorLine} />
       </View>
     );
-  }, []);
+  };
 
-  const renderItem = useCallback(({ item }: { item: any }) => {
+  const renderItem = ({ item }: { item: Entry | { type: 'dateSeparator'; date: string; id: string } }) => {
     // Handle date separator
     if ('type' in item && item.type === 'dateSeparator') {
       return renderDateSeparator(item.date);
     }
 
-    // Handle regular entry - expense and actionItem are pre-attached as _expense and _actionItem
+    // Handle regular entry
     const entry = item as Entry;
-    const expense = (item as any)._expense;
-    const actionItem = (item as any)._actionItem;
+    // Find associated expense or action item for this entry
+    const expense = entry.type === 'expense' ? expenses.find(e => e.entryId === entry.id) : undefined;
+    const actionItem = entry.type === 'action' ? actionItems.find(a => a.entryId === entry.id) : undefined;
     
     switch (layoutStyle) {
       case 'cards':
@@ -1211,65 +1246,34 @@ export const JournalScreen: React.FC<{}> = () => {
       default:
         return renderChatEntry(entry, expense, actionItem);
     }
-  }, [layoutStyle, renderChatEntry, renderCardEntry, renderListEntry, renderTimelineEntry, renderMagazineEntry, renderMinimalEntry, renderDateSeparator]);
+  };
 
-  // Get data with date separators and merge expense/action data - memoized to prevent recalculation
-  const dataWithSeparators = useMemo(() => {
+  // Get data with date separators
+  const getDataWithSeparators = () => {
     const baseEntries = showSearch ? filteredEntries : entries;
-    
-    // Enrich entries with their associated expense/action data
-    const enrichedEntries = baseEntries.map(entry => {
-      const expense = entry.type === 'expense' ? expenses.find(e => e.entryId === entry.id) : undefined;
-      const actionItem = entry.type === 'action' ? actionItems.find(a => a.entryId === entry.id) : undefined;
-      return { ...entry, _expense: expense, _actionItem: actionItem };
-    });
-    
-    const data = createEntriesWithDateSeparators(enrichedEntries);
+    const data = createEntriesWithDateSeparators(baseEntries);
     // Reverse the data so newest messages are first (will appear at bottom when inverted)
     return data.reverse();
-  }, [showSearch, filteredEntries, entries, expenses, actionItems, createEntriesWithDateSeparators]);
+  };
 
-  const dynamicStyles = useMemo(() => getStyles(theme), [theme]);
-  const layoutStyles = useMemo(() => getLayoutStyles(theme), [theme]);
-  const markdownStyles = useMemo(() => getMarkdownStyles(theme), [theme]);
-
-  // Memoize list style to prevent recalculation
-  const listStyle = useMemo(() => getListStyle(layoutStyle), [layoutStyle, theme]);
-
-  // Memoize keyExtractor to prevent unnecessary re-renders
-  const keyExtractor = useCallback((item: Entry | { type: 'dateSeparator'; date: string; id: string }) => {
-    if ('type' in item && item.type === 'dateSeparator') {
-      return item.id;
-    }
-    return (item as Entry).id;
-  }, []);
-
-  // Memoize inline styles to prevent VirtualizedList performance warning
-  const headerStyle = useMemo(() => [dynamicStyles.header, { zIndex: 10000 }], [dynamicStyles.header]);
-  const headerButtonsStyle = useMemo(() => ({ flexDirection: 'row' as const, alignItems: 'center' as const, zIndex: 10001 }), []);
-  const testButtonStyle = useMemo(() => [dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10004 }], [dynamicStyles.settingsButton]);
-  const searchButtonStyle = useMemo(() => [dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10002 }], [dynamicStyles.settingsButton]);
-  const settingsButtonStyle = useMemo(() => [dynamicStyles.settingsButton, { zIndex: 10003 }], [dynamicStyles.settingsButton]);
+  const dynamicStyles = getStyles(theme);
+  const layoutStyles = getLayoutStyles(theme);
+  const markdownStyles = getMarkdownStyles(theme);
 
   return (
     <SafeAreaView style={dynamicStyles.container}>
-      <KeyboardAvoidingView 
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-        style={dynamicStyles.container}
-      >
-      <View style={headerStyle}>
+      <View style={[dynamicStyles.header, { zIndex: 10000 }]}>
         <Text style={dynamicStyles.headerTitle}>Smpl Journal</Text>
-        <View style={headerButtonsStyle}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 10001 }}>
           <TouchableOpacity
-            style={testButtonStyle}
+            style={[dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10004 }]}
             onPress={addSingleTestEntry}
           >
             <Text style={dynamicStyles.settingsButtonText}>🧪</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={searchButtonStyle}
+            style={[dynamicStyles.settingsButton, { marginRight: 8, zIndex: 10002 }]}
             onPress={() => {
               setShowSearch(!showSearch);
             }}
@@ -1278,7 +1282,7 @@ export const JournalScreen: React.FC<{}> = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={settingsButtonStyle}
+            style={[dynamicStyles.settingsButton, { zIndex: 10003 }]}
             onPress={() => {
               setShowSettings(true);
             }}
@@ -1390,17 +1394,17 @@ export const JournalScreen: React.FC<{}> = () => {
 
       <FlatList
         ref={flatListRef}
-        data={dataWithSeparators}
+        data={getDataWithSeparators()}
         renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        style={[dynamicStyles.messagesList, listStyle]}
+        keyExtractor={(item) => {
+          if ('type' in item && item.type === 'dateSeparator') {
+            return item.id;
+          }
+          return (item as Entry).id;
+        }}
+        style={[dynamicStyles.messagesList, getListStyle(layoutStyle)]}
         showsVerticalScrollIndicator={false}
         inverted
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        updateCellsBatchingPeriod={50}
-        initialNumToRender={15}
-        windowSize={21}
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
         }}
@@ -1427,8 +1431,11 @@ export const JournalScreen: React.FC<{}> = () => {
         }}
       />
 
-      <View style={dynamicStyles.inputContainer}>
-          <View style={dynamicStyles.quickActionsRow}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={[dynamicStyles.inputContainer, { zIndex: 10000 }]}
+      >
+        <View style={dynamicStyles.quickActionsRow}>
           <TouchableOpacity
             style={[
               dynamicStyles.quickActionButton,
@@ -1483,14 +1490,10 @@ export const JournalScreen: React.FC<{}> = () => {
             onPress={handleSendMessage}
             disabled={!inputText.trim()}
           >
-            <Text style={{ 
-              color: theme.surface, 
-              fontSize: 22, 
-              fontWeight: 'bold',
-            }}>▶</Text>
+            <Text style={{ color: theme.surface, fontSize: 16 }}>→</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </KeyboardAvoidingView>
       
       {showSettings && (
         <Modal
@@ -1641,7 +1644,6 @@ export const JournalScreen: React.FC<{}> = () => {
           </TouchableOpacity>
         </Modal>
       )}
-      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -1777,14 +1779,14 @@ const getStyles = (theme: any) => StyleSheet.create({
   inputContainer: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    paddingBottom: Platform.OS === "ios" ? 4 : 4,
+    paddingBottom: Platform.OS === "ios" ? 6 : 4,
     backgroundColor: theme.surface,
     borderTopWidth: 1,
     borderTopColor: theme.border,
   },
   quickActionsRow: {
     flexDirection: "row",
-    marginBottom: 3,
+    marginBottom: 4,
     gap: 4,
   },
   quickActionButton: {
@@ -1814,9 +1816,9 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 9,
-    marginRight: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginRight: 12,
     maxHeight: 100,
     fontSize: 16,
     backgroundColor: theme.input,

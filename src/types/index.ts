@@ -28,16 +28,15 @@ export interface Expense {
   autoDetected?: boolean;
 }
 
+export type SyncMethod = 'webrtc' | 'firebase-relay' | 'cloud-sync';
+
 export interface SettingsData {
   isMarkdownEnabled: boolean;
   enterToSend: boolean;
   systemCurrency: string;
   layoutStyle: string;
   theme?: string; // 'light', 'dark', or 'system'
-  useLLMClassification?: boolean; // Enable LLM-based classification
-  llmApiKey?: string; // OpenAI or compatible API key
-  llmModel?: string; // Model to use (e.g., 'gpt-4o-mini')
-  llmEndpoint?: string; // Custom API endpoint (optional)
+  syncMethod?: SyncMethod; // 'webrtc', 'firebase-relay', or 'cloud-sync'
 }
 
 export type TabParamList = {
