@@ -551,69 +551,27 @@ export class TextAnalyzer {
     // Use provided currency or fall back to system default
     const currencyCode = currency || this.getSystemCurrency();
     
-    try {
-      // Use specific locales to avoid unwanted prefixes
-      let locale = 'en-US'; // Default to US English
-      
-      // Choose locale based on currency for cleaner formatting
-      switch (currencyCode) {
-        case 'USD':
-          locale = 'en-US'; // Produces clean $12.99
-          break;
-        case 'EUR':
-          locale = 'en-GB'; // Produces clean €12.99
-          break;
-        case 'GBP':
-          locale = 'en-GB'; // Produces clean £12.99
-          break;
-        case 'INR':
-          locale = 'en-IN'; // Produces clean ₹12.99
-          break;
-        case 'CAD':
-          locale = 'en-CA'; // Should produce C$12.99 or CA$12.99
-          break;
-        case 'AUD':
-          locale = 'en-AU'; // Should produce A$12.99
-          break;
-      }
-      
-      const formatter = new Intl.NumberFormat(locale, {
-        style: 'currency',
-        currency: currencyCode,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-      
-      const formatted = formatter.format(amount);
-      
-      // Clean up any remaining unwanted prefixes for better display
-      // Remove "US" prefix from USD formatting (US$12.99 → $12.99)
-      if (currencyCode === 'USD' && formatted.startsWith('US$')) {
-        return formatted.replace('US$', '$');
-      }
-      
-      // Remove "CA" prefix from CAD formatting if present
-      if (currencyCode === 'CAD' && formatted.startsWith('CA$')) {
-        return formatted.replace('CA$', 'C$');
-      }
-      
-      return formatted;
-    } catch (error) {
-      // Fallback formatting if currency is not supported
-      const symbols: { [key: string]: string } = {
-        'USD': '$',
-        'EUR': '€',
-        'GBP': '£',
-        'INR': '₹',
-        'CAD': 'C$',
-        'AUD': 'A$',
-        'JPY': '¥',
-        'CNY': '¥'
-      };
-      
-      const symbol = symbols[currencyCode] || currencyCode;
-      return `${symbol}${amount.toFixed(2)}`;
-    }
+    // Use simple, reliable currency formatting to avoid Unicode issues on mobile
+    const symbols: { [key: string]: string } = {
+      'USD': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'INR': '₹',
+      'CAD': 'C$',
+      'AUD': 'A$',
+      'JPY': '¥',
+      'CNY': '¥'
+    };
+    
+    const symbol = symbols[currencyCode] || currencyCode;
+    const formatted = amount.toFixed(2);
+    
+    // Format with thousand separators
+    const parts = formatted.split('.');
+    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const finalAmount = `${integerPart}.${parts[1]}`;
+    
+    return `${symbol}${finalAmount}`;
   }
 
   static isExpenseRelated(text: string): boolean {

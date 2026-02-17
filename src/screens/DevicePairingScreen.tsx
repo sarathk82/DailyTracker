@@ -40,22 +40,13 @@ export const DevicePairingScreen: React.FC = () => {
     initializeP2P();
     loadPairedDevices();
 
-    // Setup sync callback to reload data and navigate to Journal
+    // Setup sync callback to reload data silently (no alert on receiving device)
     P2PSyncService.onSync((data) => {
       setSyncing(false);
       console.log('✅ Sync received:', data.entries.length, 'entries,', data.expenses.length, 'expenses,', data.actionItems.length, 'tasks');
       
-      // Navigate to Journal tab first
-      setTimeout(() => {
-        (navigation as any).navigate('Journal');
-      }, 100);
-      
-      // Show success message
-      Alert.alert(
-        'Sync Complete ✓',
-        `${data.entries.length} entries\n${data.expenses.length} expenses\n${data.actionItems.length} tasks`,
-        [{ text: 'OK' }]
-      );
+      // Just refresh the UI silently - no alert, no navigation
+      // The device that initiated the sync will show the success alert
     });
 
     P2PSyncService.onPeerOnline((deviceId) => {
@@ -168,10 +159,13 @@ export const DevicePairingScreen: React.FC = () => {
       await loadPairedDevices();
       
       const pairedDeviceId = pairingData.deviceId;
-      console.log('Device paired, starting sync...');
+      console.log('[DevicePairing] Device paired, starting auto-sync...');
+      console.log('[DevicePairing] Target device ID:', pairedDeviceId);
       
-      // Sync immediately
+      // Auto-sync immediately after pairing
+      console.log('[DevicePairing] Calling P2PSyncService.syncWithDevice...');
       await P2PSyncService.syncWithDevice(pairedDeviceId);
+      console.log('[DevicePairing] P2PSyncService.syncWithDevice completed');
       
       // Success!
       setLoading(false);
@@ -181,13 +175,15 @@ export const DevicePairingScreen: React.FC = () => {
       if (!alertShownRef.current) {
         alertShownRef.current = true;
         Alert.alert(
-          '✓ Success!',
-          'Your data has been synced to desktop. Check the Journal tab!',
+          '✓ Synced!',
+          'Data synced successfully! Use "Sync Now" button anytime to resync.',
           [
             { 
-              text: 'Great!',
+              text: 'OK',
               onPress: () => {
                 alertShownRef.current = false;
+                // Navigate to show the paired devices list
+                setShowScanner(false);
               }
             }
           ]
@@ -195,8 +191,8 @@ export const DevicePairingScreen: React.FC = () => {
       }
       
     } catch (error: any) {
-      console.error('Scan and sync error:', error);
-      console.error('Error details:', {
+      console.error('[DevicePairing] Scan and sync error:', error);
+      console.error('[DevicePairing] Error details:', {
         message: error.message,
         stack: error.stack,
         name: error.name
@@ -210,7 +206,7 @@ export const DevicePairingScreen: React.FC = () => {
         alertShownRef.current = true;
         Alert.alert(
           'Sync Error',
-          `${error.message || 'Could not sync'}. Please try the Send button from paired devices list.`,
+          `${error.message || 'Could not sync'}`,
           [
             { 
               text: 'OK',
@@ -231,19 +227,30 @@ export const DevicePairingScreen: React.FC = () => {
     }
 
     try {
+      console.log('[DevicePairing] Manual pairing started...');
       setLoading(true);
       setShowManualInput(false);
       await P2PSyncService.pairDevice(manualCode);
       await loadPairedDevices();
       
+      // Parse the pairing code to get device ID for auto-sync
+      const pairingData = JSON.parse(manualCode);
+      console.log('[DevicePairing] Manual pair - device ID:', pairingData.deviceId);
+      
+      // Auto-sync after pairing
+      console.log('[DevicePairing] Starting auto-sync after manual pairing...');
+      await P2PSyncService.syncWithDevice(pairingData.deviceId);
+      console.log('[DevicePairing] Manual pair sync completed');
+      
       Alert.alert(
-        'Device Paired',
-        'Device paired successfully! Both devices must be running the app. Click "Sync Now" to transfer data.'
+        'Device Paired & Synced',
+        'Device paired and data synced successfully! Use "Sync Now" button for future syncs.'
       );
       
       setManualCode('');
       setLoading(false);
     } catch (error: any) {
+      console.error('[DevicePairing] Manual pairing error:', error);
       Alert.alert('Pairing Error', error.message);
       setLoading(false);
     }
@@ -280,20 +287,22 @@ export const DevicePairingScreen: React.FC = () => {
 
   const handleSyncWithDevice = async (deviceId: string) => {
     try {
+      console.log('[DevicePairing] Starting bidirectional sync with device:', deviceId);
       setSyncing(true);
       
-      // Sync works on all platforms now (via Firebase relay for native)
-      await P2PSyncService.syncWithDevice(deviceId);
+      // Bidirectional sync: send our data and request their data
+      await P2PSyncService.syncBidirectional(deviceId);
       
-      // Success message
+      console.log('[DevicePairing] Bidirectional sync completed successfully');
+      // Success message only on device that clicked the button
       Alert.alert(
-        '✓ Data Sent',
-        'Your data has been sent successfully! Check your other device.',
+        '✓ Sync Complete',
+        'Data synchronized successfully on both devices.',
         [{ text: 'OK' }]
       );
       setSyncing(false);
     } catch (error: any) {
-      console.error('Sync error:', error);
+      console.error('[DevicePairing] Sync error:', error);
       Alert.alert('Sync Failed', error.message || 'Could not sync with device');
       setSyncing(false);
     }
@@ -403,7 +412,8 @@ export const DevicePairingScreen: React.FC = () => {
             {pairedDevices.map((device) => {
               const status = P2PSyncService.getConnectionStatus(device.id);
               const statusMessage = P2PSyncService.getStatusMessage(device.id);
-              const canSync = status === 'connected';
+              // Sync is always available via Firebase relay, even without WebRTC connection
+              const canSync = true;
               
               return (
                 <View key={device.id} style={dynamicStyles.deviceCard}>
@@ -422,13 +432,13 @@ export const DevicePairingScreen: React.FC = () => {
                   <TouchableOpacity
                     style={[
                       dynamicStyles.syncButton,
-                      !canSync && dynamicStyles.syncButtonDisabled
+                      syncing && dynamicStyles.syncButtonDisabled
                     ]}
                     onPress={() => handleSyncWithDevice(device.id)}
-                    disabled={syncing || !canSync}
+                    disabled={syncing}
                   >
                     <Text style={dynamicStyles.syncButtonText}>
-                      {syncing ? '⏳' : canSync ? '🔄 Send' : Platform.OS === 'web' ? '⏸️ Wait' : '💾 Export'}
+                      {syncing ? '⏳ Syncing...' : '🔄 Sync Now'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -444,16 +454,19 @@ export const DevicePairingScreen: React.FC = () => {
             • No login required - completely private
           </Text>
           <Text style={dynamicStyles.infoText}>
-            • Sync from mobile app → desktop web browser
+            • Sync from mobile app ↔ desktop web browser
           </Text>
           <Text style={dynamicStyles.infoText}>
-            • No cloud storage - direct device-to-device transfer
+            • End-to-end encrypted data transfer
           </Text>
           <Text style={dynamicStyles.infoText}>
             • {Platform.OS === 'web' ? 'Display QR code for mobile to scan' : 'Scan QR code from desktop browser'}
           </Text>
           <Text style={dynamicStyles.infoText}>
-            • Both devices must be online for P2P sync
+            • First sync happens automatically after pairing
+          </Text>
+          <Text style={dynamicStyles.infoText}>
+            • Use "Sync Now" button anytime to resync (no need to scan QR again)
           </Text>
         </View>
       </ScrollView>

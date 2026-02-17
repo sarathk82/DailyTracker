@@ -233,9 +233,40 @@ export const JournalScreen: React.FC<{}> = () => {
   const loadEntries = useCallback(async () => {
     const savedEntries = await StorageService.getEntries();
     
+    // Clean up corrupted emoji data from old messages (migration)
+    const cleanedEntries = savedEntries.map(entry => {
+      if (entry.type === 'system' && entry.text) {
+        // Remove corrupted emoji bytes and clean up the text
+        let cleanText = entry.text;
+        
+        // Remove various corrupted emoji representations
+        cleanText = cleanText.replace(/[\u{D83D}\u{DCA0}\u{2705}\u{1F4B0}]\s*/gu, ''); // Remove emoji unicode
+        cleanText = cleanText.replace(/💰\s*/g, ''); // Remove money bag emoji
+        cleanText = cleanText.replace(/✅\s*/g, ''); // Remove checkmark emoji
+        cleanText = cleanText.replace(/∆¶\s*/g, ''); // Remove corrupted characters
+        cleanText = cleanText.replace(/∆Š\s*/g, ''); // Remove more corrupted characters
+        cleanText = cleanText.replace(/Ŀ\s*/g, ''); // Remove corrupted L
+        cleanText = cleanText.replace(/\s+/g, ' ').trim(); // Clean up multiple spaces
+        
+        // Fix missing 'A' in Auto-categorized
+        cleanText = cleanText.replace(/^uto-categorized/i, 'Auto-categorized');
+        cleanText = cleanText.replace(/\s+uto-categorized/i, ' Auto-categorized');
+        
+        return { ...entry, text: cleanText };
+      }
+      return entry;
+    });
+    
+    // Save cleaned entries back if any were modified
+    const hasChanges = cleanedEntries.some((entry, index) => entry.text !== savedEntries[index].text);
+    if (hasChanges) {
+      console.log('[Migration] Cleaning up corrupted emoji data from old messages...');
+      await StorageService.saveEntries(cleanedEntries);
+    }
+    
     // Deduplicate entries by ID (in case of sync issues)
     const uniqueEntries = Array.from(
-      new Map(savedEntries.map(entry => [entry.id, entry])).values()
+      new Map(cleanedEntries.map(entry => [entry.id, entry])).values()
     );
     
     // Sort entries by timestamp to maintain chronological order
@@ -526,8 +557,9 @@ export const JournalScreen: React.FC<{}> = () => {
         if (expense) {
           wasExpense = true;
           const prefix = expense.autoDetected ? 'Auto-categorized' : 'Manually categorized';
-          systemMessage = `💰 ${prefix} as Expense: ${TextAnalyzer.formatCurrency(expense.amount, expense.currency)}`;
-          if (expense.category) systemMessage += ` (${expense.category})`;
+          const amountStr = TextAnalyzer.formatCurrency(expense.amount, expense.currency);
+          const categoryStr = expense.category ? ` (${expense.category})` : '';
+          systemMessage = `${prefix} as Expense: ${amountStr}${categoryStr}`;
         }
         
         // Check if it was categorized as action (only if not expense)
@@ -536,7 +568,7 @@ export const JournalScreen: React.FC<{}> = () => {
           if (actionItem) {
             wasAction = true;
             const prefix = actionItem.autoDetected ? 'Auto-categorized' : 'Manually categorized';
-            systemMessage = `✅ ${prefix} as Task: ${actionItem.title}`;
+            systemMessage = `${prefix} as Task: ${actionItem.title}`;
           }
         }
         

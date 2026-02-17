@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Entry, ActionItem, Expense, SettingsData } from '../types';
 import { encryptData, decryptData, generateSalt } from './encryption';
-import CryptoJS from 'crypto-js';
 
 const ENTRIES_KEY = '@daily_tracker_entries';
 const ACTION_ITEMS_KEY = '@daily_tracker_action_items';
@@ -13,13 +12,22 @@ const ENCRYPTION_ENABLED_KEY = '@daily_tracker_encryption_enabled';
 
 // Generate a device-specific encryption key
 const generateDeviceKey = (): string => {
-  // Use device-specific info + timestamp-based randomness for the key
-  const deviceInfo = `${navigator.userAgent || 'device'}-${Date.now()}`;
-  const randomSalt = Math.random().toString(36) + Date.now().toString(36);
-  return CryptoJS.PBKDF2(deviceInfo, randomSalt, {
-    keySize: 256 / 32,
-    iterations: 1000 // Lower iterations for local encryption (not for password derivation)
-  }).toString();
+  // Use timestamp and random values for key generation
+  const timestamp = Date.now().toString(36);
+  const random1 = Math.random().toString(36).substring(2);
+  const random2 = Math.random().toString(36).substring(2);
+  const random3 = Math.random().toString(36).substring(2);
+  const combined = timestamp + random1 + random2 + random3;
+  
+  // Pad to 64 hex characters (32 bytes)
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(combined);
+  const hash = new Uint8Array(32);
+  for (let i = 0; i < bytes.length; i++) {
+    hash[i % 32] ^= bytes[i];
+  }
+  
+  return Array.from(hash).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
 let cachedEncryptionKey: string | null = null;
@@ -37,8 +45,8 @@ const getLocalEncryptionKey = async (): Promise<string> => {
       // Generate new key on first use
       key = generateDeviceKey();
       await AsyncStorage.setItem(ENCRYPTION_KEY_STORAGE, key);
-      // Don't auto-enable encryption - keep it disabled by default
-      // await AsyncStorage.setItem(ENCRYPTION_ENABLED_KEY, 'true');
+      // Enable encryption by default
+      await AsyncStorage.setItem(ENCRYPTION_ENABLED_KEY, 'true');
     }
     cachedEncryptionKey = key;
     return key;
@@ -53,20 +61,16 @@ const getLocalEncryptionKey = async (): Promise<string> => {
 const isEncryptionEnabled = async (): Promise<boolean> => {
   try {
     const enabled = await AsyncStorage.getItem(ENCRYPTION_ENABLED_KEY);
-    encryptionEnabled = enabled === 'true'; // Default to false (disabled) until crypto issues resolved
+    encryptionEnabled = enabled === 'true';
     return encryptionEnabled;
   } catch (error) {
     console.error('Error checking encryption status:', error);
-    return false; // Default to disabled until crypto module issue is fixed
+    return false;
   }
 };
 
 // Encrypt data before storing
 const encryptIfEnabled = async (data: any): Promise<string> => {
-  // TEMPORARY: Disable encryption entirely due to crypto module issues in React Native
-  return JSON.stringify(data);
-  
-  /* Encryption disabled until crypto issues resolved
   const enabled = await isEncryptionEnabled();
   if (!enabled) {
     return JSON.stringify(data);
@@ -79,7 +83,6 @@ const encryptIfEnabled = async (data: any): Promise<string> => {
     console.error('Encryption failed, storing unencrypted:', error);
     return JSON.stringify(data);
   }
-  */
 };
 
 // Decrypt data after retrieving

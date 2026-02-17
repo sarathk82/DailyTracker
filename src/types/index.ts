@@ -28,12 +28,15 @@ export interface Expense {
   autoDetected?: boolean;
 }
 
+export type SyncMethod = 'webrtc' | 'firebase-relay' | 'cloud-sync';
+
 export interface SettingsData {
   isMarkdownEnabled: boolean;
   enterToSend: boolean;
   systemCurrency: string;
   layoutStyle: string;
   theme?: string; // 'light', 'dark', or 'system'
+  syncMethod?: SyncMethod; // 'webrtc', 'firebase-relay', or 'cloud-sync'
 }
 
 export type TabParamList = {

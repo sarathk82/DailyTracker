@@ -22,6 +22,7 @@ const defaultSettings: SettingsData = {
   systemCurrency: 'AUTO', // AUTO means use system default
   layoutStyle: 'chat', // Default to current chat style
   theme: 'system', // light, dark, or system
+  syncMethod: 'firebase-relay', // Default to Firebase Relay (works on all platforms)
 };
 
 const CURRENCIES = [
@@ -39,6 +40,30 @@ const THEME_OPTIONS = [
   { id: 'light', name: 'Light Mode', icon: '☀️' },
   { id: 'dark', name: 'Dark Mode', icon: '🌙' },
   { id: 'system', name: 'System Default', icon: '⚙️' },
+];
+
+const SYNC_METHOD_OPTIONS = [
+  { 
+    id: 'firebase-relay', 
+    name: 'Firebase Relay', 
+    icon: '🔄',
+    description: 'Works everywhere including Expo Go. Data relayed through secure Firebase database.',
+    recommended: true
+  },
+  { 
+    id: 'webrtc', 
+    name: 'Direct P2P (WebRTC)', 
+    icon: '⚡',
+    description: 'Fastest. Desktop ↔ Mobile or Desktop ↔ Desktop. Requires native build (not Expo Go).',
+    webOnly: false  // Available on all platforms with native build
+  },
+  { 
+    id: 'cloud-sync', 
+    name: 'Cloud Sync', 
+    icon: '☁️',
+    description: 'Automatic cloud backup. Requires sign-in.',
+    requiresAuth: true
+  },
 ];
 
 export const SettingsScreen: React.FC<{ 
@@ -68,6 +93,7 @@ export const SettingsScreen: React.FC<{
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLayoutModal, setShowLayoutModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showSyncMethodModal, setShowSyncMethodModal] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -143,6 +169,17 @@ export const SettingsScreen: React.FC<{
     const currentTheme = settings.theme || 'system';
     const current = THEME_OPTIONS.find(t => t.id === currentTheme);
     return current ? `${current.icon} ${current.name}` : '⚙️ System Default';
+  };
+
+  const showSyncMethodPicker = () => {
+    console.log('Sync method picker tapped');
+    setShowSyncMethodModal(true);
+  };
+
+  const getCurrentSyncMethodName = () => {
+    const currentMethod = settings.syncMethod || 'firebase-relay';
+    const current = SYNC_METHOD_OPTIONS.find(m => m.id === currentMethod);
+    return current ? `${current.icon} ${current.name}` : '🔄 Firebase Relay';
   };
 
   const handleClearJournal = async () => {
@@ -274,6 +311,21 @@ export const SettingsScreen: React.FC<{
                 Choose how your journal entries are displayed
               </Text>
               <Text style={dynamicStyles.settingValue}>{getCurrentLayoutName()}</Text>
+            </View>
+            <Text style={dynamicStyles.arrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>Device Sync</Text>
+          
+          <TouchableOpacity style={dynamicStyles.settingItem} onPress={showSyncMethodPicker}>
+            <View style={dynamicStyles.settingInfo}>
+              <Text style={dynamicStyles.settingLabel}>Sync Method</Text>
+              <Text style={dynamicStyles.settingDescription}>
+                Choose how to sync data between devices
+              </Text>
+              <Text style={dynamicStyles.settingValue}>{getCurrentSyncMethodName()}</Text>
             </View>
             <Text style={dynamicStyles.arrow}>›</Text>
           </TouchableOpacity>
@@ -637,6 +689,86 @@ export const SettingsScreen: React.FC<{
           </View>
         </View>
       </Modal>
+
+      {/* Sync Method Selection Modal */}
+      <Modal
+        visible={showSyncMethodModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSyncMethodModal(false)}
+      >
+        <View style={dynamicModalStyles.overlay}>
+          <View style={dynamicModalStyles.container}>
+            <Text style={dynamicModalStyles.title}>Select Sync Method</Text>
+            <Text style={dynamicModalStyles.subtitle}>Choose how to sync between devices:</Text>
+            
+            <ScrollView style={dynamicModalStyles.optionsList} showsVerticalScrollIndicator={true}>
+              {SYNC_METHOD_OPTIONS.map((method) => {
+                const isDisabled = method.requiresAuth && !user;
+                
+                return (
+                  <TouchableOpacity
+                    key={method.id}
+                    style={[
+                      dynamicModalStyles.option,
+                      settings.syncMethod === method.id && dynamicModalStyles.selectedOption,
+                      isDisabled && { opacity: 0.5 }
+                    ]}
+                    onPress={() => {
+                      if (isDisabled) {
+                        if (method.requiresAuth) {
+                          Alert.alert(
+                            'Sign In Required',
+                            'Cloud Sync requires you to sign in. Would you like to sign in now?',
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              { text: 'Sign In', onPress: () => {
+                                setShowSyncMethodModal(false);
+                                if (onShowAuth) onShowAuth();
+                              }}
+                            ]
+                          );
+                        }
+                        return;
+                      }
+                      
+                      updateSetting('syncMethod', method.id as any);
+                      setShowSyncMethodModal(false);
+                    }}
+                    disabled={isDisabled}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[
+                        dynamicModalStyles.optionText,
+                        settings.syncMethod === method.id && dynamicModalStyles.selectedOptionText
+                      ]}>
+                        {method.icon} {method.name}
+                        {method.recommended && <Text style={{ color: theme.success }}> (Recommended)</Text>}
+                      </Text>
+                      <Text style={[
+                        dynamicModalStyles.optionDescription,
+                        { fontSize: 12, marginTop: 4, opacity: 0.7 }
+                      ]}>
+                        {method.description}
+                      </Text>
+                    </View>
+                    {settings.syncMethod === method.id && (
+                      <Text style={dynamicModalStyles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            
+            <TouchableOpacity
+              style={dynamicModalStyles.cancelButton}
+              onPress={() => setShowSyncMethodModal(false)}
+            >
+              <Text style={dynamicModalStyles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -805,6 +937,11 @@ const getModalStyles = (theme: any) => StyleSheet.create({
     fontSize: 16,
     color: theme.text,
     flex: 1,
+  },
+  optionDescription: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginTop: 4,
   },
   selectedOptionText: {
     color: theme.primary,
