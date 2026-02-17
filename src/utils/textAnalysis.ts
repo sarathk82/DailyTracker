@@ -85,9 +85,16 @@ export class TextAnalyzer {
   }
 
   static detectActionItem(text: string): boolean {
-    // Only detect action items that start with a dot (simple and explicit)
+    // Detect action items that start with a dot (simple and explicit)
     const startsWithDot = /^\s*\.\s*\S/.test(text);
-    return startsWithDot;
+    if (startsWithDot) {
+      return true;
+    }
+    
+    // Also detect action items with todo keywords
+    const lowerText = text.toLowerCase();
+    const hasTodoKeywords = this.ACTION_KEYWORDS.some(keyword => lowerText.includes(keyword));
+    return hasTodoKeywords;
   }
 
   static async detectExpenseAsync(text: string): Promise<boolean> {
@@ -101,9 +108,9 @@ export class TextAnalyzer {
   static detectExpense(text: string): boolean {
     const lowerText = text.toLowerCase();
     
-    // First check for explicit expense keywords
+    // First check for explicit expense keywords with numeric values
     const hasExpenseKeywords = this.EXPENSE_KEYWORDS.some(keyword => lowerText.includes(keyword));
-    if (hasExpenseKeywords) {
+    if (hasExpenseKeywords && this.hasNumericValue(text)) {
       return true;
     }
     
@@ -296,6 +303,10 @@ export class TextAnalyzer {
       if (cleanTitle.startsWith('.')) {
         cleanTitle = cleanTitle.substring(1).trim();
       }
+      
+      // Remove todo keywords from start of text
+      cleanTitle = cleanTitle.replace(/^(todo:|to-do:|task:)\s*/i, '');
+      cleanTitle = cleanTitle.replace(/^(need to|should|must|have to)\s+/i, '');
       
       // Extract due date from text
       const dueDate = this.extractDueDate(text);

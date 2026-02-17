@@ -11,17 +11,29 @@ jest.mock('firebase/app', () => ({
 jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => ({
     currentUser: null,
-    onAuthStateChanged: jest.fn((callback) => {
-      callback(null);
-      return jest.fn(); // unsubscribe function
-    }),
   })),
+  onAuthStateChanged: jest.fn((auth, callback) => {
+    callback(null);
+    return jest.fn(); // unsubscribe function
+  }),
+  createUserWithEmailAndPassword: jest.fn(),
+  signInWithEmailAndPassword: jest.fn(),
+  signOut: jest.fn(),
+  sendPasswordResetEmail: jest.fn(),
+  updateProfile: jest.fn(),
+  GoogleAuthProvider: jest.fn(),
+  signInWithPopup: jest.fn(),
+  signInWithRedirect: jest.fn(),
+  getRedirectResult: jest.fn(),
   initializeAuth: jest.fn(),
   getReactNativePersistence: jest.fn(),
 }));
 
 jest.mock('firebase/firestore', () => ({
   getFirestore: jest.fn(() => ({})),
+  doc: jest.fn(),
+  setDoc: jest.fn(),
+  getDoc: jest.fn(),
 }));
 
 jest.mock('firebase/database', () => ({
@@ -30,6 +42,17 @@ jest.mock('firebase/database', () => ({
 
 jest.mock('firebase/analytics', () => ({
   getAnalytics: jest.fn(() => ({})),
+}));
+
+// Mock Firebase config
+jest.mock('../../config/firebase', () => ({
+  firebaseConfig: {},
+  app: {},
+  auth: {
+    currentUser: null,
+  },
+  db: {},
+  database: {},
 }));
 
 // Now import AuthContext after mocks are set up
@@ -91,8 +114,8 @@ describe('AuthContext', () => {
       
       return (
         <>
-          <Text testID="has-login">{typeof context?.login === 'function' ? 'yes' : 'no'}</Text>
-          <Text testID="has-signup">{typeof context?.signup === 'function' ? 'yes' : 'no'}</Text>
+          <Text testID="has-login">{typeof context?.signIn === 'function' ? 'yes' : 'no'}</Text>
+          <Text testID="has-signup">{typeof context?.signUp === 'function' ? 'yes' : 'no'}</Text>
           <Text testID="has-logout">{typeof context?.logout === 'function' ? 'yes' : 'no'}</Text>
           <Text testID="has-reset">{typeof context?.resetPassword === 'function' ? 'yes' : 'no'}</Text>
         </>
@@ -114,7 +137,7 @@ describe('AuthContext', () => {
   it('should allow using auth outside of provider (returns null)', () => {
     const ComponentOutsideProvider = () => {
       const context = useAuth();
-      return <Text testID="context">{context === null ? 'null' : 'not-null'}</Text>;
+      return <Text testID="context">{context.user === null ? 'null' : 'not-null'}</Text>;
     };
 
     const { getByTestId } = render(<ComponentOutsideProvider />);
