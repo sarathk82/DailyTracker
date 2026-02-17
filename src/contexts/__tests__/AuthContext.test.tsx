@@ -1,22 +1,39 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
-import { AuthProvider, useAuth } from '../AuthContext';
 
-// Mock Firebase auth
-jest.mock('../../config/firebase', () => ({
-  auth: {
+// Mock Firebase modules BEFORE importing anything else
+jest.mock('firebase/app', () => ({
+  initializeApp: jest.fn(() => ({})),
+  getApp: jest.fn(() => ({})),
+}));
+
+jest.mock('firebase/auth', () => ({
+  getAuth: jest.fn(() => ({
     currentUser: null,
     onAuthStateChanged: jest.fn((callback) => {
       callback(null);
       return jest.fn(); // unsubscribe function
     }),
-    signInWithEmailAndPassword: jest.fn(),
-    createUserWithEmailAndPassword: jest.fn(),
-    signOut: jest.fn(),
-    sendPasswordResetEmail: jest.fn()
-  }
+  })),
+  initializeAuth: jest.fn(),
+  getReactNativePersistence: jest.fn(),
 }));
+
+jest.mock('firebase/firestore', () => ({
+  getFirestore: jest.fn(() => ({})),
+}));
+
+jest.mock('firebase/database', () => ({
+  getDatabase: jest.fn(() => ({})),
+}));
+
+jest.mock('firebase/analytics', () => ({
+  getAnalytics: jest.fn(() => ({})),
+}));
+
+// Now import AuthContext after mocks are set up
+import { AuthProvider, useAuth } from '../AuthContext';
 
 const TestComponent = () => {
   const { user, loading } = useAuth();

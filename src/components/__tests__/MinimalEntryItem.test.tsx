@@ -125,7 +125,7 @@ describe('MinimalEntryItem', () => {
         <MinimalEntryItem
           item={actionEntry}
           expense={undefined}
-          actionItem={completedAction}
+          actionItem={actionItem}
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
           markdownStyles={mockMarkdownStyles}

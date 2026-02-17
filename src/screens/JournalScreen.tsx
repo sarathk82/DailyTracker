@@ -477,6 +477,11 @@ export const JournalScreen: React.FC<{}> = () => {
     if (!trimmedInput) return;
 
     try {
+      // Clear input immediately for instant feedback
+      setInputText("");
+      setForceExpense(false);
+      setForceAction(false);
+
       // Convert dot-prefix to checkbox format for display
       let displayText = trimmedInput;
       const autoDetectedAction = TextAnalyzer.detectActionItem(trimmedInput);
@@ -492,92 +497,89 @@ export const JournalScreen: React.FC<{}> = () => {
         isMarkdown,
       };
 
-      // Save the entry first
-      await StorageService.addEntry(entry);
+      // Add to state immediately for instant UI update
+      setEntries(prev => [entry, ...prev]);
+
+      // Scroll after React updates the UI (next frame)
+      requestAnimationFrame(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      });
       
-      // Check for expense (auto-detect OR user explicitly marked it)
-      const autoDetectedExpense = TextAnalyzer.detectExpense(trimmedInput);
-      if (autoDetectedExpense || forceExpense) {
-        const expenseInfo = TextAnalyzer.extractExpenseInfo(trimmedInput, entry.id);
-        if (expenseInfo) {
-          // Add autoDetected flag
-          expenseInfo.autoDetected = autoDetectedExpense && !forceExpense;
-          await StorageService.addExpense(expenseInfo);
-          await updateEntryType(entry.id, 'expense');
-        } else if (forceExpense) {
-          // User forced expense but no amount found - show alert
-          Alert.alert(
-            "No Amount Found",
-            "Please include a numeric amount in your entry (e.g., 150, Rs200, $50)"
-          );
-        }
-      }
+      // Refocus immediately
+      textInputRef.current?.focus();
 
-      // Check for action item (auto-detect OR user explicitly marked it)
-      if (autoDetectedAction || forceAction) {
-        // If forceAction is true but no auto-detection, create action item from text
-        let actionItem;
-        if (forceAction && !autoDetectedAction) {
-          // Manually create action item from the text, extract due date
-          const dueDate = TextAnalyzer.extractDueDate(trimmedInput);
-          actionItem = {
-            id: uuid.v4(),
-            entryId: entry.id,
-            title: trimmedInput,
-            completed: false,
-            createdAt: new Date(),
-            dueDate: dueDate,
-            autoDetected: false
-          };
-        } else {
-          actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
-          if (actionItem) {
-            actionItem.autoDetected = autoDetectedAction && !forceAction;
-          }
-        }
+      // Process in background
+      (async () => {
+        // Save the entry
+        await StorageService.addEntry(entry);
         
-        if (actionItem) {
-          await StorageService.addActionItem(actionItem);
-          await updateEntryType(entry.id, 'action');
-        }
-      }
-
-      // Reload all data to show updated entries with categorization
-      await loadEntries();
-      await loadExpensesAndActions();
-
-      // Add system feedback message only in chat view
-      if (layoutStyle === 'chat') {
         let systemMessage = '';
-        let wasExpense = false;
-        let wasAction = false;
+        let entryType = 'log';
         
-        // Check if it was categorized as expense
-        const expense = await StorageService.getExpenses().then(exps => exps.find(e => e.entryId === entry.id));
-        if (expense) {
-          wasExpense = true;
-          const prefix = expense.autoDetected ? 'Auto-categorized' : 'Manually categorized';
-          const amountStr = TextAnalyzer.formatCurrency(expense.amount, expense.currency);
-          const categoryStr = expense.category ? ` (${expense.category})` : '';
-          systemMessage = `${prefix} as Expense: ${amountStr}${categoryStr}`;
-        }
-        
-        // Check if it was categorized as action (only if not expense)
-        if (!wasExpense) {
-          const actionItem = await StorageService.getActionItems().then(items => items.find(a => a.entryId === entry.id));
-          if (actionItem) {
-            wasAction = true;
-            const prefix = actionItem.autoDetected ? 'Auto-categorized' : 'Manually categorized';
-            systemMessage = `${prefix} as Task: ${actionItem.title}`;
+        // Check for expense (auto-detect OR user explicitly marked it)
+        const autoDetectedExpense = TextAnalyzer.detectExpense(trimmedInput);
+        if (autoDetectedExpense || forceExpense) {
+          const expenseInfo = TextAnalyzer.extractExpenseInfo(trimmedInput, entry.id);
+          if (expenseInfo) {
+            expenseInfo.autoDetected = autoDetectedExpense && !forceExpense;
+            await StorageService.addExpense(expenseInfo);
+            entryType = 'expense';
+            
+            if (layoutStyle === 'chat') {
+              const prefix = expenseInfo.autoDetected ? 'Auto-categorized' : 'Manually categorized';
+              const amountStr = TextAnalyzer.formatCurrency(expenseInfo.amount, expenseInfo.currency);
+              const categoryStr = expenseInfo.category ? ` (${expenseInfo.category})` : '';
+              systemMessage = `${prefix} as Expense: ${amountStr}${categoryStr}`;
+            }
+          } else if (forceExpense) {
+            Alert.alert(
+              "No Amount Found",
+              "Please include a numeric amount in your entry (e.g., 150, Rs200, $50)"
+            );
           }
         }
-        
-        // Default message if not categorized
-        if (!wasExpense && !wasAction) {
-          systemMessage = '✓ Got it!';
+
+        // Check for action item (auto-detect OR user explicitly marked it) - only if not expense
+        if (!systemMessage && (autoDetectedAction || forceAction)) {
+          let actionItem;
+          if (forceAction && !autoDetectedAction) {
+            const dueDate = TextAnalyzer.extractDueDate(trimmedInput);
+            actionItem = {
+              id: uuid.v4(),
+              entryId: entry.id,
+              title: trimmedInput,
+              completed: false,
+              createdAt: new Date(),
+              dueDate: dueDate,
+              autoDetected: false
+            };
+          } else {
+            actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
+            if (actionItem) {
+              actionItem.autoDetected = autoDetectedAction && !forceAction;
+            }
+          }
+          
+          if (actionItem) {
+            await StorageService.addActionItem(actionItem);
+            entryType = 'action';
+            
+            if (layoutStyle === 'chat') {
+              const prefix = actionItem.autoDetected ? 'Auto-categorized' : 'Manually categorized';
+              systemMessage = `${prefix} as Task: ${actionItem.title}`;
+            }
+          }
         }
 
-        if (systemMessage) {
+        // Update entry type if needed
+        if (entryType !== 'log') {
+          await updateEntryType(entry.id, entryType);
+          // Update in state
+          setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, type: entryType } : e));
+        }
+
+        // Add system message if needed
+        if (systemMessage && layoutStyle === 'chat') {
           const systemEntry: Entry = {
             id: uuid.v4(),
             text: systemMessage,
@@ -586,29 +588,37 @@ export const JournalScreen: React.FC<{}> = () => {
             isMarkdown: false,
           };
           await StorageService.addEntry(systemEntry);
-          await loadEntries();
+          setEntries(prev => [systemEntry, ...prev]);
+          // Scroll to show system message
+          requestAnimationFrame(() => {
+            flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          });
+        } else if (!systemMessage && layoutStyle === 'chat') {
+          // Default message
+          const systemEntry: Entry = {
+            id: uuid.v4(),
+            text: '✓ Got it!',
+            timestamp: new Date(Date.now() + 100),
+            type: 'system',
+            isMarkdown: false,
+          };
+          await StorageService.addEntry(systemEntry);
+          setEntries(prev => [systemEntry, ...prev]);
+          // Scroll to show system message
+          requestAnimationFrame(() => {
+            flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+          });
         }
-      }
 
-      // Clear input and force flags after successful processing
-      setInputText("");
-      setForceExpense(false);
-      setForceAction(false);
-      
-      // Scroll to bottom (offset 0 for inverted list) to show the new message
-      setTimeout(() => {
-        flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }, 100);
-      
-      // Refocus the text input for better UX
-      setTimeout(() => {
-        if (textInputRef.current) {
-          textInputRef.current.focus();
-        }
-      }, 150);
+        // Reload expenses and actions in background
+        await loadExpensesAndActions();
+      })();
+
     } catch (error) {
       console.error('Error processing message:', error);
       showToast('Failed to process message');
+      // Reload on error
+      await loadEntries();
     }
   };
 

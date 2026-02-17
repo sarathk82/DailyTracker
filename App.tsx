@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { JournalScreen, ActionItemsScreen, ExpensesScreen, AnalyticsScreen } from './src/screens';
 import { AuthScreen } from './src/screens/AuthScreen';
+import { DevicePairingScreen } from './src/screens/DevicePairingScreen';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
@@ -44,6 +45,8 @@ function AppNavigator() {
                 iconText = '💰';
               } else if (route.name === 'Analytics') {
                 iconText = '📊';
+              } else if (route.name === 'Sync') {
+                iconText = '🔄';
               } else {
                 iconText = '❓';
               }
@@ -89,6 +92,13 @@ function AppNavigator() {
             component={AnalyticsScreen}
             options={{
               tabBarLabel: 'Analytics'
+            }}
+          />
+          <Tab.Screen
+            name="Sync"
+            component={DevicePairingScreen}
+            options={{
+              tabBarLabel: 'Sync'
             }}
           />
         </Tab.Navigator>

@@ -21,6 +21,7 @@ jest.mock('../../../src/utils/storage', () => ({
     getActionItems: jest.fn(() => Promise.resolve([])),
     saveActionItems: jest.fn(() => Promise.resolve()),
     updateActionItem: jest.fn(() => Promise.resolve()),
+    getSettings: jest.fn(() => Promise.resolve({ theme: 'light' })),
   }
 }));
 
