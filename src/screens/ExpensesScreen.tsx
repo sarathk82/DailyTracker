@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
@@ -20,6 +21,7 @@ import { Expense, Entry } from '../types';
 import { StorageService } from '../utils/storage';
 import { TextAnalyzer } from '../utils/textAnalysis';
 import { EditModal as UnifiedEditModal } from '../components/EditModal';
+import { CreateExpenseModal } from '../components/CreateExpenseModal';
 
 interface ExpenseCardProps {
   expense: Expense;
@@ -82,6 +84,7 @@ export const ExpensesScreen: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'thisMonth'>('all');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'analytics'>('list');
 
   const loadExpenses = useCallback(async () => {
@@ -186,6 +189,13 @@ export const ExpensesScreen: React.FC = () => {
 
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense);
+    setIsCreating(false);
+    setModalVisible(true);
+  };
+
+  const handleCreate = () => {
+    setEditingExpense(null);
+    setIsCreating(true);
     setModalVisible(true);
   };
 
@@ -193,6 +203,7 @@ export const ExpensesScreen: React.FC = () => {
     await loadExpenses();
     setModalVisible(false);
     setEditingExpense(null);
+    setIsCreating(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -234,22 +245,31 @@ export const ExpensesScreen: React.FC = () => {
   return (
     <SafeAreaView style={dynamicStyles.container}>
       <View style={dynamicStyles.header}>
-        <Text style={dynamicStyles.headerTitle}>Expenses</Text>
-        <View style={dynamicStyles.totalsContainer}>
-          {filteredExpenses.length === 0 ? (
-            <View style={dynamicStyles.totalContainer}>
-              <Text style={dynamicStyles.totalLabel}>Total:</Text>
-              <Text style={dynamicStyles.totalAmount}>$0.00</Text>
-            </View>
-          ) : (
-            getTotalAmount(filteredExpenses).map((total) => (
-              <View key={total.currency} style={dynamicStyles.totalContainer}>
-                <Text style={dynamicStyles.totalLabel}>{total.currency} Total:</Text>
-                <Text style={dynamicStyles.totalAmount}>{total.formatted}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={dynamicStyles.headerTitle}>Expenses</Text>
+          <View style={dynamicStyles.totalsContainer}>
+            {filteredExpenses.length === 0 ? (
+              <View style={dynamicStyles.totalContainer}>
+                <Text style={dynamicStyles.totalLabel}>Total:</Text>
+                <Text style={dynamicStyles.totalAmount}>$0.00</Text>
               </View>
-            ))
-          )}
+            ) : (
+              getTotalAmount(filteredExpenses).map((total) => (
+                <View key={total.currency} style={dynamicStyles.totalContainer}>
+                  <Text style={dynamicStyles.totalLabel}>{total.currency} Total:</Text>
+                  <Text style={dynamicStyles.totalAmount}>{total.formatted}</Text>
+                </View>
+              ))
+            )}
+          </View>
         </View>
+        <TouchableOpacity
+          style={dynamicStyles.addButton}
+          onPress={handleCreate}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={24} color={theme.surface} />
+        </TouchableOpacity>
       </View>
 
       <View style={dynamicStyles.filterContainer}>
@@ -371,12 +391,21 @@ export const ExpensesScreen: React.FC = () => {
       )}
 
       <UnifiedEditModal
-        visible={modalVisible}
+        visible={modalVisible && !isCreating}
         entry={editingExpense ? entries.find(e => e.id === editingExpense.entryId) || null : null}
         expense={editingExpense}
         onClose={() => {
           setModalVisible(false);
           setEditingExpense(null);
+        }}
+        onSave={handleSaveEdit}
+      />
+
+      <CreateExpenseModal
+        visible={modalVisible && isCreating}
+        onClose={() => {
+          setModalVisible(false);
+          setIsCreating(false);
         }}
         onSave={handleSaveEdit}
       />
@@ -390,6 +419,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.background,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: theme.surface,
@@ -401,6 +432,26 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.text,
     marginBottom: 8,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   totalsContainer: {
     paddingHorizontal: 16,

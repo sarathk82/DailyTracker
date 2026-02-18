@@ -11,6 +11,7 @@ import {
   Platform,
   Keyboard,
   KeyboardAvoidingView,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../contexts/ThemeContext';
@@ -18,10 +19,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import Markdown from 'react-native-markdown-display';
+import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ActionItem, Entry } from '../types';
 import { StorageService } from '../utils/storage';
 import { EditModal as UnifiedEditModal } from '../components/EditModal';
+import { CreateActionItemModal } from '../components/CreateActionItemModal';
 
 interface ActionItemCardProps {
   item: ActionItem;
@@ -40,21 +43,53 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
   theme,
   dynamicStyles,
 }) => {
+  const swipeableRef = React.useRef<Swipeable>(null);
 
+  // Render right swipe action (complete)
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const scale = dragX.interpolate({
+      inputRange: [-100, 0],
+      outputRange: [1, 0],
+      extrapolate: 'clamp',
+    });
 
-  return (
+    return (
+      <Animated.View style={[dynamicStyles.swipeAction, { transform: [{ scale }] }]}>
+        <Ionicons name="checkmark-circle" size={30} color="#fff" />
+        <Text style={dynamicStyles.swipeActionText}>Complete</Text>
+      </Animated.View>
+    );
+  };
+
+  const handleSwipeComplete = () => {
+    if (!item.completed) {
+      onToggleComplete(item.id);
+    }
+    swipeableRef.current?.close();
+  };
+
+  const cardContent = (
     <View style={[dynamicStyles.itemCard, item.completed && dynamicStyles.completedCard]}>
-      <TouchableOpacity
-        style={dynamicStyles.itemHeader}
-        onPress={() => onToggleComplete(item.id)}
-        activeOpacity={0.7}
-      >
-        <Ionicons
-          name={item.completed ? "checkbox" : "checkbox-outline"}
-          size={24}
-          color={item.completed ? "#4caf50" : "#666"}
-        />
-        <View style={{ flex: 1, marginLeft: 8 }}>
+      <View style={dynamicStyles.itemHeader}>
+        <TouchableOpacity
+          onPress={() => onToggleComplete(item.id)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons
+            name={item.completed ? "checkbox" : "checkbox-outline"}
+            size={24}
+            color={item.completed ? "#4caf50" : "#666"}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{ flex: 1, marginLeft: 8 }}
+          onPress={() => onEdit(item)}
+          activeOpacity={0.7}
+        >
           <Markdown style={{
             body: {
               fontSize: 16,
@@ -64,8 +99,8 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
           }}>
             {item.title}
           </Markdown>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
 
       {item.description && item.description !== item.title && (
         <Text style={[dynamicStyles.itemDescription, item.completed && dynamicStyles.completedText]}>
@@ -110,6 +145,24 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
       </View>
     </View>
   );
+
+  // On mobile: Enable swipe-to-complete gesture
+  // On web/desktop: Just return the card (checkbox-only completion)
+  if (Platform.OS === 'web') {
+    return cardContent;
+  }
+
+  return (
+    <Swipeable
+      ref={swipeableRef}
+      renderRightActions={renderRightActions}
+      onSwipeableOpen={handleSwipeComplete}
+      overshootRight={false}
+      enabled={!item.completed}
+    >
+      {cardContent}
+    </Swipeable>
+  );
 };
 
 export const ActionItemsScreen: React.FC = () => {
@@ -119,6 +172,7 @@ export const ActionItemsScreen: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [editingItem, setEditingItem] = useState<ActionItem | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   
   // Keyboard handling state
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -260,6 +314,13 @@ export const ActionItemsScreen: React.FC = () => {
 
   const handleEdit = (item: ActionItem) => {
     setEditingItem(item);
+    setIsCreating(false);
+    setModalVisible(true);
+  };
+
+  const handleCreate = () => {
+    setEditingItem(null);
+    setIsCreating(true);
     setModalVisible(true);
   };
 
@@ -267,6 +328,7 @@ export const ActionItemsScreen: React.FC = () => {
     await loadActionItems();
     setModalVisible(false);
     setEditingItem(null);
+    setIsCreating(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -320,15 +382,24 @@ export const ActionItemsScreen: React.FC = () => {
 
   const dynamicStyles = getStyles(theme);
 
-  return (
+  const content = (
     <SafeAreaView style={dynamicStyles.container}>
       <View style={dynamicStyles.header}>
-        <Text style={dynamicStyles.headerTitle}>Action Items</Text>
-        <View style={dynamicStyles.stats}>
-          <Text style={dynamicStyles.statsText}>
-            {pendingCount} pending • {completedCount} completed
-          </Text>
+        <View>
+          <Text style={dynamicStyles.headerTitle}>Action Items</Text>
+          <View style={dynamicStyles.stats}>
+            <Text style={dynamicStyles.statsText}>
+              {pendingCount} pending • {completedCount} completed
+            </Text>
+          </View>
         </View>
+        <TouchableOpacity
+          style={dynamicStyles.addButton}
+          onPress={handleCreate}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={24} color={theme.surface} />
+        </TouchableOpacity>
       </View>
 
       <View style={dynamicStyles.filterContainer}>
@@ -379,7 +450,7 @@ export const ActionItemsScreen: React.FC = () => {
       )}
 
       <UnifiedEditModal
-        visible={modalVisible}
+        visible={modalVisible && !isCreating}
         entry={editingItem ? entries.find(e => e.id === editingItem.entryId) || null : null}
         actionItem={editingItem}
         onClose={() => {
@@ -388,8 +459,24 @@ export const ActionItemsScreen: React.FC = () => {
         }}
         onSave={handleSaveEdit}
       />
+
+      <CreateActionItemModal
+        visible={modalVisible && isCreating}
+        onClose={() => {
+          setModalVisible(false);
+          setIsCreating(false);
+        }}
+        onSave={handleSaveEdit}
+      />
     </SafeAreaView>
   );
+
+  // Wrap in GestureHandlerRootView for mobile (needed for swipe gestures)
+  if (Platform.OS === 'web') {
+    return content;
+  }
+
+  return <GestureHandlerRootView style={{ flex: 1 }}>{content}</GestureHandlerRootView>;
 };
 
 const getStyles = (theme: any) => StyleSheet.create({
@@ -398,8 +485,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.background,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: theme.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
@@ -409,6 +499,25 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: theme.text,
     marginBottom: 4,
+  },
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
   },
   stats: {
     flexDirection: 'row',
@@ -538,6 +647,21 @@ const getStyles = (theme: any) => StyleSheet.create({
   deleteButton: {
     backgroundColor: '#f44336',
     borderColor: '#d32f2f',
+  },
+  swipeAction: {
+    backgroundColor: '#4caf50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    marginVertical: 6,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  swipeActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
   },
   emptyContainer: {
     flex: 1,
