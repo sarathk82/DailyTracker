@@ -6,13 +6,26 @@ import { JournalScreen } from '../JournalScreen';
 jest.mock('../../services/P2PSyncService');
 jest.mock('../../utils/storage', () => ({
   StorageService: {
-    loadEntries: jest.fn(() => Promise.resolve([])),
-    saveEntry: jest.fn(() => Promise.resolve()),
+    getEntries: jest.fn(() => Promise.resolve([])),
+    saveEntries: jest.fn(() => Promise.resolve()),
+    getExpenses: jest.fn(() => Promise.resolve([])),
+    saveExpenses: jest.fn(() => Promise.resolve()),
+    getActionItems: jest.fn(() => Promise.resolve([])),
+    saveActionItems: jest.fn(() => Promise.resolve()),
     getSettings: jest.fn(() => Promise.resolve({ theme: 'light' })),
   },
 }));
 jest.mock('../../contexts/ThemeContext', () => ({
-  useTheme: () => ({ colors: { background: '#FFF', text: '#000', card: '#FFF' } }),
+  useTheme: () => ({ 
+    theme: { 
+      background: '#FFF', 
+      text: '#000', 
+      card: '#FFF',
+      placeholder: '#999',
+      input: '#EEE',
+      border: '#DDD'
+    } 
+  }),
 }));
 jest.mock('../../contexts/AuthContext', () => ({
   useAuth: () => ({ user: { uid: 'test-user' } }),
@@ -21,6 +34,6 @@ jest.mock('../../contexts/AuthContext', () => ({
 describe('JournalScreen', () => {
   it('should render without crashing', () => {
     const { getByPlaceholderText } = render(<JournalScreen />);
-    expect(getByPlaceholderText(/chat with daily tracker/i)).toBeTruthy();
+    expect(getByPlaceholderText(/Type a message/i)).toBeTruthy();
   });
 });

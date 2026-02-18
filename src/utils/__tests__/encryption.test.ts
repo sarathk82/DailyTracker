@@ -14,36 +14,40 @@ describe('Encryption Utilities', () => {
   });
 
   describe('generateMasterKey', () => {
-    it('should generate a consistent key from password and salt', () => {
+    it('should generate a consistent key from password and salt', async () => {
       const password = 'test-password-123';
       const salt = 'test-salt-456';
       
-      const key1 = generateMasterKey(password, salt);
-      const key2 = generateMasterKey(password, salt);
+      const key1 = await generateMasterKey(password, salt);
+      const key2 = await generateMasterKey(password, salt);
       
-      expect(key1).toBe(key2);
+      expect(key1).toEqual(key2);
       expect(key1).toBeTruthy();
     });
 
-    it('should generate different keys for different passwords', () => {
+    it('should generate different keys for different passwords', async () => {
       const salt = 'test-salt';
-      const key1 = generateMasterKey('password1', salt);
-      const key2 = generateMasterKey('password2', salt);
+      const key1 = await generateMasterKey('password1', salt);
+      const key2 = await generateMasterKey('password2', salt);
       
-      expect(key1).not.toBe(key2);
+      expect(key1).not.toEqual(key2);
     });
 
-    it('should generate different keys for different salts', () => {
+    it('should generate different keys for different salts', async () => {
       const password = 'test-password';
-      const key1 = generateMasterKey(password, 'salt1');
-      const key2 = generateMasterKey(password, 'salt2');
+      const key1 = await generateMasterKey(password, 'salt1');
+      const key2 = await generateMasterKey(password, 'salt2');
       
-      expect(key1).not.toBe(key2);
+      expect(key1).not.toEqual(key2);
     });
   });
 
   describe('encryptData and decryptData', () => {
-    const masterKey = generateMasterKey('test-password', 'test-salt');
+    let masterKey: string;
+
+    beforeAll(async () => {
+      masterKey = await generateMasterKey('test-password', 'test-salt');
+    });
 
     it('should encrypt and decrypt simple objects', () => {
       const data = { message: 'Hello, World!', count: 42 };
@@ -77,10 +81,10 @@ describe('Encryption Utilities', () => {
       expect(decrypted).toEqual(data);
     });
 
-    it('should throw error when decrypting with wrong key', () => {
+    it('should throw error when decrypting with wrong key', async () => {
       const data = { message: 'Secret' };
       const encrypted = encryptData(data, masterKey);
-      const wrongKey = generateMasterKey('wrong-password', 'test-salt');
+      const wrongKey = await generateMasterKey('wrong-password', 'test-salt');
       
       expect(() => decryptData(encrypted, wrongKey)).toThrow();
     });

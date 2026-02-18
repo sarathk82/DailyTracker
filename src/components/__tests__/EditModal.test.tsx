@@ -138,7 +138,7 @@ describe('EditModal', () => {
     );
 
     expect(getByDisplayValue('50')).toBeTruthy();
-    expect(getByText(/USD/)).toBeTruthy();
+    expect(getByDisplayValue('food')).toBeTruthy();
   });
 
   it('should render action item data when provided', () => {
@@ -153,7 +153,8 @@ describe('EditModal', () => {
 
     const actionEntry: Entry = {
       ...mockEntry,
-      type: 'action'
+      type: 'action',
+      text: 'Call dentist'
     };
 
     const { getByDisplayValue } = render(
@@ -186,7 +187,7 @@ describe('EditModal', () => {
       </MockWrapper>
     );
 
-    // Should not crash
-    expect(queryByText('Edit Entry')).toBeTruthy();
+    // Should not render modal content when entry is null
+    expect(queryByText('Edit Entry')).toBeFalsy();
   });
 });

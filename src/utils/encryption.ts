@@ -9,25 +9,35 @@ import aes from 'aes-js';
 const KEY_SIZE = 32; // 256 bits
 
 /**
- * Simple PBKDF2-like key derivation using repeated SHA-256
+ * Simple PBKDF2-like key derivation using repeated mixing
  * React Native compatible, no native crypto module needed
  */
 async function simpleKeyDerivation(password: string, salt: string, iterations: number): Promise<Uint8Array> {
   const encoder = new TextEncoder();
-  let key = encoder.encode(password + salt);
+  // Initial key from password + salt
+  let key = encoder.encode(password + salt + iterations.toString());
   
-  // Simple way to get SHA256 without crypto module
-  // Use repeated hashing for key stretching
+  // Simple mixing function for key stretching
   for (let i = 0; i < iterations; i++) {
-    // Convert to hex and back for hashing effect
-    const hex = Array.from(key).map(b => b.toString(16).padStart(2, '0')).join('');
-    key = encoder.encode(hex.substring(0, 64)); // Take first 64 chars (32 bytes)
+    // Mix in iteration number to ensure different output each time
+    const iterBytes = encoder.encode(i.toString());
+    const newKey = new Uint8Array(key.length + iterBytes.length);
+    for (let j = 0; j < newKey.length; j++) {
+      // XOR and rotate for mixing
+      if (j < key.length) {
+        newKey[j] = key[j] ^ iterBytes[j % iterBytes.length] ^ (j & 0xFF);
+      } else {
+        newKey[j] = iterBytes[j % iterBytes.length] ^ ((i + j) & 0xFF);
+      }
+    }
+    key = newKey;
   }
   
-  // Ensure exactly 32 bytes
+  // Ensure exactly 32 bytes with final mixing
   const result = new Uint8Array(32);
   for (let i = 0; i < 32; i++) {
-    result[i] = key[i % key.length];
+    // Mix multiple bytes from key into each output byte
+    result[i] = key[i % key.length] ^ key[(i * 7) % key.length] ^ key[(i * 13) % key.length];
   }
   return result;
 }

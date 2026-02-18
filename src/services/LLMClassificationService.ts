@@ -144,14 +144,15 @@ export class LLMClassificationService {
       scores.log += 0.5;
     }
 
-    // Determine winner
+    // Determine winner - always choose highest score
     const maxScore = Math.max(scores.expense, scores.action, scores.log);
     const totalScore = scores.expense + scores.action + scores.log;
     
     let type: 'expense' | 'action' | 'log' = 'log';
     let confidence = 0.5;
 
-    if (maxScore > 0.5) {
+    // Always classify based on highest score (with minimum threshold of 0.1)
+    if (maxScore >= 0.1) {
       if (scores.expense === maxScore) {
         type = 'expense';
       } else if (scores.action === maxScore) {

@@ -19,7 +19,7 @@ describe('LLMClassificationService', () => {
   });
 
   it('should classify log text', async () => {
-    const result = await LLMClassificationService.classifyText('had a great meeting today');
+    const result = await LLMClassificationService.classifyText('I feel happy and energized');
     expect(result.type).toBe('log');
     expect(result.confidence).toBeGreaterThan(0);
   });

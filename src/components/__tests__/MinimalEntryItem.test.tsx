@@ -51,7 +51,7 @@ describe('MinimalEntryItem', () => {
   });
 
   it('should render without crashing', () => {
-    const { container } = render(
+    const { getByText } = render(
       <MockWrapper>
         <MinimalEntryItem
           item={baseEntry}
@@ -65,7 +65,7 @@ describe('MinimalEntryItem', () => {
       </MockWrapper>
     );
 
-    expect(container).toBeTruthy();
+    expect(getByText('Minimal entry test')).toBeTruthy();
   });
 
   it('should render expense entry with expense data', () => {
@@ -134,7 +134,7 @@ describe('MinimalEntryItem', () => {
       </MockWrapper>
     );
 
-    expect(getByText(/Done task/)).toBeTruthy();
+    expect(getByText(/Complete task/)).toBeTruthy();
   });
 
   it('should render without expense or action item', () => {
