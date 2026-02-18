@@ -232,7 +232,30 @@ export class P2PSyncService {
   static async getPairedDevices(): Promise<PairedDevice[]> {
     try {
       const data = await AsyncStorage.getItem(PAIRED_DEVICES_KEY);
-      return data ? JSON.parse(data) : [];
+      const devices = data ? JSON.parse(data) : [];
+      
+      // Migrate old device names ("Device device_xxx") to more readable format
+      let needsUpdate = false;
+      const updatedDevices = devices.map((device: PairedDevice) => {
+        if (device.name.startsWith('Device device_')) {
+          needsUpdate = true;
+          // Extract device ID and create readable name
+          const deviceId = device.id;
+          return {
+            ...device,
+            name: `Synced Device (${deviceId.substring(0, 8)})`
+          };
+        }
+        return device;
+      });
+      
+      // Save updated names if migration occurred
+      if (needsUpdate) {
+        await AsyncStorage.setItem(PAIRED_DEVICES_KEY, JSON.stringify(updatedDevices));
+        console.log('Migrated device names to readable format');
+      }
+      
+      return updatedDevices;
     } catch (error) {
       console.error('Error getting paired devices:', error);
       return [];

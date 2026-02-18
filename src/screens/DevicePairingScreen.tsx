@@ -353,9 +353,6 @@ export const DevicePairingScreen: React.FC = () => {
             <Text style={dynamicStyles.deviceId}>
               Device ID: {deviceId}
             </Text>
-            <Text style={[dynamicStyles.deviceId, { fontSize: 11, marginTop: 4, opacity: 0.6 }]}>
-              (Full ID shown for debugging)
-            </Text>
             
             {/* Important Notice */}
             <View style={dynamicStyles.warningBox}>
