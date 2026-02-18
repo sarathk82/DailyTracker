@@ -12,166 +12,19 @@ const uuid = {
 };
 
 export class TextAnalyzer {
-  // Flag to enable/disable LLM classification
-  // Default to TRUE in this feature branch for local LLM testing
-  private static useLLM: boolean = true;
-
   /**
-   * Enable LLM-based classification (local model, no API needed)
+   * Text analysis now uses LLMClassificationService exclusively for intelligent classification.
+   * All detection and extraction methods use the enhanced pattern-based classifier.
    */
-  static enableLLM(apiKey?: string, options?: { apiEndpoint?: string; model?: string }) {
-    this.useLLM = true;
-    // Local LLM doesn't need configuration, but kept for compatibility
-    LLMClassificationService.configure({
-      apiKey: apiKey || 'local',
-      ...options,
-    });
-    console.log('Local LLM classification enabled');
-  }
-
-  /**
-   * Disable LLM and use regex patterns
-   */
-  static disableLLM() {
-    this.useLLM = false;
-  }
-
-  /**
-   * Check if LLM is enabled
-   */
-  static isLLMEnabled(): boolean {
-    return this.useLLM;
-  }
-
-  // Currency patterns - simplified to detect any numeric amount
-  private static readonly CURRENCY_PATTERNS = [
-    // Any number with optional decimal places
-    /\b\d+(\.\d{1,2})?\b/g,
-    // Currency symbols with numbers (but we'll extract just the number)
-    /[₹$€£]\s*\d+(\.\d{1,2})?|\d+(\.\d{1,2})?\s*[₹$€£]/g,
-    // Text-based currency mentions (extract number only)
-    /(?:Rs\.?|rs\.?|RS\.?)\s*\d+(\.\d{1,2})?/g,
-    /\d+(\.\d{1,2})?\s*(rupees?|dollars?|euros?|pounds?)/g
-  ];
-
-  // Keywords for expenses
-  private static readonly EXPENSE_KEYWORDS: string[] = [
-    "spent", "bought", "purchased", "paid", "cost",
-    "expense", "payment", "buy", "pay", "shopping",
-    "store", "bill", "receipt", "charged", "withdrew",
-    "withdrawal", "transaction", "fee", "subscription"
-  ];
-
-  // Keywords for action items (kept for reference, but only dot-prefix is used)
-  private static readonly ACTION_KEYWORDS: string[] = [
-    "todo", "to-do", "task", "need to", "should",
-    "must", "have to", "action", "plan", "schedule",
-    "remind", "remember", "don't forget", "important",
-    "deadline", "due", "appointment", "meeting", "call",
-    "email", "follow up", "buy", "get", "pick up", "pack",
-    "finish", "complete", "start", "contact", "reach out",
-    "check", "review", "submit", "apply", "book", "reserve"
-  ];
-
-  // Only dot-prefix detection is used for action items
-  // Format: ". task description" becomes an action item
 
   static async detectActionItemAsync(text: string): Promise<boolean> {
-    if (this.useLLM) {
-      const result = await LLMClassificationService.classifyText(text);
-      return result.type === 'action';
-    }
-    return this.detectActionItem(text);
-  }
-
-  static detectActionItem(text: string): boolean {
-    // Detect action items that start with a dot (simple and explicit)
-    const startsWithDot = /^\s*\.\s*\S/.test(text);
-    if (startsWithDot) {
-      return true;
-    }
-    
-    // Also detect action items with todo keywords
-    const lowerText = text.toLowerCase();
-    const hasTodoKeywords = this.ACTION_KEYWORDS.some(keyword => lowerText.includes(keyword));
-    return hasTodoKeywords;
+    const result = await LLMClassificationService.classifyText(text);
+    return result.type === 'action';
   }
 
   static async detectExpenseAsync(text: string): Promise<boolean> {
-    if (this.useLLM) {
-      const result = await LLMClassificationService.classifyText(text);
-      return result.type === 'expense';
-    }
-    return this.detectExpense(text);
-  }
-
-  static detectExpense(text: string): boolean {
-    const lowerText = text.toLowerCase();
-    
-    // First check for explicit expense keywords with numeric values
-    const hasExpenseKeywords = this.EXPENSE_KEYWORDS.some(keyword => lowerText.includes(keyword));
-    if (hasExpenseKeywords && this.hasNumericValue(text)) {
-      return true;
-    }
-    
-    // Only consider numeric values as expenses if they have strong expense context
-    // AND the text is not just a plain number
-    if (this.hasNumericValue(text) && this.hasExpenseContext(text)) {
-      // Additional check: reject plain numbers without context
-      // If the text is ONLY a number (like "150"), it's probably not an expense
-      const isPlainNumber = /^\s*\d+(\.\d{1,2})?\s*$/.test(text);
-      if (isPlainNumber) {
-        return false; // Don't treat plain numbers as expenses
-      }
-      
-      // Also reject if it's just currency symbol + number without context
-      const isCurrencyOnly = /^\s*(?:Rs\.?|rs\.?|RS\.?|₹|[$€£])\s*\d+(?:\.\d{1,2})?\s*$/.test(text);
-      if (isCurrencyOnly) {
-        return false; // Don't treat "Rs150" alone as expense without context
-      }
-      
-      return true;
-    }
-    
-    return false;
-  }
-
-  // Helper method to check if text contains numeric values
-  private static hasNumericValue(text: string): boolean {
-    // Check for numbers with or without currency symbols
-    return /(?:Rs\.?|rs\.?|RS\.?|₹|[$€£])\s*\d+(?:\.\d{1,2})?|\b\d+(?:\.\d{1,2})?\b/.test(text);
-  }
-
-  // Helper method to check if text has expense-related context
-  private static hasExpenseContext(text: string): boolean {
-    const lowerText = text.toLowerCase();
-    const expenseContexts = [
-      'spent', 'bought', 'purchased', 'paid', 'cost', 'price', 'bill', 'receipt',
-      'shopping', 'store', 'market', 'restaurant', 'cafe', 'food', 'lunch', 'dinner',
-      'gas', 'fuel', 'electricity', 'rent', 'groceries', 'medicine', 'doctor',
-      'haircut', 'salon', 'barber', 'transportation', 'taxi', 'uber', 'lyft',
-      'coffee', 'tea', 'snack', 'movie', 'ticket', 'parking', 'toll'
-    ];
-    
-    // Check for explicit expense contexts
-    const hasDirectContext = expenseContexts.some(context => lowerText.includes(context));
-    if (hasDirectContext) {
-      return true;
-    }
-    
-    // Check for "number + for + item" pattern (e.g., "500 for haircut", "20 for lunch")
-    const forPattern = /\d+(?:\.\d{1,2})?\s+for\s+\w+/i.test(text);
-    if (forPattern) {
-      return true;
-    }
-    
-    // Check for "number + currency + for + item" pattern
-    const currencyForPattern = /(?:Rs\.?|rs\.?|RS\.?|₹|[$€£])\s*\d+(?:\.\d{1,2})?\s+for\s+\w+/i.test(text);
-    if (currencyForPattern) {
-      return true;
-    }
-    
-    return false;
+    const result = await LLMClassificationService.classifyText(text);
+    return result.type === 'expense';
   }
 
   // Get system default currency
@@ -269,47 +122,17 @@ export class TextAnalyzer {
   }
 
   static async extractActionItemAsync(text: string, entryId: string): Promise<ActionItem | null> {
-    if (this.useLLM) {
-      const result = await LLMClassificationService.classifyText(text);
-      
-      if (result.type === 'action') {
-        // Clean up the title - remove leading dot if present
-        let cleanTitle = text.trim();
-        if (cleanTitle.startsWith('.')) {
-          cleanTitle = cleanTitle.substring(1).trim();
-        }
-        
-        // Use LLM-extracted due date if available, otherwise extract ourselves
-        const dueDate = result.extractedData?.dueDate || this.extractDueDate(text);
-        
-        return {
-          id: uuid.v4(),
-          entryId,
-          title: cleanTitle,
-          completed: false,
-          createdAt: new Date(),
-          dueDate: dueDate
-        };
-      }
-    }
+    const result = await LLMClassificationService.classifyText(text);
     
-    return this.extractActionItem(text, entryId);
-  }
-
-  static extractActionItem(text: string, entryId: string): ActionItem | null {
-    if (this.detectActionItem(text)) {
+    if (result.type === 'action') {
       // Clean up the title - remove leading dot if present
       let cleanTitle = text.trim();
       if (cleanTitle.startsWith('.')) {
         cleanTitle = cleanTitle.substring(1).trim();
       }
       
-      // Remove todo keywords from start of text
-      cleanTitle = cleanTitle.replace(/^(todo:|to-do:|task:)\s*/i, '');
-      cleanTitle = cleanTitle.replace(/^(need to|should|must|have to)\s+/i, '');
-      
-      // Extract due date from text
-      const dueDate = this.extractDueDate(text);
+      // Use LLM-extracted due date if available, otherwise extract ourselves
+      const dueDate = result.extractedData?.dueDate || this.extractDueDate(text);
       
       return {
         id: uuid.v4(),
@@ -320,6 +143,7 @@ export class TextAnalyzer {
         dueDate: dueDate
       };
     }
+    
     return null;
   }
 
@@ -433,44 +257,24 @@ export class TextAnalyzer {
   }
 
   static async extractExpenseInfoAsync(text: string, entryId: string): Promise<Expense | null> {
-    if (this.useLLM) {
-      const result = await LLMClassificationService.classifyText(text);
-      
-      if (result.type === 'expense' && result.extractedData) {
-        const amount = result.extractedData.amount || this.extractAmount(text)?.value;
-        if (!amount) return null;
+    const result = await LLMClassificationService.classifyText(text);
+    
+    if (result.type === 'expense' && result.extractedData) {
+      const amount = result.extractedData.amount || this.extractAmount(text)?.value;
+      if (!amount) return null;
 
-        return {
-          id: uuid.v4(),
-          entryId,
-          amount,
-          currency: result.extractedData.currency || this.getSystemCurrency(),
-          description: text.trim(),
-          category: result.extractedData.category || 'Other',
-          createdAt: new Date()
-        };
-      }
+      return {
+        id: uuid.v4(),
+        entryId,
+        amount,
+        currency: result.extractedData.currency || this.getSystemCurrency(),
+        description: text.trim(),
+        category: result.extractedData.category || 'Other',
+        createdAt: new Date()
+      };
     }
     
-    return this.extractExpenseInfo(text, entryId);
-  }
-
-  static extractExpenseInfo(text: string, entryId: string): Expense | null {
-    const amount = this.extractAmount(text);
-    if (!amount) return null;
-
-    // Extract category and clean description from the text
-    const categoryInfo = this.extractCategoryFromText(text);
-
-    return {
-      id: uuid.v4(),
-      entryId,
-      amount: amount.value,
-      currency: amount.currency,
-      description: categoryInfo.description,
-      category: categoryInfo.category,
-      createdAt: new Date()
-    };
+    return null;
   }
 
   // Extract category and keep full description from expense text
@@ -682,10 +486,5 @@ export class TextAnalyzer {
     const finalAmount = `${integerPart}.${parts[1]}`;
     
     return `${symbol}${finalAmount}`;
-  }
-
-  static isExpenseRelated(text: string): boolean {
-    const lowerText = text.toLowerCase();
-    return this.EXPENSE_KEYWORDS.some((keyword: string) => lowerText.includes(keyword));
   }
 }

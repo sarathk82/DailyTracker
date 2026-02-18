@@ -484,7 +484,7 @@ export const JournalScreen: React.FC<{}> = () => {
 
       // Convert dot-prefix to checkbox format for display
       let displayText = trimmedInput;
-      const autoDetectedAction = TextAnalyzer.detectActionItem(trimmedInput);
+      const autoDetectedAction = await TextAnalyzer.detectActionItemAsync(trimmedInput);
       if (autoDetectedAction || forceAction) {
         displayText = convertDotToCheckbox(trimmedInput);
       }
@@ -517,9 +517,9 @@ export const JournalScreen: React.FC<{}> = () => {
         let entryType = 'log';
         
         // Check for expense (auto-detect OR user explicitly marked it)
-        const autoDetectedExpense = TextAnalyzer.detectExpense(trimmedInput);
+        const autoDetectedExpense = await TextAnalyzer.detectExpenseAsync(trimmedInput);
         if (autoDetectedExpense || forceExpense) {
-          const expenseInfo = TextAnalyzer.extractExpenseInfo(trimmedInput, entry.id);
+          const expenseInfo = await TextAnalyzer.extractExpenseInfoAsync(trimmedInput, entry.id);
           if (expenseInfo) {
             expenseInfo.autoDetected = autoDetectedExpense && !forceExpense;
             await StorageService.addExpense(expenseInfo);
@@ -554,7 +554,7 @@ export const JournalScreen: React.FC<{}> = () => {
               autoDetected: false
             };
           } else {
-            actionItem = TextAnalyzer.extractActionItem(trimmedInput, entry.id);
+            actionItem = await TextAnalyzer.extractActionItemAsync(trimmedInput, entry.id);
             if (actionItem) {
               actionItem.autoDetected = autoDetectedAction && !forceAction;
             }
@@ -678,7 +678,7 @@ export const JournalScreen: React.FC<{}> = () => {
   const markAsExpense = async (entry: Entry) => {
     if (entry.type === "expense") return;
 
-    const expenseInfo = TextAnalyzer.extractExpenseInfo(entry.text, entry.id);
+    const expenseInfo = await TextAnalyzer.extractExpenseInfoAsync(entry.text, entry.id);
     if (expenseInfo) {
       expenseInfo.autoDetected = false; // Manually categorized
       await StorageService.addExpense(expenseInfo);
@@ -697,7 +697,7 @@ export const JournalScreen: React.FC<{}> = () => {
     if (entry.type === "action") return;
 
     // Try to extract using TextAnalyzer, but if that fails, create manually
-    let actionItem = TextAnalyzer.extractActionItem(entry.text, entry.id);
+    let actionItem = await TextAnalyzer.extractActionItemAsync(entry.text, entry.id);
     
     if (!actionItem) {
       // Create action item manually from the text

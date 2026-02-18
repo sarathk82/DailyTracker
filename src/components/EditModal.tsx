@@ -285,7 +285,7 @@ export const EditModal: React.FC<EditModalProps> = ({
                       if (editingEntry.type === 'action') {
                         await removeCategory(editingEntry);
                       }
-                      const expenseInfo = TextAnalyzer.extractExpenseInfo(editText, editingEntry.id);
+                      const expenseInfo = await TextAnalyzer.extractExpenseInfoAsync(editText, editingEntry.id);
                       if (expenseInfo) {
                         setEditAmount(expenseInfo.amount.toString());
                         setEditCategory(expenseInfo.category || "");
