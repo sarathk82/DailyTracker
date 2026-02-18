@@ -41,7 +41,7 @@ jobs:
           EOF
       
       - name: Build web app
-        run: npx expo export --platform web --public-url /DailyTracker/
+        run: npx expo export --platform web
       
       - name: Copy PWA files
         run: |

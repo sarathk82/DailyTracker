@@ -22,7 +22,7 @@ fi
 
 # Step 1: Build web version
 echo -e "\n${GREEN}Step 1: Building web version...${NC}"
-npx expo export --platform web --public-url /DailyTracker/
+npx expo export --platform web
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Build failed!${NC}"
