@@ -22,29 +22,33 @@ fi
 
 # Step 1: Build web version
 echo -e "\n${GREEN}Step 1: Building web version...${NC}"
-export EXPO_PUBLIC_URL=/DailyTracker/
-npx expo export:web
+npx expo export --platform web
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}❌ Build failed!${NC}"
     exit 1
 fi
 
-# Step 2: Copy additional files to web-build
-echo -e "\n${GREEN}Step 2: Copying additional files...${NC}"
+# Step 2: Fix paths for GitHub Pages subdirectory
+echo -e "\n${GREEN}Step 2: Fixing paths for GitHub Pages...${NC}"
+chmod +x fix-gh-pages-paths.sh
+./fix-gh-pages-paths.sh dist
+
+# Step 3: Copy additional files to dist
+echo -e "\n${GREEN}Step 3: Copying additional files...${NC}"
 if [ -f "public/manifest.json" ]; then
-    cp public/manifest.json web-build/
+    cp public/manifest.json dist/
 fi
 if [ -f "public/service-worker.js" ]; then
-    cp public/service-worker.js web-build/
+    cp public/service-worker.js dist/
 fi
 if [ -f "public/offline.html" ]; then
-    cp public/offline.html web-build/
+    cp public/offline.html dist/
 fi
 
-# Step 3: Deploy to GitHub Pages
-echo -e "\n${GREEN}Step 3: Deploying to GitHub Pages...${NC}"
-npx gh-pages -d web-build -m "Deploy $(date '+%Y-%m-%d %H:%M:%S')"
+# Step 4: Deploy to GitHub Pages
+echo -e "\n${GREEN}Step 4: Deploying to GitHub Pages...${NC}"
+npx gh-pages -d dist -m "Deploy $(date '+%Y-%m-%d %H:%M:%S')"
 
 if [ $? -eq 0 ]; then
     echo -e "\n${GREEN}✅ Deployment successful!${NC}"

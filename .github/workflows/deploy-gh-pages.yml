@@ -41,26 +41,29 @@ jobs:
           EOF
       
       - name: Build web app
+        run: npx expo export --platform web
+      
+      - name: Fix paths for GitHub Pages subdirectory
         run: |
-          export EXPO_PUBLIC_URL=/DailyTracker/
-          npx expo export:web
+          chmod +x fix-gh-pages-paths.sh
+          ./fix-gh-pages-paths.sh dist
       
       - name: Copy PWA files
         run: |
           if [ -f "public/manifest.json" ]; then
-            cp public/manifest.json web-build/
+            cp public/manifest.json dist/
           fi
           if [ -f "public/service-worker.js" ]; then
-            cp public/service-worker.js web-build/
+            cp public/service-worker.js dist/
           fi
           if [ -f "public/offline.html" ]; then
-            cp public/offline.html web-build/
+            cp public/offline.html dist/
           fi
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./web-build
+          publish_dir: ./dist
           commit_message: "Deploy: ${{ github.sha }}"
           allow_empty_commit: true
