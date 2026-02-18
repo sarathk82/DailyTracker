@@ -7,15 +7,19 @@ import { getAnalytics } from 'firebase/analytics';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// 🔐 SECURITY: Environment variables from .env file
+// Expo uses EXPO_PUBLIC_ prefix for client-side environment variables
+// See .env.example for setup instructions
+// IMPORTANT: Regenerate all Firebase keys if old ones were exposed!
 export const firebaseConfig = {
-  apiKey: "AIzaSyAcKWMQHjUtAq9Bu-W57JI0E6vipRH3WkY",
-  authDomain: "smpl-journal.firebaseapp.com",
-  projectId: "smpl-journal",
-  storageBucket: "smpl-journal.firebasestorage.app",
-  messagingSenderId: "290585147080",
-  appId: "1:290585147080:web:215f6530a93fc6ec0f57fd",
-  measurementId: "G-C2ENYKTYXW",
-  databaseURL: "https://smpl-journal-default-rtdb.asia-southeast1.firebasedatabase.app"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyAcKWMQHjUtAq9Bu-W57JI0E6vipRH3WkY",
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "smpl-journal.firebaseapp.com",
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "smpl-journal",
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "smpl-journal.firebasestorage.app",
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "290585147080",
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:290585147080:web:215f6530a93fc6ec0f57fd",
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-C2ENYKTYXW",
+  databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL || "https://smpl-journal-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 // Initialize Firebase
