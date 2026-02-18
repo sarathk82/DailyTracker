@@ -43,24 +43,24 @@ jobs:
       - name: Build web app
         run: |
           export EXPO_PUBLIC_URL=/DailyTracker/
-          npx expo export --platform web
+          npx expo export:web
       
       - name: Copy PWA files
         run: |
           if [ -f "public/manifest.json" ]; then
-            cp public/manifest.json dist/
+            cp public/manifest.json web-build/
           fi
           if [ -f "public/service-worker.js" ]; then
-            cp public/service-worker.js dist/
+            cp public/service-worker.js web-build/
           fi
           if [ -f "public/offline.html" ]; then
-            cp public/offline.html dist/
+            cp public/offline.html web-build/
           fi
       
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          publish_dir: ./web-build
           commit_message: "Deploy: ${{ github.sha }}"
           allow_empty_commit: true
