@@ -884,21 +884,32 @@ export class P2PSyncService {
   private static async getDeviceName(): Promise<string> {
     // Get readable device name based on platform
     if (Platform.OS === 'web') {
-      // Web: Use browser info
+      // Web: Try to get computer name from browser, fallback to user agent detection
       const userAgent = navigator.userAgent;
-      if (userAgent.includes('Mac')) return 'MacBook';
-      if (userAgent.includes('Windows')) return 'Windows PC';
+      
+      // Try to extract device name from user agent
+      if (userAgent.includes('Mac')) {
+        // Extract Mac model if available
+        const macMatch = userAgent.match(/Mac OS X ([0-9_]+)/);
+        return macMatch ? `MacBook (macOS ${macMatch[1].replace(/_/g, '.')})` : 'MacBook';
+      }
+      if (userAgent.includes('Windows')) {
+        const winMatch = userAgent.match(/Windows NT ([0-9.]+)/);
+        return winMatch ? `Windows PC (${winMatch[1]})` : 'Windows PC';
+      }
       if (userAgent.includes('Linux')) return 'Linux PC';
       if (userAgent.includes('iPad')) return 'iPad';
       return 'Web Browser';
     } else {
-      // Native: Use device model
-      const deviceName = Device.deviceName; // e.g., "iPhone 14 Pro"
-      const modelName = Device.modelName; // e.g., "iPhone15,2"
+      // Native: Get device name
+      // Device.deviceName gives us the user-set name like "John's iPhone" on iOS
+      // or the model name on Android
+      const deviceName = Device.deviceName; // User-set name or model
+      const modelName = Device.modelName; // Model identifier
       const osName = Device.osName; // "iOS" or "Android"
       
-      // Prefer deviceName (human-readable), fallback to modelName
-      if (deviceName) {
+      // Use deviceName if available (this is the user-friendly name)
+      if (deviceName && deviceName !== 'unknown') {
         return deviceName;
       } else if (modelName) {
         return `${osName} ${modelName}`;
