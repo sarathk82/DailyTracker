@@ -46,5 +46,10 @@ module.exports = async function (env, argv) {
     })
   );
 
+  // Set publicPath for GitHub Pages subdirectory deployment
+  if (process.env.EXPO_PUBLIC_URL) {
+    config.output.publicPath = process.env.EXPO_PUBLIC_URL;
+  }
+
   return config;
 };
