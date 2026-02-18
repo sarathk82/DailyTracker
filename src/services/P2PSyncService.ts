@@ -1,6 +1,7 @@
 import Peer, { DataConnection } from 'peerjs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import * as Device from 'expo-device';
 import { ref, set, onValue, remove, get } from 'firebase/database';
 import { realtimeDb } from '../config/firebase';
 import { Entry, Expense, ActionItem } from '../types';
@@ -858,8 +859,30 @@ export class P2PSyncService {
   }
 
   private static async getDeviceName(): Promise<string> {
-    // You can customize this based on platform
-    return `Device ${this.deviceId?.substring(0, 8)}`;
+    // Get readable device name based on platform
+    if (Platform.OS === 'web') {
+      // Web: Use browser info
+      const userAgent = navigator.userAgent;
+      if (userAgent.includes('Mac')) return 'MacBook';
+      if (userAgent.includes('Windows')) return 'Windows PC';
+      if (userAgent.includes('Linux')) return 'Linux PC';
+      if (userAgent.includes('iPad')) return 'iPad';
+      return 'Web Browser';
+    } else {
+      // Native: Use device model
+      const deviceName = Device.deviceName; // e.g., "iPhone 14 Pro"
+      const modelName = Device.modelName; // e.g., "iPhone15,2"
+      const osName = Device.osName; // "iOS" or "Android"
+      
+      // Prefer deviceName (human-readable), fallback to modelName
+      if (deviceName) {
+        return deviceName;
+      } else if (modelName) {
+        return `${osName} ${modelName}`;
+      } else {
+        return `${osName} Device`;
+      }
+    }
   }
 
   private static async updateLastSyncTime(deviceId: string): Promise<void> {
