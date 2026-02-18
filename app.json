@@ -33,7 +33,8 @@
     },
     "web": {
       "favicon": "./assets/smpljournal.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "baseUrl": "/DailyTracker/"
     },
     "owner": "sarathk82",
     "updates": {
