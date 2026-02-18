@@ -22,6 +22,7 @@ fi
 
 # Step 1: Build web version
 echo -e "\n${GREEN}Step 1: Building web version...${NC}"
+export EXPO_PUBLIC_URL=/DailyTracker/
 npx expo export --platform web
 
 if [ $? -ne 0 ]; then
