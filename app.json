@@ -33,7 +33,7 @@
     },
     "web": {
       "favicon": "./assets/smpljournal.png",
-      "bundler": "metro"
+      "bundler": "webpack"
     },
     "owner": "sarathk82",
     "updates": {
