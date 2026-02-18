@@ -36,6 +36,31 @@ export const DevicePairingScreen: React.FC = () => {
 
   const dynamicStyles = getStyles(theme);
 
+  // Cross-platform alert helper (Alert.alert doesn't work well on web)
+  const showAlert = (title: string, message?: string, buttons?: Array<{text: string, onPress?: () => void, style?: 'default' | 'cancel' | 'destructive'}>) => {
+    if (Platform.OS === 'web') {
+      const fullMessage = message ? `${title}\n\n${message}` : title;
+      if (buttons && buttons.length > 1) {
+        // Confirmation dialog
+        const confirmed = window.confirm(fullMessage);
+        if (confirmed && buttons[1].onPress) {
+          buttons[1].onPress();
+        } else if (!confirmed && buttons[0].onPress) {
+          buttons[0].onPress();
+        }
+      } else {
+        // Simple alert
+        window.alert(fullMessage);
+        if (buttons && buttons[0].onPress) {
+          buttons[0].onPress();
+        }
+      }
+    } else {
+      // Mobile: Use native Alert.alert
+      Alert.alert(title, message, buttons);
+    }
+  };
+
   useEffect(() => {
     initializeP2P();
     loadPairedDevices();
@@ -222,7 +247,7 @@ export const DevicePairingScreen: React.FC = () => {
 
   const handleManualPair = async () => {
     if (!manualCode.trim()) {
-      Alert.alert('Error', 'Please enter a pairing code');
+      showAlert('Error', 'Please enter a pairing code');
       return;
     }
 
@@ -242,7 +267,7 @@ export const DevicePairingScreen: React.FC = () => {
       await P2PSyncService.syncWithDevice(pairingData.deviceId);
       console.log('[DevicePairing] Manual pair sync completed');
       
-      Alert.alert(
+      showAlert(
         'Device Paired & Synced',
         'Device paired and data synced successfully! Use "Sync Now" button for future syncs.'
       );
@@ -251,13 +276,13 @@ export const DevicePairingScreen: React.FC = () => {
       setLoading(false);
     } catch (error: any) {
       console.error('[DevicePairing] Manual pairing error:', error);
-      Alert.alert('Pairing Error', error.message);
+      showAlert('Pairing Error', error.message);
       setLoading(false);
     }
   };
 
   const handleClearAllDevices = async () => {
-    Alert.alert(
+    showAlert(
       'Clear All Paired Devices?',
       'This will remove all device pairings. You can always pair them again.',
       [
@@ -275,9 +300,9 @@ export const DevicePairingScreen: React.FC = () => {
                 await AsyncStorage.removeItem(`@sync_key_${device.id}`);
               }
               await loadPairedDevices();
-              Alert.alert('Success', 'All devices cleared');
+              showAlert('Success', 'All devices cleared');
             } catch (error: any) {
-              Alert.alert('Error', 'Failed to clear devices: ' + error.message);
+              showAlert('Error', 'Failed to clear devices: ' + error.message);
             }
           }
         }
@@ -295,7 +320,7 @@ export const DevicePairingScreen: React.FC = () => {
       
       console.log('[DevicePairing] Bidirectional sync completed successfully');
       // Success message only on device that clicked the button
-      Alert.alert(
+      showAlert(
         '✓ Sync Complete',
         'Data synchronized successfully on both devices.',
         [{ text: 'OK' }]
@@ -303,7 +328,7 @@ export const DevicePairingScreen: React.FC = () => {
       setSyncing(false);
     } catch (error: any) {
       console.error('[DevicePairing] Sync error:', error);
-      Alert.alert('Sync Failed', error.message || 'Could not sync with device');
+      showAlert('Sync Failed', error.message || 'Could not sync with device');
       setSyncing(false);
     }
   };
