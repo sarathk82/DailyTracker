@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { Platform } from 'react-native';
 import { initializeApp } from 'firebase/app';
 import {
   getAuth,
@@ -16,13 +17,46 @@ import {
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 import { firebaseConfig } from '../config/firebase';
-import { generateSalt, generateMasterKey } from '../utils/encryption';
+import { generateSalt, generateMasterKey, validatePassword } from '../utils/encryption';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 export const db = getFirestore(app);
+
+/**
+ * Secure key storage wrapper
+ * Uses SecureStore on native platforms, AsyncStorage on web (less secure but available)
+ */
+const SecureKeyStorage = {
+  async setItem(key: string, value: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      // Web: Use AsyncStorage (less secure, but SecureStore not available)
+      await AsyncStorage.setItem(key, value);
+    } else {
+      // Native: Use SecureStore (iOS Keychain, Android KeyStore)
+      await SecureStore.setItemAsync(key, value);
+    }
+  },
+  
+  async getItem(key: string): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      return await AsyncStorage.getItem(key);
+    } else {
+      return await SecureStore.getItemAsync(key);
+    }
+  },
+  
+  async removeItem(key: string): Promise<void> {
+    if (Platform.OS === 'web') {
+      await AsyncStorage.removeItem(key);
+    } else {
+      await SecureStore.deleteItemAsync(key);
+    }
+  }
+};
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -69,14 +103,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(firebaseUser);
       
       if (firebaseUser) {
-        // Try to load cached master key
-        const cachedKey = await AsyncStorage.getItem('masterKey');
+        // Try to load cached master key from secure storage
+        const cachedKey = await SecureKeyStorage.getItem('masterKey');
         if (cachedKey) {
           setMasterKey(cachedKey);
         }
       } else {
         setMasterKey(null);
-        await AsyncStorage.removeItem('masterKey');
+        await SecureKeyStorage.removeItem('masterKey');
       }
       
       setLoading(false);
@@ -87,6 +121,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUp = async (email: string, password: string, displayName: string) => {
     try {
+      // Validate password strength
+      const validation = validatePassword(password);
+      if (!validation.valid) {
+        throw new Error(validation.message);
+      }
+
       // Create Firebase user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
@@ -107,8 +147,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         lastSync: new Date().toISOString(),
       });
 
-      // Cache master key locally
-      await AsyncStorage.setItem('masterKey', key);
+      // Cache master key in secure storage
+      await SecureKeyStorage.setItem('masterKey', key);
       setMasterKey(key);
     } catch (error: any) {
       console.error('Sign up error:', error);
@@ -135,8 +175,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Generate master key from password
       const key = await generateMasterKey(password, salt);
 
-      // Cache master key locally
-      await AsyncStorage.setItem('masterKey', key);
+      // Cache master key in secure storage
+      await SecureKeyStorage.setItem('masterKey', key);
       setMasterKey(key);
     } catch (error: any) {
       console.error('Sign in error:', error);
@@ -147,7 +187,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       await signOut(auth);
-      await AsyncStorage.removeItem('masterKey');
+      await SecureKeyStorage.removeItem('masterKey');
       setMasterKey(null);
     } catch (error: any) {
       console.error('Logout error:', error);
@@ -188,7 +228,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           lastSync: new Date().toISOString(),
         });
 
-        await AsyncStorage.setItem('masterKey', key);
+        await SecureKeyStorage.setItem('masterKey', key);
         setMasterKey(key);
       } else {
         // Existing user - retrieve encryption key
@@ -197,7 +237,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const defaultPassword = firebaseUser.uid;
         const key = await generateMasterKey(defaultPassword, salt);
 
-        await AsyncStorage.setItem('masterKey', key);
+        await SecureKeyStorage.setItem('masterKey', key);
         setMasterKey(key);
       }
     } catch (error: any) {

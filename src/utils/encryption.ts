@@ -1,74 +1,59 @@
 import aes from 'aes-js';
+import { pbkdf2 } from '@noble/hashes/pbkdf2';
+import { sha256 } from '@noble/hashes/sha2';
 
 /**
  * Encryption utilities for end-to-end encrypted cloud sync
  * Uses AES-256-CTR encryption - React Native compatible
  * Pure JavaScript implementation, no native dependencies
+ * 
+ * Security improvements (Feb 2026):
+ * - Replaced custom KDF with industry-standard PBKDF2-HMAC-SHA256
+ * - Increased iterations from 1,000 to 100,000 (OWASP recommendation)
+ * - Removed Math.random() fallback (requires crypto.getRandomValues)
  */
 
 const KEY_SIZE = 32; // 256 bits
+const PBKDF2_ITERATIONS = 100000; // OWASP recommendation for 2024+
 
 /**
- * Simple PBKDF2-like key derivation using repeated mixing
- * React Native compatible, no native crypto module needed
- */
-async function simpleKeyDerivation(password: string, salt: string, iterations: number): Promise<Uint8Array> {
-  const encoder = new TextEncoder();
-  // Initial key from password + salt
-  let key = encoder.encode(password + salt + iterations.toString());
-  
-  // Simple mixing function for key stretching
-  for (let i = 0; i < iterations; i++) {
-    // Mix in iteration number to ensure different output each time
-    const iterBytes = encoder.encode(i.toString());
-    const newKey = new Uint8Array(key.length + iterBytes.length);
-    for (let j = 0; j < newKey.length; j++) {
-      // XOR and rotate for mixing
-      if (j < key.length) {
-        newKey[j] = key[j] ^ iterBytes[j % iterBytes.length] ^ (j & 0xFF);
-      } else {
-        newKey[j] = iterBytes[j % iterBytes.length] ^ ((i + j) & 0xFF);
-      }
-    }
-    key = newKey;
-  }
-  
-  // Ensure exactly 32 bytes with final mixing
-  const result = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) {
-    // Mix multiple bytes from key into each output byte
-    result[i] = key[i % key.length] ^ key[(i * 7) % key.length] ^ key[(i * 13) % key.length];
-  }
-  return result;
-}
-
-/**
- * Generate a master encryption key from user password
+ * Generate a master encryption key from user password using PBKDF2
+ * Uses industry-standard PBKDF2-HMAC-SHA256 with 100,000 iterations
  * @param password User's password
  * @param salt Unique salt for this user (stored in Firestore)
  * @returns Derived encryption key as hex string
  */
 export async function generateMasterKey(password: string, salt: string): Promise<string> {
-  const keyBytes = await simpleKeyDerivation(password, salt, 1000);
+  // Convert password and salt to Uint8Array
+  const encoder = new TextEncoder();
+  const passwordBytes = encoder.encode(password);
+  const saltBytes = encoder.encode(salt);
+  
+  // Derive key using PBKDF2-HMAC-SHA256 with 100,000 iterations
+  const keyBytes = pbkdf2(sha256, passwordBytes, saltBytes, {
+    c: PBKDF2_ITERATIONS,
+    dkLen: KEY_SIZE
+  });
+  
   return Array.from(keyBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**
- * Generate a random salt for new users
- * Uses crypto.getRandomValues or Math.random as fallback
- * @returns Random hex string
+ * Generate a cryptographically secure random salt for new users
+ * Requires crypto.getRandomValues - no insecure fallback
+ * @returns Random hex string (32 characters = 16 bytes)
+ * @throws Error if crypto.getRandomValues is unavailable
  */
 export function generateSalt(): string {
-  // Generate 16 random bytes (React Native compatible)
-  const randomBytes = new Uint8Array(16);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(randomBytes);
-  } else {
-    // Fallback to Math.random
-    for (let i = 0; i < 16; i++) {
-      randomBytes[i] = Math.floor(Math.random() * 256);
-    }
+  // Require crypto.getRandomValues - no Math.random() fallback for security
+  if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+    throw new Error('crypto.getRandomValues is required but unavailable. Cannot generate secure salt.');
   }
+  
+  // Generate 16 random bytes
+  const randomBytes = new Uint8Array(16);
+  crypto.getRandomValues(randomBytes);
+  
   return Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -100,15 +85,12 @@ export function encryptData(data: any, masterKey: string): string {
       }
     }
     
-    // Generate random IV (16 bytes)
-    const iv = new Uint8Array(16);
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      crypto.getRandomValues(iv);
-    } else {
-      for (let i = 0; i < 16; i++) {
-        iv[i] = Math.floor(Math.random() * 256);
-      }
+    // Generate cryptographically secure random IV (16 bytes)
+    if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+      throw new Error('crypto.getRandomValues is required for secure encryption');
     }
+    const iv = new Uint8Array(16);
+    crypto.getRandomValues(iv);
     
     // Create Counter for CTR mode
     const counter = new aes.Counter(iv);
