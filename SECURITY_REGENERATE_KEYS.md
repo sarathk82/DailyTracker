@@ -156,6 +156,26 @@ Set up monitoring for:
 - [ ] Team notified
 - [ ] Incident documented
 
+## GitHub Pages / Web Deployment
+
+After updating your `.env` file with new credentials:
+
+### Local Deployments
+Your existing deployment script will work automatically:
+```bash
+./deploy-gh-pages.sh
+```
+Expo reads the `.env` file during build.
+
+### Automated Deployments (GitHub Actions)
+If using automated deployments, add Firebase credentials as GitHub Secrets:
+
+1. Go to GitHub repository **Settings** → **Secrets and variables** → **Actions**
+2. Add all 8 `EXPO_PUBLIC_*` variables as secrets
+3. GitHub Actions will create `.env` from secrets during build
+
+See [GITHUB_PAGES_SETUP.md](GITHUB_PAGES_SETUP.md) for detailed instructions.
+
 ## Support
 
 - **Firebase Support:** https://firebase.google.com/support
@@ -165,8 +185,8 @@ Set up monitoring for:
 
 - **Exposed:** Unknown (check git history)
 - **Discovered:** February 18, 2026
-- **Mitigated:** [TO BE COMPLETED]
-- **Fully Resolved:** [TO BE COMPLETED]
+- **Mitigated:** February 18, 2026 (environment variables + new API key)
+- **Fully Resolved:** [TO BE COMPLETED after monitoring period]
 
 ---
 
