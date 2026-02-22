@@ -38,6 +38,7 @@ export class P2PSyncService {
   private static onSyncCallback: ((data: SyncData) => void) | null = null;
   private static onPeerOnlineCallback: ((deviceId: string) => void) | null = null;
   private static onDataRefreshCallback: (() => void) | null = null;
+  private static firebaseUnsubscribe: (() => void) | null = null;
 
   /**
    * Initialize P2P service - get or create device ID
@@ -638,6 +639,12 @@ export class P2PSyncService {
       this.peer.destroy();
       this.peer = null;
     }
+    
+    // Clean up Firebase listener
+    if (this.firebaseUnsubscribe) {
+      this.firebaseUnsubscribe();
+      this.firebaseUnsubscribe = null;
+    }
   }
   
   /**
@@ -650,12 +657,19 @@ export class P2PSyncService {
       return;
     }
     
+    // Clean up existing listener if it exists
+    if (this.firebaseUnsubscribe) {
+      console.log('[Firebase Relay] Cleaning up existing listener');
+      this.firebaseUnsubscribe();
+      this.firebaseUnsubscribe = null;
+    }
+    
     console.log('[Firebase Relay] Initializing listener for device:', this.deviceId, 'on platform:', Platform.OS);
     
     // Listen for sync data sent to this device
     const syncRef = ref(realtimeDb, `sync/${this.deviceId}`);
     
-    onValue(syncRef, async (snapshot) => {
+    this.firebaseUnsubscribe = onValue(syncRef, async (snapshot) => {
       console.log('[Firebase Relay] Snapshot received');
       const data = snapshot.val();
       console.log('[Firebase Relay] Data exists:', !!data);

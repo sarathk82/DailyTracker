@@ -87,7 +87,8 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
         </TouchableOpacity>
         <TouchableOpacity
           style={{ flex: 1, marginLeft: 8 }}
-          onPress={() => onEdit(item)}
+          onPress={Platform.OS === 'web' ? () => onEdit(item) : undefined}
+          onLongPress={Platform.OS !== 'web' ? () => onEdit(item) : undefined}
           activeOpacity={0.7}
         >
           <Markdown style={{
@@ -125,14 +126,16 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
           )}
         </View>
         <View style={dynamicStyles.itemActions}>
-          <TouchableOpacity
-            style={dynamicStyles.actionButton}
-            onPress={() => onEdit(item)}
-            activeOpacity={0.7}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-          >
-            <Text style={{ fontSize: 18 }}>✏️</Text>
-          </TouchableOpacity>
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={dynamicStyles.actionButton}
+              onPress={() => onEdit(item)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            >
+              <Text style={{ fontSize: 18 }}>✏️</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[dynamicStyles.actionButton, dynamicStyles.deleteButton]}
             onPress={() => onDelete(item.id)}

@@ -211,6 +211,21 @@ export const EditModal: React.FC<EditModalProps> = ({
     }
   };
 
+  const handleMarkComplete = async () => {
+    if (!actionItem) return;
+    
+    try {
+      await StorageService.updateActionItem(actionItem.id, {
+        completed: !actionItem.completed,
+      });
+      handleClose();
+      onSave();
+    } catch (error) {
+      console.error('Error marking action item as complete:', error);
+      Alert.alert('Error', 'Failed to mark action item as complete');
+    }
+  };
+
   if (!editingEntry) return null;
 
   const dynamicStyles = createDynamicStyles(theme);
@@ -224,14 +239,18 @@ export const EditModal: React.FC<EditModalProps> = ({
     >
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <View style={dynamicStyles.editModalOverlay}>
-          <View style={dynamicStyles.editModalContent}>
+          <View style={[
+            dynamicStyles.editModalContent,
+            Platform.OS === 'android' && keyboardHeight > 0 && { maxHeight: '70%' }
+          ]}>
             <ScrollView 
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 20 }}
+              keyboardShouldPersistTaps="handled"
             >
               <Text style={dynamicStyles.editModalTitle}>Edit Entry</Text>
               
@@ -370,13 +389,23 @@ export const EditModal: React.FC<EditModalProps> = ({
                 </>
               )}
               
-                  <View style={dynamicStyles.editModalButtons}>
+              <View style={dynamicStyles.editModalButtons}>
                 <TouchableOpacity
                   style={[dynamicStyles.editModalButton, dynamicStyles.editModalButtonCancel]}
                   onPress={handleClose}
                 >
                   <Text style={dynamicStyles.editModalButtonText}>Cancel</Text>
                 </TouchableOpacity>
+                {editingEntry.type === 'action' && actionItem && (
+                  <TouchableOpacity
+                    style={[dynamicStyles.editModalButton, dynamicStyles.editModalButtonComplete]}
+                    onPress={handleMarkComplete}
+                  >
+                    <Text style={[dynamicStyles.editModalButtonText, { color: theme.surface }]}>
+                      {actionItem.completed ? 'Mark Incomplete' : 'Mark Complete'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={[dynamicStyles.editModalButton, dynamicStyles.editModalButtonSave]}
                   onPress={handleSave}
@@ -498,6 +527,9 @@ const createDynamicStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.cardBackground,
     borderWidth: 1,
     borderColor: theme.border,
+  },
+  editModalButtonComplete: {
+    backgroundColor: '#4caf50',
   },
   editModalButtonSave: {
     backgroundColor: theme.primary,

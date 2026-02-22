@@ -1,6 +1,6 @@
 import aes from 'aes-js';
-import { pbkdf2 } from '@noble/hashes/pbkdf2';
-import { sha256 } from '@noble/hashes/sha2';
+import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 
 /**
  * Encryption utilities for end-to-end encrypted cloud sync

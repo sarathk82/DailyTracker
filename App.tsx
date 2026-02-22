@@ -1,8 +1,8 @@
 // IMPORTANT: Must be imported first to polyfill crypto.getRandomValues for React Native
 import 'react-native-get-random-values';
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ActivityIndicator, AppState, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -13,12 +13,61 @@ import { AuthScreen } from './src/screens/AuthScreen';
 import { DevicePairingScreen } from './src/screens/DevicePairingScreen';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { P2PSyncService } from './src/services/P2PSyncService';
 
 const Tab = createBottomTabNavigator();
 
 function AppNavigator() {
   const { theme, isDark } = useTheme();
   const { user, loading } = useAuth();
+  const appState = useRef(AppState.currentState);
+  const [syncInitialized, setSyncInitialized] = useState(false);
+  
+  // Initialize P2P sync service on app startup
+  useEffect(() => {
+    const initSync = async () => {
+      try {
+        console.log('[App] Initializing P2P sync service...');
+        await P2PSyncService.initialize();
+        setSyncInitialized(true);
+        console.log('[App] P2P sync service initialized');
+      } catch (error) {
+        console.error('[App] Failed to initialize P2P sync service:', error);
+      }
+    };
+    
+    initSync();
+  }, []);
+  
+  // Handle app state changes (background/foreground) on mobile
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      // Web doesn't need AppState handling
+      return;
+    }
+    
+    const subscription = AppState.addEventListener('change', async (nextAppState) => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        // App has come to the foreground - re-initialize sync to ensure listeners are active
+        console.log('[App] App foregrounded, re-initializing sync...');
+        try {
+          await P2PSyncService.initialize();
+          console.log('[App] Sync re-initialized on foreground');
+        } catch (error) {
+          console.error('[App] Failed to re-initialize sync on foreground:', error);
+        }
+      }
+      
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
   
   // Show loading spinner while checking auth state
   if (loading) {

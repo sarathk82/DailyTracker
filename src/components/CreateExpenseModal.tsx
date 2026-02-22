@@ -134,7 +134,8 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     >
       <KeyboardAvoidingView
         style={dynamicStyles.modalContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <TouchableOpacity
           style={dynamicStyles.modalOverlay}
@@ -144,9 +145,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         <View
           style={[
             dynamicStyles.modalContent,
-            Platform.OS === 'android' && keyboardHeight > 0
-              ? { marginBottom: keyboardHeight }
-              : {},
+            Platform.OS === 'android' && keyboardHeight > 0 && { maxHeight: '70%' }
           ]}
         >
           <View style={dynamicStyles.modalHeader}>
@@ -156,7 +155,11 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={dynamicStyles.modalBody} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={dynamicStyles.modalBody} 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={dynamicStyles.inputGroup}>
               <Text style={dynamicStyles.label}>Amount *</Text>
               <View style={dynamicStyles.amountRow}>

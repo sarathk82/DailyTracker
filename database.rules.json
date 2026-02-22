@@ -1,0 +1,54 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    
+    "sync": {
+      "$deviceId": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.hasChildren(['timestamp']) && newData.child('timestamp').isNumber()",
+        
+        "type": {
+          ".validate": "newData.isString() && (newData.val() === 'pairing_confirmation' || newData.val() === 'sync_data')"
+        },
+        
+        "fromDevice": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+        },
+        
+        "deviceName": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200"
+        },
+        
+        "syncKey": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+        },
+        
+        "data": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1048576"
+        },
+        
+        "timestamp": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000 && newData.val() >= now - 60000"
+        },
+        
+        "bidirectional": {
+          ".validate": "newData.isBoolean()"
+        },
+        
+        "isResponse": {
+          ".validate": "newData.isBoolean()"
+        },
+        
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    
+    "$other": {
+      ".validate": false
+    }
+  }
+}

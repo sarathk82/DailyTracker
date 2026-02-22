@@ -231,6 +231,48 @@ export const SettingsScreen: React.FC<{
     }
   };
 
+  const handleClearCorruptedData = async () => {
+    console.log('handleClearCorruptedData called');
+    
+    const confirmClear = Platform.OS === 'web' 
+      ? window.confirm('This will clear ALL corrupted storage data and start fresh. This is a recovery tool for when you see decryption errors. Continue?')
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Clear Corrupted Data',
+            'This will clear ALL corrupted storage data and start fresh. This is a recovery tool for when you see decryption errors. Continue?',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+              {
+                text: 'Clear & Recover',
+                style: 'destructive',
+                onPress: () => resolve(true),
+              },
+            ]
+          );
+        });
+
+    if (confirmClear) {
+      try {
+        console.log('Clearing corrupted data...');
+        await StorageService.clearCorruptedData();
+        console.log('Corrupted data cleared successfully');
+        
+        if (Platform.OS === 'web') {
+          window.alert('Corrupted data cleared! App will start fresh. Please reload the app.');
+        } else {
+          Alert.alert('Success', 'Corrupted data cleared! App will start fresh. Please reload the app.');
+        }
+      } catch (error) {
+        console.error('Error clearing corrupted data:', error);
+        if (Platform.OS === 'web') {
+          window.alert('Failed to clear corrupted data');
+        } else {
+          Alert.alert('Error', 'Failed to clear corrupted data');
+        }
+      }
+    }
+  };
+
   // Generate styles dynamically based on theme
   const dynamicStyles = getStyles(theme);
   const dynamicModalStyles = getModalStyles(theme);
@@ -411,6 +453,19 @@ export const SettingsScreen: React.FC<{
               <Text style={[dynamicStyles.settingLabel, dynamicStyles.dangerText]}>Clear Journal Entries</Text>
               <Text style={dynamicStyles.settingDescription}>
                 Delete all journal entries while keeping expenses and tasks
+              </Text>
+            </View>
+            <Text style={[dynamicStyles.arrow, dynamicStyles.dangerText]}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[dynamicStyles.settingItem, dynamicStyles.dangerSettingItem]} 
+            onPress={handleClearCorruptedData}
+          >
+            <View style={dynamicStyles.settingInfo}>
+              <Text style={[dynamicStyles.settingLabel, dynamicStyles.dangerText]}>Fix Storage Errors</Text>
+              <Text style={dynamicStyles.settingDescription}>
+                Clear corrupted data if you see decryption errors
               </Text>
             </View>
             <Text style={[dynamicStyles.arrow, dynamicStyles.dangerText]}>›</Text>

@@ -89,27 +89,35 @@ const encryptIfEnabled = async (data: any): Promise<string> => {
 const decryptIfNeeded = async (dataString: string): Promise<any> => {
   if (!dataString) return null;
   
-  // Try to detect if data is encrypted (encrypted data won't start with { or [)
-  const isLikelyEncrypted = !dataString.trim().startsWith('{') && !dataString.trim().startsWith('[');
+  // Check if data is valid hex (encrypted data should be hex)
+  const isValidHex = /^[0-9a-fA-F]+$/.test(dataString.trim());
   
-  if (!isLikelyEncrypted) {
-    // Data is not encrypted, parse as JSON
-    return JSON.parse(dataString);
-  }
-  
-  try {
-    const key = await getLocalEncryptionKey();
-    return decryptData(dataString, key);
-  } catch (error) {
-    console.error('Decryption failed, trying to parse as JSON:', error);
-    // Fallback to parsing as JSON (for backward compatibility)
+  // If it's valid hex and long enough to have IV + data, try to decrypt
+  if (isValidHex && dataString.length > 32) {
     try {
-      return JSON.parse(dataString);
-    } catch (parseError) {
-      console.error('Failed to parse data:', parseError);
+      const key = await getLocalEncryptionKey();
+      return decryptData(dataString, key);
+    } catch (error) {
+      console.error('Decryption failed:', error);
+      // Data is corrupted, return null to trigger empty array
       return null;
     }
   }
+  
+  // Try to parse as JSON (unencrypted or old format)
+  const trimmed = dataString.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      return JSON.parse(trimmed);
+    } catch (parseError) {
+      console.error('Failed to parse JSON:', parseError);
+      return null;
+    }
+  }
+  
+  // Data format is unknown/corrupted
+  console.warn('Unknown data format, cannot decrypt or parse:', dataString.substring(0, 50));
+  return null;
 };
 
 export class StorageService {
@@ -180,6 +188,10 @@ export class StorageService {
       const encryptedValue = await AsyncStorage.getItem(ENTRIES_KEY);
       if (encryptedValue != null) {
         const entries = await decryptIfNeeded(encryptedValue);
+        if (!entries || !Array.isArray(entries)) {
+          console.warn('Invalid entries data, returning empty array');
+          return [];
+        }
         // Convert timestamp strings back to Date objects and ensure type preservation
         const restoredEntries = entries.map((entry: any) => ({
           ...entry,
@@ -235,6 +247,10 @@ export class StorageService {
       const encryptedValue = await AsyncStorage.getItem(ACTION_ITEMS_KEY);
       if (encryptedValue != null) {
         const actionItems = await decryptIfNeeded(encryptedValue);
+        if (!actionItems || !Array.isArray(actionItems)) {
+          console.warn('Invalid action items data, returning empty array');
+          return [];
+        }
         return actionItems.map((item: any) => ({
           ...item,
           createdAt: new Date(item.createdAt),
@@ -296,6 +312,10 @@ export class StorageService {
       const encryptedValue = await AsyncStorage.getItem(EXPENSES_KEY);
       if (encryptedValue != null) {
         const expenses = await decryptIfNeeded(encryptedValue);
+        if (!expenses || !Array.isArray(expenses)) {
+          console.warn('Invalid expenses data, returning empty array');
+          return [];
+        }
         const mappedExpenses = expenses.map((expense: any) => ({
           ...expense,
           createdAt: new Date(expense.createdAt),
@@ -447,5 +467,18 @@ export class StorageService {
       throw error;
     }
   }
-}
 
+  // Clear corrupted storage data (recovery tool)
+  static async clearCorruptedData(): Promise<void> {
+    try {
+      console.log('Clearing potentially corrupted storage data...');
+      await AsyncStorage.removeItem(ENTRIES_KEY);
+      await AsyncStorage.removeItem(ACTION_ITEMS_KEY);
+      await AsyncStorage.removeItem(EXPENSES_KEY);
+      console.log('Corrupted data cleared. App will start fresh.');
+    } catch (error) {
+      console.error('Error clearing corrupted data:', error);
+      throw error;
+    }
+  }
+}

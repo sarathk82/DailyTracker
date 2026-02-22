@@ -505,8 +505,12 @@ export const JournalScreen: React.FC<{}> = () => {
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
       });
       
-      // Refocus immediately
-      textInputRef.current?.focus();
+      // Refocus immediately (with delay on web to override blurOnSubmit)
+      if (Platform.OS === 'web') {
+        setTimeout(() => textInputRef.current?.focus(), 0);
+      } else {
+        textInputRef.current?.focus();
+      }
 
       // Process in background
       (async () => {
@@ -1271,7 +1275,7 @@ export const JournalScreen: React.FC<{}> = () => {
   const markdownStyles = getMarkdownStyles(theme);
 
   return (
-    <SafeAreaView style={dynamicStyles.container}>
+    <SafeAreaView style={dynamicStyles.container} edges={['top']}>
       <View style={[dynamicStyles.header, { zIndex: 10000 }]}>
         <Text style={dynamicStyles.headerTitle}>Smpl Journal</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', zIndex: 10001 }}>
@@ -1442,8 +1446,9 @@ export const JournalScreen: React.FC<{}> = () => {
       />
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
         style={[dynamicStyles.inputContainer, { zIndex: 10000 }]}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
         <View style={dynamicStyles.quickActionsRow}>
           <TouchableOpacity
@@ -1489,8 +1494,15 @@ export const JournalScreen: React.FC<{}> = () => {
             multiline
             maxLength={1000}
             onSubmitEditing={enterToSend ? handleSendMessage : undefined}
-            blurOnSubmit={enterToSend}
+            blurOnSubmit={Platform.OS === 'web' ? false : enterToSend}
             returnKeyType={enterToSend ? "send" : "default"}
+            onKeyPress={(e: any) => {
+              // On web, intercept Enter key when enterToSend is enabled
+              if (Platform.OS === 'web' && enterToSend && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
           />
           <TouchableOpacity
             style={[
