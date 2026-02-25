@@ -93,7 +93,7 @@ describe('MessageBubble', () => {
     );
 
     expect(getByText('Spent $50 on groceries')).toBeTruthy();
-    expect(getByText(/50/)).toBeTruthy();
+    expect(getByText(/Auto-categorized as Expense/)).toBeTruthy();
   });
 
   it('should render action item entry with action data', () => {

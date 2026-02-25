@@ -89,23 +89,14 @@ const encryptIfEnabled = async (data: any): Promise<string> => {
 const decryptIfNeeded = async (dataString: string): Promise<any> => {
   if (!dataString) return null;
   
-  // Check if data is valid hex (encrypted data should be hex)
-  const isValidHex = /^[0-9a-fA-F]+$/.test(dataString.trim());
-  
-  // If it's valid hex and long enough to have IV + data, try to decrypt
-  if (isValidHex && dataString.length > 32) {
-    try {
-      const key = await getLocalEncryptionKey();
-      return decryptData(dataString, key);
-    } catch (error) {
-      console.error('Decryption failed:', error);
-      // Data is corrupted, return null to trigger empty array
-      return null;
-    }
-  }
-  
-  // Try to parse as JSON (unencrypted or old format)
   const trimmed = dataString.trim();
+
+  // Old CryptoJS "Salted__" base64 format — cannot be decrypted with current AES-CTR system
+  if (trimmed.startsWith('U2FsdGVkX1')) {
+    return null;
+  }
+
+  // Try to parse as JSON (unencrypted / plain format)
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
     try {
       return JSON.parse(trimmed);
@@ -114,9 +105,20 @@ const decryptIfNeeded = async (dataString: string): Promise<any> => {
       return null;
     }
   }
-  
-  // Data format is unknown/corrupted
-  console.warn('Unknown data format, cannot decrypt or parse:', dataString.substring(0, 50));
+
+  // Current encrypted format: IV + ciphertext as hex string
+  const isValidHex = /^[0-9a-fA-F]+$/.test(trimmed);
+  if (isValidHex && trimmed.length > 32) {
+    try {
+      const key = await getLocalEncryptionKey();
+      return decryptData(trimmed, key);
+    } catch (error) {
+      console.error('Decryption failed:', error);
+      return null;
+    }
+  }
+
+  // Unknown/unrecoverable format
   return null;
 };
 

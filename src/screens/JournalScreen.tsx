@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   Modal,
 } from "react-native";
@@ -52,7 +53,6 @@ export const JournalScreen: React.FC<{}> = () => {
   const authContext = useAuth();
   const { user, logout } = authContext || { user: null, logout: null };
   
-  console.log('JournalScreen - User:', user ? user.email : 'not logged in');
   
   const [entries, setEntries] = useState<Entry[]>([]);
   const [inputText, setInputText] = useState("");
@@ -76,6 +76,29 @@ export const JournalScreen: React.FC<{}> = () => {
   const [filteredEntries, setFilteredEntries] = useState<Entry[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  // Find and navigate through matches
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const [totalMatches, setTotalMatches] = useState(0);
+  const [matchEntryIds, setMatchEntryIds] = useState<string[]>([]);
+  
+  // Helper function to get the occurrence index for a specific entry
+  const getOccurrenceIndexForEntry = (entryId: string): number | undefined => {
+    if (!searchQuery.trim() || totalMatches === 0) return undefined;
+    
+    const currentEntryId = matchEntryIds[currentMatchIndex];
+    if (currentEntryId !== entryId) return undefined;
+    
+    // Count how many times this entry appears before currentMatchIndex
+    let occurrencesBeforeCurrent = 0;
+    for (let i = 0; i < currentMatchIndex; i++) {
+      if (matchEntryIds[i] === entryId) {
+        occurrencesBeforeCurrent++;
+      }
+    }
+    
+    return occurrencesBeforeCurrent;
+  };
   
 
 
@@ -292,8 +315,11 @@ export const JournalScreen: React.FC<{}> = () => {
   const createEntriesWithDateSeparators = useCallback((entriesList: Entry[]) => {
     if (entriesList.length === 0) return [];
 
+    // Filter out system entries — category info is now shown as subtext in the entry bubble
+    const visibleEntries = entriesList.filter(e => e.type !== 'system');
+
     // Sort entries chronologically (oldest first)
-    const sortedEntries = [...entriesList].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    const sortedEntries = [...visibleEntries].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     
     const result: (Entry | { type: 'dateSeparator'; date: string; id: string })[] = [];
     let currentDate = '';
@@ -322,16 +348,17 @@ export const JournalScreen: React.FC<{}> = () => {
   useEffect(() => {
     if (!showSearch) {
       setFilteredEntries(entries);
+      setTotalMatches(0);
+      setMatchEntryIds([]);
+      setCurrentMatchIndex(0);
       return;
     }
 
+    // Date filter only — text search highlights in place, does NOT hide entries
     let filtered = entries;
-
-    // Date filter
     if (selectedDate) {
       const searchDate = new Date(selectedDate);
       searchDate.setHours(0, 0, 0, 0);
-      
       filtered = filtered.filter((entry) => {
         if (entry.type === 'system') return false;
         const entryDate = new Date(entry.timestamp);
@@ -340,20 +367,33 @@ export const JournalScreen: React.FC<{}> = () => {
       });
     }
 
-    // Text filter
+    setFilteredEntries(filtered);
+
+    // Count matches across ALL visible entries for navigation
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter((entry) => {
-        if (entry.type === 'system') return false;
-        // Text search in entry content
-        if (entry.text.toLowerCase().includes(query)) return true;
-        // Type-based search
-        if (entry.type.toLowerCase().includes(query)) return true;
-        return false;
+      let matchCount = 0;
+      const entryIdsWithMatches: string[] = [];
+      
+      filtered.forEach((entry) => {
+        if (entry.type === 'system') return;
+        const text = entry.text.toLowerCase();
+        const matches = text.match(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'));
+        if (matches) {
+          matchCount += matches.length;
+          // Add entry ID for each match in this entry
+          matches.forEach(() => entryIdsWithMatches.push(entry.id));
+        }
       });
+      
+      setTotalMatches(matchCount);
+      setMatchEntryIds(entryIdsWithMatches);
+      setCurrentMatchIndex(prev => (matchCount > 0 && prev >= matchCount ? 0 : prev));
+    } else {
+      setTotalMatches(0);
+      setMatchEntryIds([]);
+      setCurrentMatchIndex(0);
     }
-
-    setFilteredEntries(filtered);
   }, [searchQuery, entries, selectedDate, showSearch]);
 
   const getListStyle = (layout: string) => {
@@ -453,6 +493,64 @@ export const JournalScreen: React.FC<{}> = () => {
       loadExpensesAndActions();
     });
   }, [loadEntries, loadSettings, loadExpensesAndActions]);
+
+  // Scroll to current match when navigating
+  useEffect(() => {
+    if (!searchQuery.trim() || totalMatches === 0 || matchEntryIds.length === 0) return;
+
+    const targetEntryId = matchEntryIds[currentMatchIndex];
+    if (!targetEntryId) return;
+
+    // Web: two-step — scrollToIndex to force virtualized item into DOM, then scrollIntoView to correct visual position
+    if (Platform.OS === 'web') {
+      const baseEntries = showSearch ? filteredEntries : entries;
+      const dataWithSeps = createEntriesWithDateSeparators(baseEntries).reverse();
+      const targetIndex = dataWithSeps.findIndex(
+        (item) => !('type' in item && item.type === 'dateSeparator') && (item as Entry).id === targetEntryId
+      );
+      // Step 1: scrollToIndex forces the item to render (even if visual position is off due to inversion)
+      if (targetIndex >= 0 && flatListRef.current) {
+        try {
+          flatListRef.current.scrollToIndex({ index: targetIndex, animated: false, viewPosition: 0.5 });
+        } catch (_) {}
+      }
+      // Step 2: after item is rendered, scrollIntoView corrects the visual position
+      const attempt = (retries: number) => {
+        setTimeout(() => {
+          const elId = `entry-${targetEntryId}`;
+          const el = typeof document !== 'undefined' ? document.getElementById(elId) : null;
+          if (el) {
+            el.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'center' });
+          } else if (retries > 0) {
+            attempt(retries - 1);
+          }
+        }, retries === 3 ? 100 : 200);
+      };
+      attempt(3);
+      return;
+    }
+
+    // Mobile: scrollToIndex to bring the entry into view
+    if (!flatListRef.current) return;
+    setTimeout(() => {
+      try {
+        const baseEntries = showSearch ? filteredEntries : entries;
+        const dataWithSeps = createEntriesWithDateSeparators(baseEntries).reverse();
+        const targetIndex = dataWithSeps.findIndex(
+          (item) => !('type' in item && item.type === 'dateSeparator') && (item as Entry).id === targetEntryId
+        );
+        if (targetIndex >= 0) {
+          flatListRef.current?.scrollToIndex({
+            index: targetIndex,
+            animated: false,
+            viewPosition: 0.5,
+          });
+        }
+      } catch (error) {
+        // Silently fail
+      }
+    }, 100);
+  }, [currentMatchIndex, searchQuery, totalMatches, matchEntryIds, filteredEntries, entries, showSearch, createEntriesWithDateSeparators]);
 
   // Refresh data when screen comes into focus (e.g., after editing in another tab)
   useFocusEffect(
@@ -582,37 +680,7 @@ export const JournalScreen: React.FC<{}> = () => {
           setEntries(prev => prev.map(e => e.id === entry.id ? { ...e, type: entryType } : e));
         }
 
-        // Add system message if needed
-        if (systemMessage && layoutStyle === 'chat') {
-          const systemEntry: Entry = {
-            id: uuid.v4(),
-            text: systemMessage,
-            timestamp: new Date(Date.now() + 100),
-            type: 'system',
-            isMarkdown: false,
-          };
-          await StorageService.addEntry(systemEntry);
-          setEntries(prev => [systemEntry, ...prev]);
-          // Scroll to show system message
-          requestAnimationFrame(() => {
-            flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-          });
-        } else if (!systemMessage && layoutStyle === 'chat') {
-          // Default message
-          const systemEntry: Entry = {
-            id: uuid.v4(),
-            text: '✓ Got it!',
-            timestamp: new Date(Date.now() + 100),
-            type: 'system',
-            isMarkdown: false,
-          };
-          await StorageService.addEntry(systemEntry);
-          setEntries(prev => [systemEntry, ...prev]);
-          // Scroll to show system message
-          requestAnimationFrame(() => {
-            flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-          });
-        }
+        // No system response messages — category is shown as subtext in the entry bubble itself
 
         // Reload expenses and actions in background
         await loadExpensesAndActions();
@@ -1130,6 +1198,8 @@ export const JournalScreen: React.FC<{}> = () => {
       markdownStyles={markdownStyles}
       expense={expense}
       actionItem={actionItem}
+      searchQuery={searchQuery}
+      highlightIndex={getOccurrenceIndexForEntry(item.id)}
     />
   );
 
@@ -1143,6 +1213,8 @@ export const JournalScreen: React.FC<{}> = () => {
         markdownStyles={markdownStyles}
         expense={expense}
         actionItem={actionItem}
+        searchQuery={searchQuery}
+        highlightIndex={getOccurrenceIndexForEntry(item.id)}
       />
     </View>
   );
@@ -1157,6 +1229,8 @@ export const JournalScreen: React.FC<{}> = () => {
         markdownStyles={markdownStyles}
         expense={expense}
         actionItem={actionItem}
+        searchQuery={searchQuery}
+        highlightIndex={getOccurrenceIndexForEntry(item.id)}
       />
     </View>
   );
@@ -1176,6 +1250,8 @@ export const JournalScreen: React.FC<{}> = () => {
           markdownStyles={markdownStyles}
           expense={expense}
           actionItem={actionItem}
+          searchQuery={searchQuery}
+          highlightIndex={getOccurrenceIndexForEntry(item.id)}
         />
       </View>
     </View>
@@ -1191,6 +1267,8 @@ export const JournalScreen: React.FC<{}> = () => {
         markdownStyles={markdownStyles}
         expense={expense}
         actionItem={actionItem}
+        searchQuery={searchQuery}
+        highlightIndex={getOccurrenceIndexForEntry(item.id)}
       />
     </View>
   );
@@ -1242,24 +1320,36 @@ export const JournalScreen: React.FC<{}> = () => {
     // Find associated expense or action item for this entry
     const expense = entry.type === 'expense' ? expenses.find(e => e.entryId === entry.id) : undefined;
     const actionItem = entry.type === 'action' ? actionItems.find(a => a.entryId === entry.id) : undefined;
-    
+
+    let content: React.ReactNode;
     switch (layoutStyle) {
       case 'cards':
-        return renderCardEntry(entry, expense, actionItem);
+        content = renderCardEntry(entry, expense, actionItem);
+        break;
       case 'list':
-        return renderListEntry(entry, expense, actionItem);
+        content = renderListEntry(entry, expense, actionItem);
+        break;
       case 'timeline':
-        return renderTimelineEntry(entry, expense, actionItem);
+        content = renderTimelineEntry(entry, expense, actionItem);
+        break;
       case 'magazine':
-        return renderMagazineEntry(entry, expense, actionItem);
+        content = renderMagazineEntry(entry, expense, actionItem);
+        break;
       case 'minimal':
         // Skip system feedback messages in minimal view
         if (entry.type === 'system') return null;
-        return renderMinimalEntry(entry, expense, actionItem);
+        content = renderMinimalEntry(entry, expense, actionItem);
+        break;
       case 'chat':
       default:
-        return renderChatEntry(entry, expense, actionItem);
+        content = renderChatEntry(entry, expense, actionItem);
+        break;
     }
+    // On web use a real <div id="..."> so getElementById is guaranteed to work
+    if (Platform.OS === 'web') {
+      return React.createElement('div', { id: `entry-${entry.id}` }, content);
+    }
+    return <View>{content}</View>;
   };
 
   // Get data with date separators
@@ -1308,101 +1398,132 @@ export const JournalScreen: React.FC<{}> = () => {
 
       {showSearch && (
         <View style={dynamicStyles.searchContainer}>
-          <View style={dynamicStyles.searchSection}>
-            <Text style={dynamicStyles.searchLabel}>Search by Text:</Text>
-            <View style={dynamicStyles.searchRow}>
-              <TextInput
-                style={dynamicStyles.searchInput}
-                placeholder="Search entries..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-                clearButtonMode="while-editing"
-              />
-              {searchQuery.length > 0 && (
+          {/* Row 1: input + match counter + nav arrows + close */}
+          <View style={dynamicStyles.searchRow}>
+            <TextInput
+              style={dynamicStyles.searchInput}
+              placeholder="Search entries..."
+              value={searchQuery}
+              onChangeText={(text) => {
+                setSearchQuery(text);
+                setCurrentMatchIndex(0);
+              }}
+              autoCapitalize="none"
+              clearButtonMode="while-editing"
+            />
+            {searchQuery.trim().length > 0 && totalMatches > 0 && (
+              <>
+                <Text style={dynamicStyles.matchCounter}>{currentMatchIndex + 1}/{totalMatches}</Text>
                 <TouchableOpacity
-                  style={dynamicStyles.clearButton}
-                  onPress={() => setSearchQuery("")}
+                  style={[dynamicStyles.matchNavButton, currentMatchIndex === 0 && dynamicStyles.matchNavButtonDisabled]}
+                  onPress={() => { Keyboard.dismiss(); if (currentMatchIndex > 0) setCurrentMatchIndex(currentMatchIndex - 1); }}
+                  disabled={currentMatchIndex === 0}
                 >
-                  <Text style={dynamicStyles.clearButtonText}>✕</Text>
+                  <Text style={[dynamicStyles.matchNavButtonText, currentMatchIndex === 0 && dynamicStyles.matchNavButtonTextDisabled]}>▲</Text>
                 </TouchableOpacity>
-              )}
-            </View>
+                <TouchableOpacity
+                  style={[dynamicStyles.matchNavButton, currentMatchIndex === totalMatches - 1 && dynamicStyles.matchNavButtonDisabled]}
+                  onPress={() => { Keyboard.dismiss(); if (currentMatchIndex < totalMatches - 1) setCurrentMatchIndex(currentMatchIndex + 1); }}
+                  disabled={currentMatchIndex === totalMatches - 1}
+                >
+                  <Text style={[dynamicStyles.matchNavButtonText, currentMatchIndex === totalMatches - 1 && dynamicStyles.matchNavButtonTextDisabled]}>▼</Text>
+                </TouchableOpacity>
+              </>
+            )}
+            <TouchableOpacity
+              style={dynamicStyles.searchCloseButton}
+              onPress={() => {
+                setShowSearch(false);
+                setSearchQuery("");
+                setSelectedDate(null);
+                setCurrentMatchIndex(0);
+              }}
+            >
+              <Text style={dynamicStyles.searchCloseButtonText}>✕</Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={dynamicStyles.dateSection}>
-            <Text style={dynamicStyles.searchLabel}>Filter by Date:</Text>
+          {/* Row 2: date shortcuts + picker + clear */}
+          <View style={dynamicStyles.searchDateRow}>
+            <TouchableOpacity
+              style={[dynamicStyles.quickDateButtonInline, selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && dynamicStyles.quickDateButtonActive]}
+              onPress={() => setSelectedDate(selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? null : new Date())}
+            >
+              <Text style={[dynamicStyles.quickDateButtonTextInline, selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && { color: 'white' }]}>Today</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[dynamicStyles.quickDateButtonInline, selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(Date.now() - 86400000), 'yyyy-MM-dd') && dynamicStyles.quickDateButtonActive]}
+              onPress={() => {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                setSelectedDate(selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(yesterday, 'yyyy-MM-dd') ? null : yesterday);
+              }}
+            >
+              <Text style={[dynamicStyles.quickDateButtonTextInline, selectedDate && format(selectedDate, 'yyyy-MM-dd') === format(new Date(Date.now() - 86400000), 'yyyy-MM-dd') && { color: 'white' }]}>Yesterday</Text>
+            </TouchableOpacity>
             {Platform.OS === 'web' ? (
-              <View style={dynamicStyles.datePickerButtonLarge}>
-                <Text style={dynamicStyles.datePickerIconLarge}>📅</Text>
+              <View style={[dynamicStyles.quickDateButtonInline, { padding: 0 },
+                selectedDate
+                  && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')
+                  && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(Date.now() - 86400000), 'yyyy-MM-dd')
+                  && dynamicStyles.quickDateButtonActive]}>
                 <input
                   type="date"
                   style={{
-                    flex: 1,
-                    border: 'none',
+                    width: '100%',
+                    height: '100%',
+                    minHeight: 28,
                     background: 'transparent',
-                    fontSize: 16,
-                    color: theme.text,
+                    border: 'none',
                     outline: 'none',
                     cursor: 'pointer',
-                  }}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      setSelectedDate(new Date(e.target.value));
-                    } else {
-                      setSelectedDate(null);
-                    }
-                  }}
-                  value={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
-                  placeholder="Select Date"
+                    fontSize: 12,
+                    fontWeight: '600',
+                    color: (selectedDate
+                      && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')
+                      && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(Date.now() - 86400000), 'yyyy-MM-dd'))
+                      ? '#ffffff' : (theme.text as string),
+                    padding: '2px 2px',
+                    boxSizing: 'border-box',
+                    colorScheme: isDark ? 'dark' : 'light',
+                  } as any}
+                  onChange={(e) => setSelectedDate(e.target.value ? new Date(e.target.value + 'T12:00:00') : null)}
+                  value={selectedDate
+                    && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')
+                    && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(Date.now() - 86400000), 'yyyy-MM-dd')
+                    ? format(selectedDate, 'yyyy-MM-dd') : ''}
                 />
-                {selectedDate && (
-                  <TouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      setSelectedDate(null);
-                    }}
-                    style={dynamicStyles.datePickerClear}
-                  >
-                    <Text style={dynamicStyles.datePickerClearText}>✕</Text>
-                  </TouchableOpacity>
-                )}
               </View>
             ) : (
               <TouchableOpacity
-                style={dynamicStyles.datePickerButtonLarge}
+                style={[dynamicStyles.quickDateButtonInline,
+                  selectedDate
+                    && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')
+                    && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(Date.now() - 86400000), 'yyyy-MM-dd')
+                    && dynamicStyles.quickDateButtonActive]}
                 onPress={() => setShowDatePicker(true)}
               >
-                <Text style={dynamicStyles.datePickerIconLarge}>📅</Text>
-                <Text style={dynamicStyles.datePickerButtonLabel}>
-                  {selectedDate ? format(selectedDate, 'MMM dd, yyyy') : 'Select Date'}
+                <Text style={[dynamicStyles.quickDateButtonTextInline,
+                  selectedDate
+                    && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')
+                    && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(Date.now() - 86400000), 'yyyy-MM-dd')
+                    && { color: 'white' }]}>
+                  {selectedDate
+                    && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd')
+                    && format(selectedDate, 'yyyy-MM-dd') !== format(new Date(Date.now() - 86400000), 'yyyy-MM-dd')
+                    ? format(selectedDate, 'MMM d') : '📅'}
                 </Text>
-                {selectedDate && (
-                  <TouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      setSelectedDate(null);
-                    }}
-                    style={dynamicStyles.datePickerClear}
-                  >
-                    <Text style={dynamicStyles.datePickerClearText}>✕</Text>
-                  </TouchableOpacity>
-                )}
+              </TouchableOpacity>
+            )}
+            {(searchQuery || selectedDate) && (
+              <TouchableOpacity
+                style={dynamicStyles.searchClearAllButton}
+                onPress={() => { setSearchQuery(''); setSelectedDate(null); }}
+              >
+                <Text style={dynamicStyles.searchClearAllButtonText}>Clear</Text>
               </TouchableOpacity>
             )}
           </View>
-
-          {(searchQuery || selectedDate) && (
-            <TouchableOpacity
-              style={dynamicStyles.clearAllButton}
-              onPress={() => {
-                setSearchQuery("");
-                setSelectedDate(null);
-              }}
-            >
-              <Text style={dynamicStyles.clearAllButtonText}>Clear All Filters</Text>
-            </TouchableOpacity>
-          )}
         </View>
       )}
 
@@ -1410,6 +1531,8 @@ export const JournalScreen: React.FC<{}> = () => {
         ref={flatListRef}
         data={getDataWithSeparators()}
         renderItem={renderItem}
+        extraData={{ searchQuery, currentMatchIndex, matchEntryIds }}
+        keyboardShouldPersistTaps="always"
         keyExtractor={(item) => {
           if ('type' in item && item.type === 'dateSeparator') {
             return item.id;
@@ -1421,6 +1544,17 @@ export const JournalScreen: React.FC<{}> = () => {
         inverted
         maintainVisibleContentPosition={{
           minIndexForVisible: 0,
+        }}
+        onScrollToIndexFailed={(info) => {
+          // Fallback: scroll to offset instead
+          const wait = new Promise(resolve => setTimeout(resolve, 50));
+          wait.then(() => {
+            flatListRef.current?.scrollToIndex({
+              index: info.index,
+              animated: false,
+              viewPosition: 0.5,
+            });
+          });
         }}
         ListEmptyComponent={() => {
           // Show message when searching or filtering by date
@@ -1434,7 +1568,7 @@ export const JournalScreen: React.FC<{}> = () => {
               message = `No entries found on ${format(selectedDate, 'MMM dd, yyyy')}`;
             }
             return (
-              <View style={{ padding: 20, alignItems: 'center', transform: [{ scaleY: -1 }] }}>
+              <View style={{ padding: 20, alignItems: 'center', transform: Platform.OS === 'web' ? [{ scaleY: -1 }] : undefined }}>
                 <Text style={{ color: theme.textSecondary, fontSize: 16, textAlign: 'center' }}>
                   {message}
                 </Text>
@@ -1570,7 +1704,7 @@ export const JournalScreen: React.FC<{}> = () => {
       />
       
       {/* Date Picker Modal */}
-      {showDatePicker && (
+      {showDatePicker && Platform.OS !== 'web' && (
         <Modal
           visible={showDatePicker}
           animationType="fade"
@@ -1595,7 +1729,7 @@ export const JournalScreen: React.FC<{}> = () => {
             >
               <View style={dynamicStyles.datePickerContent}>
                 <View style={dynamicStyles.datePickerHeader}>
-                  <Text style={dynamicStyles.datePickerTitle}>Select Date</Text>
+                  <Text style={dynamicStyles.datePickerTitle}>Pick a Date</Text>
                   <TouchableOpacity
                     onPress={() => setShowDatePicker(false)}
                     style={dynamicStyles.datePickerClose}
@@ -1604,68 +1738,114 @@ export const JournalScreen: React.FC<{}> = () => {
                   </TouchableOpacity>
                 </View>
                 
-                <View style={dynamicStyles.datePickerQuickButtons}>
-                  <TouchableOpacity
-                    style={dynamicStyles.quickDateButton}
-                    onPress={() => {
-                      setSelectedDate(new Date());
-                      setShowDatePicker(false);
-                    }}
-                  >
-                    <Text style={dynamicStyles.quickDateButtonText}>Today</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={dynamicStyles.quickDateButton}
-                    onPress={() => {
-                      const yesterday = new Date();
-                      yesterday.setDate(yesterday.getDate() - 1);
-                      setSelectedDate(yesterday);
-                      setShowDatePicker(false);
-                    }}
-                  >
-                    <Text style={dynamicStyles.quickDateButtonText}>Yesterday</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={dynamicStyles.quickDateButton}
-                    onPress={() => {
-                      const lastWeek = new Date();
-                      lastWeek.setDate(lastWeek.getDate() - 7);
-                      setSelectedDate(lastWeek);
-                      setShowDatePicker(false);
-                    }}
-                  >
-                    <Text style={dynamicStyles.quickDateButtonText}>Last Week</Text>
-                  </TouchableOpacity>
+                {/* Calendar View */}
+                <View style={{ marginTop: 16 }}>
+                  {(() => {
+                    const currentDate = selectedDate || new Date();
+                    const year = currentDate.getFullYear();
+                    const month = currentDate.getMonth();
+                    const firstDay = new Date(year, month, 1).getDay();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                    const today = new Date();
+                    
+                    // Month/Year selector
+                    return (
+                      <View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                          <TouchableOpacity
+                            onPress={() => {
+                              const newDate = new Date(currentDate);
+                              newDate.setMonth(newDate.getMonth() - 1);
+                              setSelectedDate(newDate);
+                            }}
+                            style={{ padding: 8 }}
+                          >
+                            <Text style={{ fontSize: 20, color: theme.text }}>‹</Text>
+                          </TouchableOpacity>
+                          <Text style={{ fontSize: 16, fontWeight: '600', color: theme.text }}>
+                            {format(currentDate, 'MMMM yyyy')}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => {
+                              const newDate = new Date(currentDate);
+                              newDate.setMonth(newDate.getMonth() + 1);
+                              setSelectedDate(newDate);
+                            }}
+                            style={{ padding: 8 }}
+                          >
+                            <Text style={{ fontSize: 20, color: theme.text }}>›</Text>
+                          </TouchableOpacity>
+                        </View>
+                        
+                        {/* Day headers */}
+                        <View style={{ flexDirection: 'row', marginBottom: 8 }}>
+                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+                            <View key={day} style={{ flex: 1, alignItems: 'center' }}>
+                              <Text style={{ fontSize: 12, fontWeight: '600', color: theme.textSecondary }}>{day}</Text>
+                            </View>
+                          ))}
+                        </View>
+                        
+                        {/* Calendar grid */}
+                        <View>
+                          {Array.from({ length: Math.ceil((firstDay + daysInMonth) / 7) }).map((_, weekIndex) => (
+                            <View key={weekIndex} style={{ flexDirection: 'row', marginBottom: 4 }}>
+                              {Array.from({ length: 7 }).map((_, dayIndex) => {
+                                const dayNumber = weekIndex * 7 + dayIndex - firstDay + 1;
+                                const isValidDay = dayNumber > 0 && dayNumber <= daysInMonth;
+                                const dateObj = new Date(year, month, dayNumber);
+                                const isSelected = selectedDate && 
+                                  dateObj.getDate() === selectedDate.getDate() &&
+                                  dateObj.getMonth() === selectedDate.getMonth() &&
+                                  dateObj.getFullYear() === selectedDate.getFullYear();
+                                const isToday = isValidDay &&
+                                  dateObj.getDate() === today.getDate() &&
+                                  dateObj.getMonth() === today.getMonth() &&
+                                  dateObj.getFullYear() === today.getFullYear();
+                                
+                                return (
+                                  <View key={dayIndex} style={{ flex: 1, aspectRatio: 1, padding: 2 }}>
+                                    {isValidDay ? (
+                                      <TouchableOpacity
+                                        onPress={() => {
+                                          setSelectedDate(new Date(year, month, dayNumber));
+                                          setTimeout(() => setShowDatePicker(false), 200);
+                                        }}
+                                        style={{
+                                          flex: 1,
+                                          borderRadius: 8,
+                                          justifyContent: 'center',
+                                          alignItems: 'center',
+                                          backgroundColor: isSelected ? '#007AFF' : isToday ? theme.border : 'transparent',
+                                        }}
+                                      >
+                                        <Text style={{
+                                          fontSize: 14,
+                                          color: isSelected ? '#fff' : theme.text,
+                                          fontWeight: isToday ? '700' : '400',
+                                        }}>
+                                          {dayNumber}
+                                        </Text>
+                                      </TouchableOpacity>
+                                    ) : (
+                                      <View style={{ flex: 1 }} />
+                                    )}
+                                  </View>
+                                );
+                              })}
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    );
+                  })()}
                 </View>
-                
-                {Platform.OS === 'web' && (
-                  <View style={{ marginTop: 16 }}>
-                    <Text style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 8, fontWeight: '600' }}>Or pick a specific date:</Text>
-                    <input
-                      type="date"
-                      style={{
-                        width: '100%',
-                        padding: 12,
-                        fontSize: 16,
-                        borderRadius: 8,
-                        border: '1px solid #ddd',
-                        boxSizing: 'border-box',
-                      }}
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          setSelectedDate(new Date(e.target.value));
-                          setShowDatePicker(false);
-                        }
-                      }}
-                      defaultValue={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
-                    />
-                  </View>
-                )}
               </View>
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
       )}
+
     </SafeAreaView>
   );
 };
@@ -1691,95 +1871,120 @@ const getStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: theme.surface,
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 10,
+    backgroundColor: theme.input,
+    borderTopWidth: 3,
+    borderTopColor: theme.primary,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
-  },
-  searchSection: {
-    marginBottom: 12,
-  },
-  dateSection: {
-    marginBottom: 8,
-  },
-  searchLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.textSecondary,
-    marginBottom: 6,
+    // iOS shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    // Android shadow
+    elevation: 8,
+    // Slight bottom radius so it feels like a card
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+    // ensure it stays above the list
+    zIndex: 100,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 5,
+  },
+  searchDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 7,
   },
   searchInput: {
     flex: 1,
-    height: 40,
-    paddingHorizontal: 12,
-    backgroundColor: theme.input,
+    flexShrink: 1,
+    minWidth: 0,
+    height: 36,
+    paddingHorizontal: 10,
+    backgroundColor: theme.surface,
     borderRadius: 8,
-    fontSize: 16,
+    fontSize: 15,
     color: theme.text,
     borderWidth: 1,
     borderColor: theme.border,
   },
-  datePickerButtonLarge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.input,
-    borderRadius: 8,
+  matchCounter: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    fontWeight: '500',
+    minWidth: 36,
+    textAlign: 'center',
+  },
+  matchNavButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    backgroundColor: theme.surface,
     borderWidth: 1,
     borderColor: theme.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    height: 40,
-  },
-  datePickerIconLarge: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  datePickerButtonLabel: {
-    flex: 1,
-    fontSize: 16,
-    color: theme.text,
-  },
-  datePickerClear: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: theme.border,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  datePickerClearText: {
-    fontSize: 12,
+  matchNavButtonDisabled: {
+    opacity: 0.3,
+  },
+  matchNavButtonText: {
+    fontSize: 13,
+    color: theme.text,
+    fontWeight: 'bold',
+  },
+  matchNavButtonTextDisabled: {
+    color: theme.textSecondary,
+  },
+  searchCloseButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  searchCloseButtonText: {
+    fontSize: 13,
     color: theme.textSecondary,
     fontWeight: 'bold',
   },
+  searchClearAllButton: {
+    paddingHorizontal: 10,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: theme.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchClearAllButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   clearButton: {
-    marginLeft: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    marginLeft: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: theme.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  clearAllButton: {
-    backgroundColor: theme.error,
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  clearAllButtonText: {
-    color: theme.surface,
-    fontSize: 14,
-    fontWeight: '600',
-  },
   clearButtonText: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.textSecondary,
     fontWeight: 'bold',
   },
@@ -1973,7 +2178,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   dateSeparator: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 6,
     paddingHorizontal: 8,
   },
   dateSeparatorLine: {
@@ -1982,14 +2187,14 @@ const getStyles = (theme: any) => StyleSheet.create({
     backgroundColor: theme.border,
   },
   dateSeparatorText: {
-    marginHorizontal: 12,
-    fontSize: 14,
+    marginHorizontal: 8,
+    fontSize: 11,
     fontWeight: '600',
     color: theme.textSecondary,
     backgroundColor: theme.background,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   datePickerContent: {
     backgroundColor: theme.surface,
@@ -2036,6 +2241,31 @@ const getStyles = (theme: any) => StyleSheet.create({
   quickDateButtonText: {
     color: 'white',
     fontSize: 14,
+    fontWeight: '600',
+  },
+  quickDateButtonsRow: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  quickDateButtonInline: {
+    flex: 1,
+    minWidth: 60,
+    backgroundColor: theme.surface,
+    borderWidth: 1,
+    borderColor: theme.border,
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickDateButtonActive: {
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
+  },
+  quickDateButtonTextInline: {
+    color: theme.text,
+    fontSize: 13,
     fontWeight: '600',
   },
 });

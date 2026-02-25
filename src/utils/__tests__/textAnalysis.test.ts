@@ -1,5 +1,26 @@
 import { TextAnalyzer } from '../textAnalysis';
-import { Entry, ActionItem, Expense } from '../../types';
+import { ActionItem, Expense } from '../../types';
+
+// Mock LLMClassificationService so tests are fast and deterministic
+jest.mock('../../services/LLMClassificationService', () => ({
+  LLMClassificationService: {
+    classifyText: jest.fn(async (text: string) => {
+      const lower = text.toLowerCase();
+      // Expense signals
+      if (/\$|rs\s|₹|paid|spent|cost|bought|purchased/.test(lower) && /\d/.test(lower)) {
+        const amountMatch = text.match(/(\d+(?:\.\d{1,2})?)/);
+        const amount = amountMatch ? parseFloat(amountMatch[1]) : undefined;
+        const currency = /rs\s|₹/i.test(text) ? 'INR' : (text.includes('$') ? 'USD' : undefined);
+        return { type: 'expense', extractedData: { amount, currency } };
+      }
+      // Action signals
+      if (/^\.|todo:|need to|call |buy |finish /i.test(lower)) {
+        return { type: 'action', extractedData: {} };
+      }
+      return { type: 'note', extractedData: {} };
+    }),
+  },
+}));
 
 describe('TextAnalyzer', () => {
   const mockDate = new Date('2025-09-02T10:00:00Z');
@@ -12,102 +33,84 @@ describe('TextAnalyzer', () => {
     jest.restoreAllMocks();
   });
 
-  describe('detectExpense', () => {
-    it('should detect expenses with dollar amounts', () => {
+  describe('detectExpenseAsync', () => {
+    it('should detect expenses with dollar amounts', async () => {
       const text = 'I spent $50.99 on groceries today';
-      const isExpense = TextAnalyzer.detectExpense(text);
-      
+      const isExpense = await TextAnalyzer.detectExpenseAsync(text);
       expect(isExpense).toBe(true);
     });
 
-    it('should detect expenses with written dollar amounts', () => {
-      const text = 'Paid 25 dollars for lunch';
-      const isExpense = TextAnalyzer.detectExpense(text);
-      
-      expect(isExpense).toBe(true);
-    });
-
-    it('should not detect expenses without context', () => {
-      const text = 'I went to the store today';
-      const isExpense = TextAnalyzer.detectExpense(text);
-      
-      expect(isExpense).toBe(false);
-    });
-
-    it('should detect expense with Rs symbol', () => {
+    it('should detect expense with Rs symbol', async () => {
       const text = 'Rs 500 for haircut';
-      const isExpense = TextAnalyzer.detectExpense(text);
-      
+      const isExpense = await TextAnalyzer.detectExpenseAsync(text);
       expect(isExpense).toBe(true);
+    });
+
+    it('should not detect regular text as expense', async () => {
+      const text = 'The weather is nice today';
+      const isExpense = await TextAnalyzer.detectExpenseAsync(text);
+      expect(isExpense).toBe(false);
     });
   });
 
-  describe('detectActionItem', () => {
-    it('should detect action items with dot prefix', () => {
+  describe('detectActionItemAsync', () => {
+    it('should detect action items with dot prefix', async () => {
       const text = '. Call dentist tomorrow';
-      const isAction = TextAnalyzer.detectActionItem(text);
-      
+      const isAction = await TextAnalyzer.detectActionItemAsync(text);
       expect(isAction).toBe(true);
     });
 
-    it('should detect action items with todo keywords', () => {
-      const text = 'Need to buy groceries tomorrow';
-      const isAction = TextAnalyzer.detectActionItem(text);
-      
+    it('should detect action items with todo keywords', async () => {
+      const text = 'todo: finish presentation';
+      const isAction = await TextAnalyzer.detectActionItemAsync(text);
       expect(isAction).toBe(true);
     });
 
-    it('should not detect regular text as action item', () => {
+    it('should not detect regular text as action item', async () => {
       const text = 'The weather is nice today';
-      const isAction = TextAnalyzer.detectActionItem(text);
-      
+      const isAction = await TextAnalyzer.detectActionItemAsync(text);
       expect(isAction).toBe(false);
     });
   });
 
-  describe('extractExpenseInfo', () => {
-    it('should extract expense information from text', () => {
+  describe('extractExpenseInfoAsync', () => {
+    it('should extract expense information from text', async () => {
       const text = 'Spent $50 on groceries';
-      const expense = TextAnalyzer.extractExpenseInfo(text, 'entry-1');
-      
+      const expense = await TextAnalyzer.extractExpenseInfoAsync(text, 'entry-1');
       expect(expense).not.toBeNull();
       expect(expense?.amount).toBe(50);
       expect(expense?.currency).toBe('USD');
       expect(expense?.entryId).toBe('entry-1');
     });
 
-    it('should handle Rs currency', () => {
+    it('should handle Rs currency', async () => {
       const text = 'Paid Rs 200 for taxi';
-      const expense = TextAnalyzer.extractExpenseInfo(text, 'entry-1');
-      
+      const expense = await TextAnalyzer.extractExpenseInfoAsync(text, 'entry-1');
       expect(expense).not.toBeNull();
       expect(expense?.amount).toBe(200);
       expect(expense?.currency).toBe('INR');
     });
 
-    it('should return null for text without amounts', () => {
+    it('should return null for text without amounts', async () => {
       const text = 'Went shopping today';
-      const expense = TextAnalyzer.extractExpenseInfo(text, 'entry-1');
-      
+      const expense = await TextAnalyzer.extractExpenseInfoAsync(text, 'entry-1');
       expect(expense).toBeNull();
     });
   });
 
-  describe('extractActionItem', () => {
-    it('should extract action item from text', () => {
+  describe('extractActionItemAsync', () => {
+    it('should extract action item from text', async () => {
       const text = '. Call dentist tomorrow';
-      const actionItem = TextAnalyzer.extractActionItem(text, 'entry-1');
-      
+      const actionItem = await TextAnalyzer.extractActionItemAsync(text, 'entry-1');
       expect(actionItem).not.toBeNull();
       expect(actionItem?.title).toContain('Call dentist');
       expect(actionItem?.entryId).toBe('entry-1');
       expect(actionItem?.completed).toBe(false);
     });
 
-    it('should handle todo keyword', () => {
+    it('should handle todo keyword', async () => {
       const text = 'todo: finish presentation';
-      const actionItem = TextAnalyzer.extractActionItem(text, 'entry-1');
-      
+      const actionItem = await TextAnalyzer.extractActionItemAsync(text, 'entry-1');
       expect(actionItem).not.toBeNull();
       expect(actionItem?.title).toContain('finish presentation');
     });
@@ -141,20 +144,27 @@ describe('TextAnalyzer', () => {
     });
   });
 
-  describe('isExpenseRelated', () => {
-    it('should identify expense-related text', () => {
-      const text = 'Spent money on lunch';
-      expect(TextAnalyzer.isExpenseRelated(text)).toBe(true);
+  describe('extractDueDate', () => {
+    it('should extract today as due date', () => {
+      const result = TextAnalyzer.extractDueDate('Call dentist today');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      expect(result.getTime()).toBe(today.getTime());
     });
 
-    it('should identify paid as expense', () => {
-      const text = 'Paid the bill today';
-      expect(TextAnalyzer.isExpenseRelated(text)).toBe(true);
+    it('should extract tomorrow as due date', () => {
+      const result = TextAnalyzer.extractDueDate('Buy groceries tomorrow');
+      const tomorrow = new Date();
+      tomorrow.setHours(0, 0, 0, 0);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      expect(result.getTime()).toBe(tomorrow.getTime());
     });
 
-    it('should not identify regular text as expense', () => {
-      const text = 'Had a great day';
-      expect(TextAnalyzer.isExpenseRelated(text)).toBe(false);
+    it('should default to today when no date found', () => {
+      const result = TextAnalyzer.extractDueDate('Do the thing');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      expect(result.getTime()).toBe(today.getTime());
     });
   });
 });

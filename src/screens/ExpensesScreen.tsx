@@ -81,7 +81,7 @@ export const ExpensesScreen: React.FC = () => {
   const dynamicStyles = getStyles(theme);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [filter, setFilter] = useState<'all' | 'thisMonth'>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -107,14 +107,15 @@ export const ExpensesScreen: React.FC = () => {
   );
 
   const filteredExpenses = expenses.filter(expense => {
-    if (filter === 'thisMonth') {
-      const now = new Date();
-      const monthStart = startOfMonth(now);
-      const monthEnd = endOfMonth(now);
-      return isWithinInterval(expense.createdAt, { start: monthStart, end: monthEnd });
-    }
-    return true;
+    if (!selectedMonth) return true;
+    return format(expense.createdAt, 'yyyy-MM') === selectedMonth;
   });
+
+  const getAvailableMonths = () => {
+    const monthSet = new Set<string>();
+    expenses.forEach(e => monthSet.add(format(e.createdAt, 'yyyy-MM')));
+    return Array.from(monthSet).sort().reverse();
+  };
 
   interface TotalAmount {
     currency: string;
@@ -232,37 +233,10 @@ export const ExpensesScreen: React.FC = () => {
     />
   );
 
-  const getFilterButtonStyle = (filterType: typeof filter) => [
-    dynamicStyles.filterButton,
-    filter === filterType && dynamicStyles.filterButtonActive,
-  ];
-
-  const getFilterButtonTextStyle = (filterType: typeof filter) => [
-    dynamicStyles.filterButtonText,
-    filter === filterType && dynamicStyles.filterButtonTextActive,
-  ];
-
   return (
     <SafeAreaView style={dynamicStyles.container}>
       <View style={dynamicStyles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={dynamicStyles.headerTitle}>Expenses</Text>
-          <View style={dynamicStyles.totalsContainer}>
-            {filteredExpenses.length === 0 ? (
-              <View style={dynamicStyles.totalContainer}>
-                <Text style={dynamicStyles.totalLabel}>Total:</Text>
-                <Text style={dynamicStyles.totalAmount}>$0.00</Text>
-              </View>
-            ) : (
-              getTotalAmount(filteredExpenses).map((total) => (
-                <View key={total.currency} style={dynamicStyles.totalContainer}>
-                  <Text style={dynamicStyles.totalLabel}>{total.currency} Total:</Text>
-                  <Text style={dynamicStyles.totalAmount}>{total.formatted}</Text>
-                </View>
-              ))
-            )}
-          </View>
-        </View>
+        <Text style={dynamicStyles.headerTitle}>Expenses</Text>
         <TouchableOpacity
           style={dynamicStyles.addButton}
           onPress={handleCreate}
@@ -272,42 +246,55 @@ export const ExpensesScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <View style={dynamicStyles.filterContainer}>
+      {/* Month tabs + analytics toggle */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={dynamicStyles.monthTabsScroll}
+        contentContainerStyle={dynamicStyles.monthTabsContent}
+      >
         <TouchableOpacity
-          style={getFilterButtonStyle('all')}
-          onPress={() => setFilter('all')}
+          style={[dynamicStyles.monthTab, !selectedMonth && viewMode === 'list' && dynamicStyles.monthTabActive]}
+          onPress={() => { setSelectedMonth(null); setViewMode('list'); }}
         >
-          <Text style={getFilterButtonTextStyle('all')}>All Time</Text>
+          <Text style={[dynamicStyles.monthTabText, !selectedMonth && viewMode === 'list' && dynamicStyles.monthTabTextActive]}>All</Text>
         </TouchableOpacity>
+        {getAvailableMonths().map(m => (
+          <TouchableOpacity
+            key={m}
+            style={[dynamicStyles.monthTab, selectedMonth === m && viewMode === 'list' && dynamicStyles.monthTabActive]}
+            onPress={() => { setSelectedMonth(m); setViewMode('list'); }}
+          >
+            <Text style={[dynamicStyles.monthTabText, selectedMonth === m && viewMode === 'list' && dynamicStyles.monthTabTextActive]}>
+              {format(new Date(m + '-15'), 'MMM yy')}
+            </Text>
+          </TouchableOpacity>
+        ))}
         <TouchableOpacity
-          style={getFilterButtonStyle('thisMonth')}
-          onPress={() => setFilter('thisMonth')}
+          style={[dynamicStyles.monthTab, viewMode === 'analytics' && dynamicStyles.monthTabActive]}
+          onPress={() => setViewMode(viewMode === 'analytics' ? 'list' : 'analytics')}
         >
-          <Text style={getFilterButtonTextStyle('thisMonth')}>This Month</Text>
+          <Text style={[dynamicStyles.monthTabText, viewMode === 'analytics' && dynamicStyles.monthTabTextActive]}>📊</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
-      {/* View Mode Toggle */}
-      <View style={dynamicStyles.viewToggleContainer}>
-        <TouchableOpacity
-          style={[dynamicStyles.viewToggleButton, viewMode === 'list' && dynamicStyles.viewToggleButtonActive]}
-          onPress={() => setViewMode('list')}
-        >
-          <Text style={[dynamicStyles.viewToggleText, viewMode === 'list' && dynamicStyles.viewToggleTextActive]}>List</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[dynamicStyles.viewToggleButton, viewMode === 'analytics' && dynamicStyles.viewToggleButtonActive]}
-          onPress={() => setViewMode('analytics')}
-        >
-          <Text style={[dynamicStyles.viewToggleText, viewMode === 'analytics' && dynamicStyles.viewToggleTextActive]}>Analytics</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Month summary strip */}
+      {filteredExpenses.length > 0 && viewMode === 'list' && (
+        <View style={dynamicStyles.monthSummaryStrip}>
+          <Text style={dynamicStyles.monthSummaryLabel}>
+            {selectedMonth ? format(new Date(selectedMonth + '-15'), 'MMMM yyyy') : 'All time'} • {filteredExpenses.length} {filteredExpenses.length === 1 ? 'expense' : 'expenses'}
+          </Text>
+          {getTotalAmount(filteredExpenses).map(t => (
+            <Text key={t.currency} style={dynamicStyles.monthSummaryAmount}>{t.formatted}</Text>
+          ))}
+        </View>
+      )}
 
       {filteredExpenses.length === 0 ? (
         <View style={dynamicStyles.emptyContainer}>
           <Ionicons name="receipt-outline" size={64} color="#ccc" />
           <Text style={dynamicStyles.emptyText}>
-            {filter === 'all' ? 'No expenses yet' : 'No expenses this month'}
+            {!selectedMonth ? 'No expenses yet' : 'No expenses this month'}
           </Text>
           <Text style={dynamicStyles.emptySubtext}>
             Add entries in your journal to track expenses
@@ -420,9 +407,10 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     backgroundColor: theme.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
@@ -431,7 +419,59 @@ const getStyles = (theme: any) => StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: theme.text,
-    marginBottom: 8,
+  },
+  monthTabsScroll: {
+    backgroundColor: theme.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+    maxHeight: 44,
+    flexGrow: 0,
+  },
+  monthTabsContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
+    alignItems: 'center',
+  },
+  monthTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: theme.input,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  monthTabActive: {
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
+  },
+  monthTabText: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    fontWeight: '600',
+  },
+  monthTabTextActive: {
+    color: '#ffffff',
+  },
+  monthSummaryStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    backgroundColor: theme.input,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  monthSummaryLabel: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    fontWeight: '500',
+  },
+  monthSummaryAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2e7d32',
   },
   addButton: {
     width: 40,
@@ -504,12 +544,12 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   expenseCard: {
     backgroundColor: theme.surface,
-    marginVertical: 6,
-    padding: 16,
-    borderRadius: 12,
+    marginVertical: 3,
+    padding: 10,
+    borderRadius: 10,
     shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 2,
   },
@@ -523,7 +563,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   amountText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: 'bold',
     color: '#2e7d32',
   },
@@ -557,13 +597,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderColor: '#d32f2f',
   },
   expenseDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: theme.text,
-    lineHeight: 18,
-    marginBottom: 8,
+    lineHeight: 17,
+    marginBottom: 4,
   },
   expenseDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.placeholder,
   },
   emptyContainer: {

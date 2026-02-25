@@ -81,7 +81,7 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
         >
           <Ionicons
             name={item.completed ? "checkbox" : "checkbox-outline"}
-            size={24}
+            size={20}
             color={item.completed ? "#4caf50" : "#666"}
           />
         </TouchableOpacity>
@@ -93,7 +93,7 @@ const ActionItemCard: React.FC<ActionItemCardProps> = ({
         >
           <Markdown style={{
             body: {
-              fontSize: 16,
+              fontSize: 14,
               color: item.completed ? theme.placeholder : theme.text,
               textDecorationLine: item.completed ? 'line-through' : 'none',
             }
@@ -491,8 +491,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: theme.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
@@ -533,17 +533,17 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     backgroundColor: theme.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
   },
   filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginRight: 6,
+    borderRadius: 16,
     backgroundColor: theme.input,
   },
   filterButtonActive: {
@@ -562,25 +562,25 @@ const getStyles = (theme: any) => StyleSheet.create({
     paddingHorizontal: 16,
   },
   sectionHeader: {
-    paddingVertical: 12,
+    paddingVertical: 4,
     paddingHorizontal: 8,
-    marginTop: 8,
+    marginTop: 4,
   },
   sectionHeaderText: {
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: '700',
-    color: theme.text,
+    color: theme.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   itemCard: {
     backgroundColor: theme.surface,
-    marginVertical: 6,
-    padding: 16,
-    borderRadius: 12,
+    marginVertical: 2,
+    padding: 10,
+    borderRadius: 10,
     shadowColor: theme.text,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 2,
   },
@@ -591,41 +591,41 @@ const getStyles = (theme: any) => StyleSheet.create({
   itemHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   itemTitle: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: theme.text,
-    marginLeft: 12,
-    lineHeight: 20,
+    marginLeft: 8,
+    lineHeight: 18,
   },
   completedText: {
     textDecorationLine: 'line-through',
     color: theme.textSecondary,
   },
   itemDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: theme.textSecondary,
-    lineHeight: 18,
-    marginBottom: 12,
-    marginLeft: 36,
+    lineHeight: 16,
+    marginBottom: 4,
+    marginLeft: 28,
   },
   itemFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
   itemDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.placeholder,
   },
   itemDueDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: theme.textSecondary,
-    marginTop: 2,
+    marginTop: 1,
     fontWeight: '500',
   },
   overdue: {
@@ -636,13 +636,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: 'row',
   },
   actionButton: {
-    padding: 10,
-    marginLeft: 8,
-    minWidth: 36,
-    minHeight: 36,
+    padding: 5,
+    marginLeft: 5,
+    minWidth: 28,
+    minHeight: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 6,
     backgroundColor: theme.input,
     borderWidth: 1,
     borderColor: theme.border,

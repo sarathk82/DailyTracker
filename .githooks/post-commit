@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Post-commit hook: runs full test suite after every local commit to master.
+# Produces a report — commit is already done, report tells you whether to keep or revert.
+# Install with: bash scripts/install-hooks.sh
+
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+if [ "$BRANCH" != "master" ]; then
+  exit 0
+fi
+
+REPORT_FILE=".test-report-$(date +%Y%m%d-%H%M%S).txt"
+COMMIT_SHA=$(git rev-parse --short HEAD)
+COMMIT_MSG=$(git log -1 --pretty=%s)
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  🧪  POST-COMMIT TEST RUN  (master @ $COMMIT_SHA)"
+echo "  📝  $COMMIT_MSG"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+START=$(date +%s)
+
+npm run test:ci -- --forceExit 2>&1 | tee "$REPORT_FILE"
+TEST_EXIT=$?
+
+END=$(date +%s)
+ELAPSED=$((END - START))
+
+echo "" | tee -a "$REPORT_FILE"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$REPORT_FILE"
+
+if [ $TEST_EXIT -eq 0 ]; then
+  echo "  ✅  ALL TESTS PASSED  (${ELAPSED}s)" | tee -a "$REPORT_FILE"
+  echo "  ✔   Commit $COMMIT_SHA is safe to keep." | tee -a "$REPORT_FILE"
+  echo "  📄  Report: $REPORT_FILE" | tee -a "$REPORT_FILE"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$REPORT_FILE"
+  ls -t .test-report-*.txt 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null
+else
+  echo "  ❌  TESTS FAILED  (${ELAPSED}s)" | tee -a "$REPORT_FILE"
+  echo "" | tee -a "$REPORT_FILE"
+  echo "  VERDICT: Commit $COMMIT_SHA is on master but tests are failing." | tee -a "$REPORT_FILE"
+  echo "" | tee -a "$REPORT_FILE"
+  echo "  OPTIONS:" | tee -a "$REPORT_FILE"
+  echo "    • Fix & amend:  fix the issues, then  git commit --amend --no-edit" | tee -a "$REPORT_FILE"
+  echo "    • Revert:       git revert HEAD" | tee -a "$REPORT_FILE"
+  echo "    • Keep anyway:  do nothing (failures may be pre-existing)" | tee -a "$REPORT_FILE"
+  echo "" | tee -a "$REPORT_FILE"
+  echo "  📄  Full report: $REPORT_FILE" | tee -a "$REPORT_FILE"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" | tee -a "$REPORT_FILE"
+fi
+
+echo ""
+exit 0  # always exit 0 — post-commit cannot block the commit

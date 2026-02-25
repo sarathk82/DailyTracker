@@ -1,20 +1,25 @@
 module.exports = {
   preset: "react-native",
-  setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
+  testRegex: "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
+  testEnvironment: "node",
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
   transform: {
     "^.+\\.(js|jsx|ts|tsx)$": "babel-jest",
   },
-  testRegex: "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
-  testEnvironment: "node",
   transformIgnorePatterns: [
-    "node_modules/(?!(@react-native|react-native|@react-navigation|react-native-vector-icons|react-native-markdown-display|react-native-safe-area-context|react-native-screens|expo|@expo)/)"
+    "node_modules/(?!(@react-native|react-native|@react-navigation|react-native-vector-icons|react-native-markdown-display|react-native-safe-area-context|react-native-screens|expo|@expo|@noble|aes-js|firebase)/)",
   ],
+  moduleNameMapper: {
+    // Stub native-only Expo modules that use ESM and can't run in Jest/Node
+    "^expo-secure-store$": "<rootDir>/src/config/__mocks__/expo-secure-store.js",
+    "^expo-device$": "<rootDir>/src/config/__mocks__/expo-device.js",
+    "^expo-camera$": "<rootDir>/src/config/__mocks__/expo-camera.js",
+    "^expo-document-picker$": "<rootDir>/src/config/__mocks__/expo-document-picker.js",
+    "^expo-file-system$": "<rootDir>/src/config/__mocks__/expo-file-system.js",
+    "^expo-sharing$": "<rootDir>/src/config/__mocks__/expo-sharing.js",
+  },
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
   testPathIgnorePatterns: ["<rootDir>/node_modules/", "<rootDir>/.expo/"],
-  transformIgnorePatterns: [
-    "node_modules/(?!(@react-native|react-native|@react-navigation|react-native-vector-icons|react-native-markdown-display|react-native-safe-area-context|react-native-screens|expo|@expo)/)",
-  ],
   collectCoverageFrom: [
     "src/**/*.{ts,tsx}",
     "!src/**/*.d.ts",
@@ -22,11 +27,4 @@ module.exports = {
   ],
   coverageReporters: ["text", "lcov", "html"],
   coverageDirectory: "coverage",
-  moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"],
-  transform: {
-    "^.+\\.(ts|tsx)$": [
-      "babel-jest",
-      { presets: ["@babel/preset-typescript"] },
-    ],
-  },
 };

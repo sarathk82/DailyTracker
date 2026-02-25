@@ -7,6 +7,7 @@ import { Entry, Expense, ActionItem } from '../types';
 import { TextAnalyzer } from '../utils/textAnalysis';
 import { isDesktop } from '../utils/platform';
 import { useTheme } from '../contexts/ThemeContext';
+import { HighlightedText } from './HighlightedText';
 
 interface MessageBubbleProps {
   entry: Entry;
@@ -16,6 +17,8 @@ interface MessageBubbleProps {
   markdownStyles: any;
   expense?: Expense;
   actionItem?: ActionItem;
+  searchQuery?: string;
+  highlightIndex?: number;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
@@ -26,6 +29,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
   markdownStyles,
   expense,
   actionItem,
+  searchQuery = '',
+  highlightIndex,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -93,17 +98,13 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
     switch (entry.type) {
       case "expense":
         if (expense) {
-          const prefix = expense.autoDetected ? 'Auto-categorized as Expense' : 'Manually categorized as Expense';
           const amountStr = TextAnalyzer.formatCurrency(expense.amount, expense.currency);
-          return `${prefix}: ${amountStr}`;
+          const label = expense.autoDetected ? 'Auto-categorized' : 'Categorized';
+          return `💰 ${label} as Expense · ${amountStr}`;
         }
-        return "Expense";
+        return '💰 Expense';
       case "action":
-        if (actionItem) {
-          const prefix = actionItem.autoDetected ? 'Auto-categorized as Task' : 'Manually categorized as Task';
-          return `${prefix}: ${actionItem.title}`;
-        }
-        return "Task";
+        return actionItem?.autoDetected ? '✅ Auto-categorized as Task' : '✅ Task';
       default:
         return null;
     }
@@ -135,6 +136,17 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
 
   const MessageContent = () => {
     const styles = getStyles(theme);
+    
+    // Get base text style based on entry type
+    const baseTextStyle = [
+      styles.messageText,
+      entry.type === 'system' 
+        ? styles.systemMessageText 
+        : entry.type === 'log'
+          ? styles.userMessageText
+          : styles.nonUserMessageText
+    ];
+    
     return (
     <View style={{ flex: 1, width: '100%' }}>
       <View style={styles.messageHeader}>
@@ -184,23 +196,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
         )}
       </View>
       {entry.type !== 'system' && !desktop && (
-        <Text style={styles.gestureHint}>Long press to edit • Swipe left to delete</Text>
+        <Text style={styles.gestureHint}>Swipe left to delete</Text>
       )}
-      {entry.isMarkdown ? (
+      {searchQuery && searchQuery.trim() ? (
+        <HighlightedText
+          text={entry.text}
+          searchQuery={searchQuery}
+          highlightIndex={highlightIndex}
+          baseStyle={StyleSheet.flatten(baseTextStyle)}
+        />
+      ) : entry.isMarkdown ? (
         <Markdown style={markdownStyles}>{entry.text}</Markdown>
       ) : (
         <Text 
-          style={[
-            styles.messageText,
-            entry.type === 'system' 
-              ? styles.systemMessageText 
-              : entry.type === 'log'
-                ? styles.userMessageText
-                : styles.nonUserMessageText
-          ]}
-          selectable={Platform.OS === 'web'}
+          style={baseTextStyle}
+          selectable={Platform.OS !== 'web'}
         >
           {entry.text}
+        </Text>
+      )}
+      {getCategoryLabel() && (
+        <Text style={{ fontSize: 10, color: entry.type === 'expense' ? '#2e7d32' : '#1565c0', marginTop: 2, opacity: 0.8 }}>
+          {getCategoryLabel()}
         </Text>
       )}
     </View>
@@ -269,7 +286,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({
 
 const getStyles = (theme: any) => StyleSheet.create({
   userMessageContainer: {
-    marginVertical: 4,
+    marginVertical: 1,
     alignSelf: 'flex-start',
     maxWidth: '85%',
     flexShrink: 1,
@@ -303,11 +320,11 @@ const getStyles = (theme: any) => StyleSheet.create({
     maxWidth: "95%",
   },
   messageBubble: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     maxWidth: '100%',
     alignSelf: 'flex-start',
-    borderRadius: 12,
+    borderRadius: 10,
     flexShrink: 1,
     ...(Platform.OS === 'web' ? {
       boxShadow: '0px 1px 1px rgba(0, 0, 0, 0.18)',
@@ -359,7 +376,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 2,
     flexWrap: 'wrap',
   },
   actionButtons: {
@@ -393,8 +410,8 @@ const getStyles = (theme: any) => StyleSheet.create({
     marginLeft: 4,
   },
   messageText: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 14,
+    lineHeight: 19,
     flexWrap: 'wrap',
     ...(Platform.OS === 'web' ? {
       userSelect: 'text',
