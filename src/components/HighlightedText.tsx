@@ -63,12 +63,10 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({
 
         if (isMatch) {
           const isCurrent = matchCounter === highlightIndex;
-          const matchId = `match-${entryId}-${matchCounter}`;
           matchCounter++;
           return (
             <View
               key={`match-${index}`}
-              nativeID={matchId}
               style={{ backgroundColor: isCurrent ? '#757575' : '#FFEB3B', borderRadius: 2, paddingHorizontal: 2 }}
             >
               <Text style={[flatStyle, { color: isCurrent ? '#FFFFFF' : '#000000', fontWeight: isCurrent ? 'bold' : '600' }]}>
