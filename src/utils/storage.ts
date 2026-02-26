@@ -248,10 +248,24 @@ export class StorageService {
     try {
       const encryptedValue = await AsyncStorage.getItem(ACTION_ITEMS_KEY);
       if (encryptedValue != null) {
-        const actionItems = await decryptIfNeeded(encryptedValue);
-        if (!actionItems || !Array.isArray(actionItems)) {
-          console.warn('Invalid action items data, returning empty array');
+        let actionItems = await decryptIfNeeded(encryptedValue);
+        if (!actionItems) {
+          // Decryption failed (wrong key, old format) — clear to avoid repeating on every load
+          console.warn(`Invalid action items data (null after decrypt, raw length: ${encryptedValue.length}) — clearing corrupted entry`);
+          await AsyncStorage.removeItem(ACTION_ITEMS_KEY);
           return [];
+        }
+        if (!Array.isArray(actionItems)) {
+          // Stored as object map — attempt recovery via Object.values()
+          if (typeof actionItems === 'object') {
+            const recovered = Object.values(actionItems);
+            console.warn(`Action items stored as object, recovered ${recovered.length} items via Object.values()`);
+            actionItems = recovered;
+          } else {
+            console.warn(`Invalid action items data (type: ${typeof actionItems}) — clearing corrupted entry`);
+            await AsyncStorage.removeItem(ACTION_ITEMS_KEY);
+            return [];
+          }
         }
         return actionItems.map((item: any) => ({
           ...item,
@@ -313,16 +327,29 @@ export class StorageService {
     try {
       const encryptedValue = await AsyncStorage.getItem(EXPENSES_KEY);
       if (encryptedValue != null) {
-        const expenses = await decryptIfNeeded(encryptedValue);
-        if (!expenses || !Array.isArray(expenses)) {
-          console.warn('Invalid expenses data, returning empty array');
+        let expenses = await decryptIfNeeded(encryptedValue);
+        if (!expenses) {
+          // Decryption failed (wrong key, old format) — clear to avoid repeating on every load
+          console.warn(`Invalid expenses data (null after decrypt, raw length: ${encryptedValue.length}) — clearing corrupted entry`);
+          await AsyncStorage.removeItem(EXPENSES_KEY);
           return [];
         }
-        const mappedExpenses = expenses.map((expense: any) => ({
+        if (!Array.isArray(expenses)) {
+          // Stored as object map — attempt recovery via Object.values()
+          if (typeof expenses === 'object') {
+            const recovered = Object.values(expenses);
+            console.warn(`Expenses stored as object, recovered ${recovered.length} items via Object.values()`);
+            expenses = recovered;
+          } else {
+            console.warn(`Invalid expenses data (type: ${typeof expenses}) — clearing corrupted entry`);
+            await AsyncStorage.removeItem(EXPENSES_KEY);
+            return [];
+          }
+        }
+        return expenses.map((expense: any) => ({
           ...expense,
           createdAt: new Date(expense.createdAt),
         }));
-        return mappedExpenses;
       }
       return [];
     } catch (e) {

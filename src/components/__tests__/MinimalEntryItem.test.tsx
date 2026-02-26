@@ -4,6 +4,13 @@ import { MinimalEntryItem } from '../MinimalEntryItem';
 import { Entry, Expense, ActionItem } from '../../types';
 import { ThemeProvider } from '../../contexts/ThemeContext';
 
+jest.mock('../HighlightedText', () => ({
+  HighlightedText: ({ text, searchQuery }: { text: string; searchQuery: string }) => {
+    const { Text } = require('react-native');
+    return <Text testID="highlighted-text">{text}</Text>;
+  },
+}));
+
 const mockOnEdit = jest.fn();
 const mockOnDelete = jest.fn();
 const mockMarkdownStyles = {};
@@ -82,7 +89,7 @@ describe('MinimalEntryItem', () => {
       currency: 'USD',
       description: 'lunch',
       category: 'food',
-      timestamp: new Date(),
+      createdAt: new Date(),
       autoDetected: true
     };
 
@@ -152,6 +159,65 @@ describe('MinimalEntryItem', () => {
       </MockWrapper>
     );
 
+    expect(getByText('Minimal entry test')).toBeTruthy();
+  });
+
+  it('should use HighlightedText when searchQuery is provided', () => {
+    const { getByTestId } = render(
+      <MockWrapper>
+        <MinimalEntryItem
+          item={baseEntry}
+          expense={undefined}
+          actionItem={undefined}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          markdownStyles={mockMarkdownStyles}
+          layoutStyles={mockLayoutStyles}
+          searchQuery="entry"
+        />
+      </MockWrapper>
+    );
+
+    expect(getByTestId('highlighted-text')).toBeTruthy();
+  });
+
+  it('should pass highlightIndex to HighlightedText', () => {
+    const { getByTestId } = render(
+      <MockWrapper>
+        <MinimalEntryItem
+          item={baseEntry}
+          expense={undefined}
+          actionItem={undefined}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          markdownStyles={mockMarkdownStyles}
+          layoutStyles={mockLayoutStyles}
+          searchQuery="Minimal"
+          highlightIndex={0}
+        />
+      </MockWrapper>
+    );
+
+    expect(getByTestId('highlighted-text')).toBeTruthy();
+  });
+
+  it('should not use HighlightedText when searchQuery is empty string', () => {
+    const { getByText, queryByTestId } = render(
+      <MockWrapper>
+        <MinimalEntryItem
+          item={baseEntry}
+          expense={undefined}
+          actionItem={undefined}
+          onEdit={mockOnEdit}
+          onDelete={mockOnDelete}
+          markdownStyles={mockMarkdownStyles}
+          layoutStyles={mockLayoutStyles}
+          searchQuery=""
+        />
+      </MockWrapper>
+    );
+
+    expect(queryByTestId('highlighted-text')).toBeNull();
     expect(getByText('Minimal entry test')).toBeTruthy();
   });
 });

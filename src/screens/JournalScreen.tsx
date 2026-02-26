@@ -1282,6 +1282,8 @@ export const JournalScreen: React.FC<{}> = () => {
       onDelete={handleDeleteEntry}
       markdownStyles={markdownStyles}
       layoutStyles={layoutStyles}
+      searchQuery={searchQuery}
+      highlightIndex={getOccurrenceIndexForEntry(item.id)}
     />
   );
 

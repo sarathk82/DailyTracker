@@ -5,6 +5,7 @@ import Markdown from 'react-native-markdown-display';
 import { Entry, Expense, ActionItem } from '../types';
 import { TextAnalyzer } from '../utils/textAnalysis';
 import { isDesktop } from '../utils/platform';
+import { HighlightedText } from './HighlightedText';
 
 interface MinimalEntryItemProps {
   item: Entry;
@@ -14,6 +15,8 @@ interface MinimalEntryItemProps {
   onDelete: (entry: Entry) => void;
   markdownStyles: any;
   layoutStyles: any;
+  searchQuery?: string;
+  highlightIndex?: number;
 }
 
 export const MinimalEntryItem: React.FC<MinimalEntryItemProps> = React.memo(({
@@ -24,6 +27,8 @@ export const MinimalEntryItem: React.FC<MinimalEntryItemProps> = React.memo(({
   onDelete,
   markdownStyles,
   layoutStyles,
+  searchQuery,
+  highlightIndex,
 }) => {
   const desktop = isDesktop();
   const [translateX] = useState(new Animated.Value(0));
@@ -90,7 +95,14 @@ export const MinimalEntryItem: React.FC<MinimalEntryItemProps> = React.memo(({
           <View style={layoutStyles.minimalContainer}>
           <View style={layoutStyles.minimalContent}>
             <View style={{ flex: 1, minWidth: 0, marginRight: 4 }}>
-              {item.isMarkdown ? (
+              {searchQuery && searchQuery.trim() ? (
+                <HighlightedText
+                  text={item.text}
+                  searchQuery={searchQuery}
+                  highlightIndex={highlightIndex}
+                  baseStyle={layoutStyles.minimalText}
+                />
+              ) : item.isMarkdown ? (
                 <Markdown style={markdownStyles}>{item.text}</Markdown>
               ) : (
                 <Text style={layoutStyles.minimalText} numberOfLines={1} ellipsizeMode="tail">{item.text}</Text>
