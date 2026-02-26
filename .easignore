@@ -15,6 +15,12 @@ dist/
 .expo/
 .firebase/
 
+# Android build artifacts (machine-specific, corrupt EAS builds)
+android/app/build/
+android/build/
+android/.gradle/
+android/app/.cxx/
+
 # Documentation
 *.md
 README.md
