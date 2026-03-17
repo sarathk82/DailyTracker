@@ -137,7 +137,6 @@ export class StorageService {
     });
     
     if (unique.length < entries.length) {
-      console.log(`[Dedupe] Removed ${entries.length - unique.length} duplicate entries`);
       await this.saveEntries(unique);
     }
   }
@@ -154,7 +153,6 @@ export class StorageService {
     });
     
     if (unique.length < expenses.length) {
-      console.log(`[Dedupe] Removed ${expenses.length - unique.length} duplicate expenses`);
       await this.saveExpenses(unique);
     }
   }
@@ -171,17 +169,14 @@ export class StorageService {
     });
     
     if (unique.length < items.length) {
-      console.log(`[Dedupe] Removed ${items.length - unique.length} duplicate action items`);
       await this.saveActionItems(unique);
     }
   }
 
   static async deduplicateAll(): Promise<void> {
-    console.log('[Dedupe] Starting deduplication...');
     await this.deduplicateEntries();
     await this.deduplicateExpenses();
     await this.deduplicateActionItems();
-    console.log('[Dedupe] Deduplication complete!');
   }
 
   // Existing methods
@@ -191,7 +186,7 @@ export class StorageService {
       if (encryptedValue != null) {
         const entries = await decryptIfNeeded(encryptedValue);
         if (!entries || !Array.isArray(entries)) {
-          console.warn('Invalid entries data, returning empty array');
+          console.error('Invalid entries data, returning empty array');
           return [];
         }
         // Convert timestamp strings back to Date objects and ensure type preservation
@@ -251,7 +246,7 @@ export class StorageService {
         let actionItems = await decryptIfNeeded(encryptedValue);
         if (!actionItems) {
           // Decryption failed (wrong key, old format) — clear to avoid repeating on every load
-          console.warn(`Invalid action items data (null after decrypt, raw length: ${encryptedValue.length}) — clearing corrupted entry`);
+          console.error(`Invalid action items data (null after decrypt, raw length: ${encryptedValue.length}) — clearing corrupted entry`);
           await AsyncStorage.removeItem(ACTION_ITEMS_KEY);
           return [];
         }
@@ -259,10 +254,10 @@ export class StorageService {
           // Stored as object map — attempt recovery via Object.values()
           if (typeof actionItems === 'object') {
             const recovered = Object.values(actionItems);
-            console.warn(`Action items stored as object, recovered ${recovered.length} items via Object.values()`);
+            console.error(`Action items stored as object, recovered ${recovered.length} items via Object.values()`);
             actionItems = recovered;
           } else {
-            console.warn(`Invalid action items data (type: ${typeof actionItems}) — clearing corrupted entry`);
+            console.error(`Invalid action items data (type: ${typeof actionItems}) — clearing corrupted entry`);
             await AsyncStorage.removeItem(ACTION_ITEMS_KEY);
             return [];
           }
@@ -330,7 +325,7 @@ export class StorageService {
         let expenses = await decryptIfNeeded(encryptedValue);
         if (!expenses) {
           // Decryption failed (wrong key, old format) — clear to avoid repeating on every load
-          console.warn(`Invalid expenses data (null after decrypt, raw length: ${encryptedValue.length}) — clearing corrupted entry`);
+          console.error(`Invalid expenses data (null after decrypt, raw length: ${encryptedValue.length}) — clearing corrupted entry`);
           await AsyncStorage.removeItem(EXPENSES_KEY);
           return [];
         }
@@ -338,10 +333,10 @@ export class StorageService {
           // Stored as object map — attempt recovery via Object.values()
           if (typeof expenses === 'object') {
             const recovered = Object.values(expenses);
-            console.warn(`Expenses stored as object, recovered ${recovered.length} items via Object.values()`);
+            console.error(`Expenses stored as object, recovered ${recovered.length} items via Object.values()`);
             expenses = recovered;
           } else {
-            console.warn(`Invalid expenses data (type: ${typeof expenses}) — clearing corrupted entry`);
+            console.error(`Invalid expenses data (type: ${typeof expenses}) — clearing corrupted entry`);
             await AsyncStorage.removeItem(EXPENSES_KEY);
             return [];
           }
@@ -489,8 +484,6 @@ export class StorageService {
       await this.saveExpenses(expenses);
       if (settings) await this.saveSettings(settings);
       if (backup) await this.saveBackup(backup);
-
-      console.log('All data re-encrypted successfully');
     } catch (error) {
       console.error('Error re-encrypting data:', error);
       throw error;
@@ -500,11 +493,9 @@ export class StorageService {
   // Clear corrupted storage data (recovery tool)
   static async clearCorruptedData(): Promise<void> {
     try {
-      console.log('Clearing potentially corrupted storage data...');
       await AsyncStorage.removeItem(ENTRIES_KEY);
       await AsyncStorage.removeItem(ACTION_ITEMS_KEY);
       await AsyncStorage.removeItem(EXPENSES_KEY);
-      console.log('Corrupted data cleared. App will start fresh.');
     } catch (error) {
       console.error('Error clearing corrupted data:', error);
       throw error;

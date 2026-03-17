@@ -37,6 +37,7 @@ export interface SettingsData {
   layoutStyle: string;
   theme?: string; // 'light', 'dark', or 'system'
   syncMethod?: SyncMethod; // 'webrtc', 'firebase-relay', or 'cloud-sync'
+  localLLMEnabled?: boolean; // Auto-categorize entries using local pattern matching
 }
 
 export type TabParamList = {

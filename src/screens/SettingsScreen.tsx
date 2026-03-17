@@ -23,6 +23,7 @@ const defaultSettings: SettingsData = {
   layoutStyle: 'chat', // Default to current chat style
   theme: 'system', // light, dark, or system
   syncMethod: 'firebase-relay', // Default to Firebase Relay (works on all platforms)
+  localLLMEnabled: true, // Auto-categorize entries using local pattern matching
 };
 
 const CURRENCIES = [
@@ -81,15 +82,12 @@ export const SettingsScreen: React.FC<{
   try {
     authContext = useAuth();
   } catch (error) {
-    console.log('Auth context not available:', error);
     authContext = { logout: null, user: null };
   }
   
   const { logout, user } = authContext || { logout: null, user: null };
   const [settings, setSettings] = useState<SettingsData>(defaultSettings);
 
-  console.log('SettingsScreen - User:', user ? user.email : 'not logged in');
-  console.log('SettingsScreen - Logout function:', logout ? 'available' : 'not available');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [showLayoutModal, setShowLayoutModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
@@ -112,10 +110,8 @@ export const SettingsScreen: React.FC<{
 
   const saveSettings = async (newSettings: SettingsData) => {
     try {
-      console.log('Saving settings:', newSettings);
       await StorageService.saveSettings(newSettings);
       setSettings(newSettings);
-      console.log('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
       Alert.alert('Error', 'Failed to save settings');
@@ -126,14 +122,11 @@ export const SettingsScreen: React.FC<{
     key: K,
     value: SettingsData[K]
   ) => {
-    console.log(`Updating setting ${String(key)} to ${value}`);
     const newSettings = { ...settings, [key]: value };
     saveSettings(newSettings);
   };
 
   const showCurrencyPicker = () => {
-    console.log('Currency picker tapped'); // Debug log
-    console.log('Setting showCurrencyModal to true');
     setShowCurrencyModal(true);
   };
 
@@ -145,8 +138,6 @@ export const SettingsScreen: React.FC<{
   ];
 
   const showLayoutPicker = () => {
-    console.log('Layout picker tapped'); // Debug log
-    console.log('Setting showLayoutModal to true');
     setShowLayoutModal(true);
   };
 
@@ -161,7 +152,6 @@ export const SettingsScreen: React.FC<{
   };
 
   const showThemePicker = () => {
-    console.log('Theme picker tapped');
     setShowThemeModal(true);
   };
 
@@ -172,7 +162,6 @@ export const SettingsScreen: React.FC<{
   };
 
   const showSyncMethodPicker = () => {
-    console.log('Sync method picker tapped');
     setShowSyncMethodModal(true);
   };
 
@@ -183,8 +172,6 @@ export const SettingsScreen: React.FC<{
   };
 
   const handleClearJournal = async () => {
-    console.log('handleClearJournal called');
-    
     // Use window.confirm for web, Alert for native
     const confirmClear = Platform.OS === 'web' 
       ? window.confirm('This will delete all journal entries but keep your expenses and tasks. Continue?')
@@ -205,15 +192,8 @@ export const SettingsScreen: React.FC<{
 
     if (confirmClear) {
       try {
-        console.log('Clearing journal entries...');
-        // Get all entries
-        const allEntries = await StorageService.getEntries();
-        console.log(`Found ${allEntries.length} entries to clear`);
-        
-        // Filter to keep only system messages (if any) or clear all
         // Since expenses and tasks are stored separately, we can safely clear all entries
         await StorageService.saveEntries([]);
-        console.log('Journal entries cleared successfully');
         
         if (Platform.OS === 'web') {
           window.alert('Journal entries cleared. Your expenses and tasks are safe. Please refresh the journal tab.');
@@ -232,8 +212,6 @@ export const SettingsScreen: React.FC<{
   };
 
   const handleClearCorruptedData = async () => {
-    console.log('handleClearCorruptedData called');
-    
     const confirmClear = Platform.OS === 'web' 
       ? window.confirm('This will clear ALL corrupted storage data and start fresh. This is a recovery tool for when you see decryption errors. Continue?')
       : await new Promise((resolve) => {
@@ -253,9 +231,7 @@ export const SettingsScreen: React.FC<{
 
     if (confirmClear) {
       try {
-        console.log('Clearing corrupted data...');
         await StorageService.clearCorruptedData();
-        console.log('Corrupted data cleared successfully');
         
         if (Platform.OS === 'web') {
           window.alert('Corrupted data cleared! App will start fresh. Please reload the app.');
@@ -290,6 +266,19 @@ export const SettingsScreen: React.FC<{
         <View style={dynamicStyles.section}>
           <Text style={dynamicStyles.sectionTitle}>Text Input</Text>
           
+          <View style={dynamicStyles.settingItem}>
+            <View style={dynamicStyles.settingInfo}>
+              <Text style={dynamicStyles.settingLabel}>Local LLM Auto-Categorization</Text>
+              <Text style={dynamicStyles.settingDescription}>
+                Automatically classify entries as expense, task, or log. When off, entries are logged as-is unless you manually tag them with the 💰 or ✅ buttons.
+              </Text>
+            </View>
+            <Switch
+              value={settings.localLLMEnabled !== false}
+              onValueChange={(value) => updateSetting('localLLMEnabled', value)}
+            />
+          </View>
+
           <View style={dynamicStyles.settingItem}>
             <View style={dynamicStyles.settingInfo}>
               <Text style={dynamicStyles.settingLabel}>Enable Markdown</Text>

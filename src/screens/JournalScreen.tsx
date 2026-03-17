@@ -69,6 +69,7 @@ export const JournalScreen: React.FC<{}> = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [layoutStyle, setLayoutStyle] = useState('chat');
+  const [localLLMEnabled, setLocalLLMEnabled] = useState(true);
   
   // Search functionality
   const [searchQuery, setSearchQuery] = useState("");
@@ -283,7 +284,6 @@ export const JournalScreen: React.FC<{}> = () => {
     // Save cleaned entries back if any were modified
     const hasChanges = cleanedEntries.some((entry, index) => entry.text !== savedEntries[index].text);
     if (hasChanges) {
-      console.log('[Migration] Cleaning up corrupted emoji data from old messages...');
       await StorageService.saveEntries(cleanedEntries);
     }
     
@@ -421,6 +421,7 @@ export const JournalScreen: React.FC<{}> = () => {
         setIsMarkdown(savedSettings.isMarkdownEnabled);
         setEnterToSend(savedSettings.enterToSend);
         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+        setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -477,7 +478,6 @@ export const JournalScreen: React.FC<{}> = () => {
     // Deduplicate on startup (web only, one-time cleanup)
     if (Platform.OS === 'web') {
       StorageService.deduplicateAll().then(() => {
-        console.log('✅ Startup deduplication complete');
         // Reload to show deduplicated data
         loadEntries();
         loadExpensesAndActions();
@@ -488,7 +488,6 @@ export const JournalScreen: React.FC<{}> = () => {
     
     // Register P2P sync data refresh callback
     P2PSyncService.onDataRefresh(() => {
-      console.log('P2P sync data refresh triggered, reloading entries...');
       loadEntries();
       loadExpensesAndActions();
     });
@@ -556,8 +555,9 @@ export const JournalScreen: React.FC<{}> = () => {
   useFocusEffect(
     useCallback(() => {
       loadEntries();
+      loadSettings();
       loadExpensesAndActions();
-    }, [loadEntries, loadExpensesAndActions])
+    }, [loadEntries, loadSettings, loadExpensesAndActions])
   );
 
   const showToast = (message: string) => {
@@ -582,7 +582,9 @@ export const JournalScreen: React.FC<{}> = () => {
 
       // Convert dot-prefix to checkbox format for display
       let displayText = trimmedInput;
-      const autoDetectedAction = await TextAnalyzer.detectActionItemAsync(trimmedInput);
+      const autoDetectedAction = localLLMEnabled
+        ? await TextAnalyzer.detectActionItemAsync(trimmedInput)
+        : false;
       if (autoDetectedAction || forceAction) {
         displayText = convertDotToCheckbox(trimmedInput);
       }
@@ -616,10 +618,12 @@ export const JournalScreen: React.FC<{}> = () => {
         await StorageService.addEntry(entry);
         
         let systemMessage = '';
-        let entryType = 'log';
+        let entryType: 'log' | 'action' | 'expense' | 'system' = 'log';
         
         // Check for expense (auto-detect OR user explicitly marked it)
-        const autoDetectedExpense = await TextAnalyzer.detectExpenseAsync(trimmedInput);
+        const autoDetectedExpense = localLLMEnabled
+          ? await TextAnalyzer.detectExpenseAsync(trimmedInput)
+          : false;
         if (autoDetectedExpense || forceExpense) {
           const expenseInfo = await TextAnalyzer.extractExpenseInfoAsync(trimmedInput, entry.id);
           if (expenseInfo) {

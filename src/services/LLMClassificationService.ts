@@ -73,7 +73,6 @@ export class LLMClassificationService {
     apiEndpoint?: string;
     model?: string;
   }) {
-    console.log('Local LLM mode - no API configuration needed');
     // Configuration ignored in local mode
   }
 

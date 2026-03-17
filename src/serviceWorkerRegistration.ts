@@ -7,8 +7,6 @@ export function register() {
       navigator.serviceWorker
         .register(swUrl)
         .then((registration) => {
-          console.log('SW registered: ', registration);
-          
           // Check for updates periodically
           setInterval(() => {
             registration.update();
@@ -24,15 +22,12 @@ export function register() {
               if (installingWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
                   // New update available
-                  console.log('New content is available; please refresh.');
-                  
                   // Show update notification to user
                   if (window.confirm('New version available! Reload to update?')) {
                     window.location.reload();
                   }
                 } else {
                   // Content cached for offline use
-                  console.log('Content is cached for offline use.');
                 }
               }
             };

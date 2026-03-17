@@ -137,9 +137,7 @@ export class P2PSyncService {
    */
   static async pairDevice(qrData: string): Promise<void> {
     try {
-      console.log('Attempting to pair with QR data:', qrData);
       const pairingData = JSON.parse(qrData);
-      console.log('Parsed pairing data:', pairingData);
       
       const { deviceId, syncKey, deviceName } = pairingData;
 
@@ -159,7 +157,6 @@ export class P2PSyncService {
       
       // Check if device is already paired
       if (pairedDevices.some(d => d.id === deviceId)) {
-        console.log('Device already paired, updating...');
         const index = pairedDevices.findIndex(d => d.id === deviceId);
         pairedDevices[index] = pairedDevice;
       } else {
@@ -174,7 +171,6 @@ export class P2PSyncService {
       // Send our pairing info back via Firebase Relay for bidirectional pairing
       // IMPORTANT: We send back the SAME shared syncKey, not our own different key
       try {
-        console.log('[DevicePairing] Sending pairing confirmation to:', deviceId);
         await this.sendPairingConfirmation(deviceId, syncKey);
       } catch (error) {
         console.error('[DevicePairing] Failed to send pairing confirmation:', error);
@@ -185,10 +181,8 @@ export class P2PSyncService {
       try {
         await this.connectToDevice(deviceId);
       } catch (error) {
-        console.log('Could not establish connection (WebRTC may not be available), but device is paired');
+        // WebRTC may not be available, but device is paired
       }
-
-      console.log('Device paired successfully:', deviceName);
     } catch (error) {
       console.error('Failed to pair device:', error);
       if (error instanceof SyntaxError) {
@@ -217,10 +211,8 @@ export class P2PSyncService {
         timestamp: Date.now()
       };
       
-      console.log('[DevicePairing] Uploading pairing confirmation to Firebase...');
       const syncRef = ref(realtimeDb, `sync/${targetDeviceId}`);
       await set(syncRef, pairingConfirmation);
-      console.log('[DevicePairing] ✓ Pairing confirmation sent');
     } catch (error) {
       console.error('[DevicePairing] Error sending pairing confirmation:', error);
       throw error;
@@ -253,7 +245,6 @@ export class P2PSyncService {
       // Save updated names if migration occurred
       if (needsUpdate) {
         await AsyncStorage.setItem(PAIRED_DEVICES_KEY, JSON.stringify(updatedDevices));
-        console.log('Migrated device names to readable format');
       }
       
       return updatedDevices;
@@ -350,13 +341,9 @@ export class P2PSyncService {
    * Sync with a specific device
    */
   static async syncWithDevice(deviceId: string): Promise<void> {
-    console.log('[Sync] Starting sync to device:', deviceId);
-    console.log('[Sync] Platform:', Platform.OS);
-    
     // Check user's sync method preference
     const settings = await StorageService.getSettings();
     const syncMethod = settings?.syncMethod || 'firebase-relay';
-    console.log('[Sync] User preference:', syncMethod);
     
     // Route based on user preference
     if (syncMethod === 'webrtc') {
@@ -364,33 +351,23 @@ export class P2PSyncService {
       if (Platform.OS === 'web') {
         // Web: Try PeerJS WebRTC connection
         if (!this.isP2PAvailable()) {
-          console.log('[Sync] WebRTC not available, falling back to Firebase relay');
           return this.syncViaFirebaseRelay(deviceId);
         }
 
         const conn = this.connections.get(deviceId);
         if (!conn) {
-          console.log('[Sync] No WebRTC connection, falling back to Firebase relay');
           return this.syncViaFirebaseRelay(deviceId);
         }
 
-        console.log('[Sync] Using WebRTC connection');
         return this.syncViaWebRTC(deviceId, conn);
       } else {
-        // Native: WebRTC requires native build (react-native-webrtc)
-        // For now, fall back to Firebase relay in Expo Go
-        // In production native build, this would use react-native-webrtc
-        console.log('[Sync] WebRTC selected but requires native build. Using Firebase relay in Expo Go.');
-        console.log('[Sync] To use WebRTC on native, build with EAS and install react-native-webrtc');
+        // Native: WebRTC requires native build — fall back to Firebase relay
         return this.syncViaFirebaseRelay(deviceId);
       }
     } else if (syncMethod === 'cloud-sync') {
-      // Cloud sync - would need Firebase Auth and Firestore
-      console.log('[Sync] Cloud sync not yet implemented, using Firebase relay');
       return this.syncViaFirebaseRelay(deviceId);
     } else {
       // Default: firebase-relay
-      console.log('[Sync] Using Firebase relay');
       return this.syncViaFirebaseRelay(deviceId);
     }
   }
@@ -399,18 +376,10 @@ export class P2PSyncService {
    * Sync via WebRTC (P2P direct connection)
    */
   private static async syncViaWebRTC(deviceId: string, conn: DataConnection): Promise<void> {
-    console.log('[Sync] Using WebRTC connection');
-    
     // Get all local data
     const entries = await StorageService.getEntries();
     const expenses = await StorageService.getExpenses();
     const actionItems = await StorageService.getActionItems();
-
-    console.log('[Sync] Data to send:', {
-      entries: entries.length,
-      expenses: expenses.length,
-      actionItems: actionItems.length
-    });
 
     const syncData: SyncData = {
       entries,
@@ -420,18 +389,14 @@ export class P2PSyncService {
     };
 
     // Encrypt sync data with shared sync key
-    console.log('[Sync] Encrypting data...');
     const encryptedData = encryptData(syncData, this.syncKey!);
-    console.log('[Sync] Data encrypted, length:', encryptedData.length);
 
     // Send to peer via WebRTC
     conn.send({
       type: 'sync',
       data: encryptedData,
     });
-    console.log('[Sync] Data sent via WebRTC');
 
-    // Update last sync time
     // Update last sync time
     await this.updateLastSyncTime(deviceId);
   }
@@ -440,13 +405,8 @@ export class P2PSyncService {
    * Bidirectional sync - both devices exchange data
    */
   static async syncBidirectional(deviceId: string): Promise<void> {
-    console.log('[Sync] Starting bidirectional sync with device:', deviceId);
-    
     try {
-      // Send our data to them (with bidirectional flag)
       await this.syncViaFirebaseRelay(deviceId, true);
-      
-      console.log('[Sync] ✓ Bidirectional sync completed successfully');
     } catch (error) {
       console.error('[Sync] Bidirectional sync failed:', error);
       throw error;  // Re-throw to show error alert
@@ -457,25 +417,16 @@ export class P2PSyncService {
    * Handle received sync data
    */
   private static async handleReceivedData(message: any): Promise<void> {
-    console.log('[Sync] Received message type:', message.type);
-    
     if (message.type !== 'sync') {
       return;
     }
 
     try {
-      console.log('[Sync] Processing sync data...');
       // Decrypt sync data with shared sync key
       const syncData: SyncData = decryptData(message.data, this.syncKey!);
-      console.log('[Sync] Data decrypted:', {
-        entries: syncData.entries.length,
-        expenses: syncData.expenses.length,
-        actionItems: syncData.actionItems.length
-      });
 
       // Merge with local data (conflict resolution: newer wins)
       await this.mergeData(syncData);
-      console.log('[Sync] Data merged successfully');
 
       if (this.onSyncCallback) {
         this.onSyncCallback(syncData);
@@ -554,7 +505,6 @@ export class P2PSyncService {
     });
 
     const result = Array.from(map.values());
-    console.log(`[Merge] Deduplication: ${local.length} local + ${remote.length} remote = ${result.length} merged`);
     return result;
   }
 
@@ -602,7 +552,7 @@ export class P2PSyncService {
       try {
         await this.connectToDevice(device.id);
       } catch (error) {
-        console.log('Could not connect to:', device.name);
+        // Connection will be established later when device comes online
       }
     }
   }
@@ -653,26 +603,19 @@ export class P2PSyncService {
    */
   private static initializeFirebaseRelay(): void {
     if (!this.deviceId) {
-      console.log('[Firebase Relay] Cannot initialize - no device ID');
       return;
     }
     
     // Clean up existing listener if it exists
     if (this.firebaseUnsubscribe) {
-      console.log('[Firebase Relay] Cleaning up existing listener');
       this.firebaseUnsubscribe();
       this.firebaseUnsubscribe = null;
     }
     
-    console.log('[Firebase Relay] Initializing listener for device:', this.deviceId, 'on platform:', Platform.OS);
-    
-    // Listen for sync data sent to this device
     const syncRef = ref(realtimeDb, `sync/${this.deviceId}`);
     
     this.firebaseUnsubscribe = onValue(syncRef, async (snapshot) => {
-      console.log('[Firebase Relay] Snapshot received');
       const data = snapshot.val();
-      console.log('[Firebase Relay] Data exists:', !!data);
       
       if (!data) {
         return;
@@ -680,12 +623,9 @@ export class P2PSyncService {
       
       // Handle pairing confirmation messages
       if (data.type === 'pairing_confirmation') {
-        console.log('[Firebase Relay] Received pairing confirmation from:', data.fromDevice);
-        
         try {
           // Store their sync key
           await AsyncStorage.setItem(`@sync_key_${data.fromDevice}`, data.syncKey);
-          console.log('[Firebase Relay] Stored sync key for:', data.fromDevice);
           
           // Add to paired devices if not already there
           const pairedDevices = await this.getPairedDevices();
@@ -697,7 +637,6 @@ export class P2PSyncService {
             };
             pairedDevices.push(pairedDevice);
             await AsyncStorage.setItem(PAIRED_DEVICES_KEY, JSON.stringify(pairedDevices));
-            console.log('[Firebase Relay] Added device to paired list:', data.deviceName);
           }
           
           // Clear the pairing confirmation from Firebase
@@ -711,8 +650,6 @@ export class P2PSyncService {
       
       // Handle regular sync data
       if (data.data && data.timestamp) {
-        console.log('[Firebase Relay] Valid sync data from:', data.fromDevice);
-        
         try {
           // Decrypt sync data with shared sync key
           const syncKey = await AsyncStorage.getItem(`@sync_key_${data.fromDevice}`);
@@ -721,23 +658,14 @@ export class P2PSyncService {
             return;
           }
           
-          console.log('[Firebase Relay] Decrypting data...');
           const syncData: SyncData = decryptData(data.data, syncKey);
-          console.log('[Firebase Relay] Data decrypted:', {
-            entries: syncData.entries.length,
-            expenses: syncData.expenses.length,
-            actionItems: syncData.actionItems.length
-          });
           
           // Merge with local data
           await this.mergeData(syncData);
-          console.log('[Firebase Relay] Data merged');
           
           // If this was a bidirectional sync request, send our data back
           if (data.bidirectional && !data.isResponse) {
-            console.log('[Firebase Relay] Bidirectional sync requested, sending data back to:', data.fromDevice);
             try {
-              // Send our data back (mark as response to avoid infinite loop)
               await this.sendSyncResponse(data.fromDevice);
             } catch (error) {
               console.error('[Firebase Relay] Error sending sync response:', error);
@@ -756,7 +684,7 @@ export class P2PSyncService {
           
           // Clean up the relay data after receiving
           await remove(syncRef);
-          console.log('[Firebase Relay] ✓ Sync complete');
+
         } catch (error) {
           console.error('[Firebase Relay] Error processing data:', error);
         }
@@ -769,23 +697,10 @@ export class P2PSyncService {
    */
   static async syncViaFirebaseRelay(targetDeviceId: string, bidirectional: boolean = false): Promise<void> {
     try {
-      console.log('[Firebase Relay] Starting sync to:', targetDeviceId);
-      
       // Get all local data
       const entries = await StorageService.getEntries();
       const expenses = await StorageService.getExpenses();
       const actionItems = await StorageService.getActionItems();
-
-      console.log('[Firebase Relay] Data to sync:', {
-        entries: entries.length,
-        expenses: expenses.length,
-        actionItems: actionItems.length
-      });
-      console.log('[Firebase Relay] Sample data check:', {
-        firstEntry: entries[0]?.text?.substring(0, 30),
-        firstExpense: expenses[0]?.amount,
-        firstTask: actionItems[0]?.title?.substring(0, 30)
-      });
 
       // Prepare sync data (dates will be serialized by JSON.stringify)
       const syncData: SyncData = {
@@ -801,14 +716,11 @@ export class P2PSyncService {
         throw new Error('No sync key found for target device');
       }
 
-      console.log('[Firebase Relay] Encrypting data...');
       // Encrypt sync data with shared sync key
       const encryptedData = encryptData(syncData, syncKey);
-      console.log('[Firebase Relay] Data encrypted, length:', encryptedData.length);
       
       // Upload to Firebase Realtime Database
       try {
-        console.log('[Firebase Relay] Uploading to Firebase...');
         const syncRef = ref(realtimeDb, `sync/${targetDeviceId}`);
         const uploadData = {
           data: encryptedData,
@@ -818,7 +730,7 @@ export class P2PSyncService {
         };
         
         await set(syncRef, uploadData);
-        console.log('[Firebase Relay] ✓ Upload successful!');
+
       } catch (uploadError: any) {
         console.error('[Firebase Relay] Upload error:', uploadError);
         // Check if it's a 404 error (database doesn't exist)
@@ -878,7 +790,7 @@ export class P2PSyncService {
       };
       
       await set(syncRef, uploadData);
-      console.log('[Firebase Relay] ✓ Sync response sent');
+
     } catch (error) {
       console.error('[Firebase Relay] Error sending sync response:', error);
       throw error;

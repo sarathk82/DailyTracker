@@ -95,6 +95,20 @@ export const EditModal: React.FC<EditModalProps> = ({
       } else {
         setEditDueDate(new Date());
       }
+    } else if (expense) {
+      // Standalone expense (created directly from expense tab, no journal entry)
+      const syntheticEntry: Entry = {
+        id: expense.entryId,
+        text: expense.description,
+        timestamp: expense.createdAt,
+        type: 'expense',
+        isMarkdown: false,
+      };
+      setEditingEntry(syntheticEntry);
+      setEditText(expense.description);
+      setEditAmount(expense.amount.toString());
+      setEditCategory(expense.category || "");
+      setEditDueDate(new Date());
     }
   }, [entry, expense, actionItem]);
 

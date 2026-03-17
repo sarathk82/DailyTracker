@@ -29,13 +29,11 @@ export class SyncService {
    */
   static async syncToCloud(userId: string, masterKey: string): Promise<void> {
     if (this.syncInProgress) {
-      console.log('Sync already in progress, skipping...');
       return;
     }
 
     try {
       this.syncInProgress = true;
-      console.log('Starting sync to cloud...');
 
       // Get all local data
       const entries = await StorageService.getEntries();
@@ -65,7 +63,6 @@ export class SyncService {
       );
 
       this.lastSyncTime = new Date();
-      console.log('Sync completed successfully');
     } catch (error) {
       console.error('Sync error:', error);
       throw error;
@@ -79,7 +76,6 @@ export class SyncService {
    */
   static async syncFromCloud(userId: string, masterKey: string): Promise<void> {
     try {
-      console.log('Starting sync from cloud...');
 
       // Download entries
       const entriesSnapshot = await getDocs(
@@ -126,8 +122,6 @@ export class SyncService {
       for (const item of actionItems) {
         await StorageService.addActionItem(item);
       }
-
-      console.log('Downloaded and decrypted all data');
     } catch (error) {
       console.error('Sync from cloud error:', error);
       throw error;
@@ -214,7 +208,6 @@ export class SyncService {
     const unsubscribeEntries = onSnapshot(
       collection(db, 'users', userId, 'entries'),
       () => {
-        console.log('Entries updated in cloud');
         onUpdate();
       }
     );
@@ -222,7 +215,6 @@ export class SyncService {
     const unsubscribeExpenses = onSnapshot(
       collection(db, 'users', userId, 'expenses'),
       () => {
-        console.log('Expenses updated in cloud');
         onUpdate();
       }
     );
@@ -230,7 +222,6 @@ export class SyncService {
     const unsubscribeActionItems = onSnapshot(
       collection(db, 'users', userId, 'actionItems'),
       () => {
-        console.log('Action items updated in cloud');
         onUpdate();
       }
     );

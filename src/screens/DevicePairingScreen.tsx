@@ -68,15 +68,11 @@ export const DevicePairingScreen: React.FC = () => {
     // Setup sync callback to reload data silently (no alert on receiving device)
     P2PSyncService.onSync((data) => {
       setSyncing(false);
-      console.log('✅ Sync received:', data.entries.length, 'entries,', data.expenses.length, 'expenses,', data.actionItems.length, 'tasks');
-      
-      // Just refresh the UI silently - no alert, no navigation
-      // The device that initiated the sync will show the success alert
+      // Just refresh the UI silently - the device that initiated the sync shows the success alert
     });
 
     P2PSyncService.onPeerOnline((deviceId) => {
-      console.log('🟢 Device connected:', deviceId);
-      // Just log, don't show alert to avoid alert stacking
+      // No-op: don't show alert to avoid stacking
     });
 
     // Cleanup and disconnect on unmount
@@ -150,14 +146,8 @@ export const DevicePairingScreen: React.FC = () => {
   const handleBarCodeScanned = async ({ data }: { data: string }) => {
     // Prevent duplicate scans
     if (isScanning) {
-      console.log('Already processing a scan, ignoring duplicate');
       return;
     }
-    
-    console.log('Processing QR code scan...');
-    console.log('Raw QR data:', data);
-    console.log('QR data length:', data.length);
-    console.log('QR data type:', typeof data);
     
     setIsScanning(true);
     setShowScanner(false);
@@ -168,7 +158,6 @@ export const DevicePairingScreen: React.FC = () => {
       let pairingData;
       try {
         pairingData = JSON.parse(data);
-        console.log('Parsed pairing data:', pairingData);
       } catch (parseError) {
         throw new Error('Invalid QR code format. Please scan the QR code from the desktop app.');
       }
@@ -179,18 +168,13 @@ export const DevicePairingScreen: React.FC = () => {
       }
       
       // Pair the device
-      console.log('Pairing device...');
       await P2PSyncService.pairDevice(data);
       await loadPairedDevices();
       
       const pairedDeviceId = pairingData.deviceId;
-      console.log('[DevicePairing] Device paired, starting auto-sync...');
-      console.log('[DevicePairing] Target device ID:', pairedDeviceId);
       
       // Auto-sync immediately after pairing
-      console.log('[DevicePairing] Calling P2PSyncService.syncWithDevice...');
       await P2PSyncService.syncWithDevice(pairedDeviceId);
-      console.log('[DevicePairing] P2PSyncService.syncWithDevice completed');
       
       // Success!
       setLoading(false);
@@ -252,7 +236,6 @@ export const DevicePairingScreen: React.FC = () => {
     }
 
     try {
-      console.log('[DevicePairing] Manual pairing started...');
       setLoading(true);
       setShowManualInput(false);
       await P2PSyncService.pairDevice(manualCode);
@@ -260,12 +243,9 @@ export const DevicePairingScreen: React.FC = () => {
       
       // Parse the pairing code to get device ID for auto-sync
       const pairingData = JSON.parse(manualCode);
-      console.log('[DevicePairing] Manual pair - device ID:', pairingData.deviceId);
       
       // Auto-sync after pairing
-      console.log('[DevicePairing] Starting auto-sync after manual pairing...');
       await P2PSyncService.syncWithDevice(pairingData.deviceId);
-      console.log('[DevicePairing] Manual pair sync completed');
       
       showAlert(
         'Device Paired & Synced',
@@ -312,13 +292,11 @@ export const DevicePairingScreen: React.FC = () => {
 
   const handleSyncWithDevice = async (deviceId: string) => {
     try {
-      console.log('[DevicePairing] Starting bidirectional sync with device:', deviceId);
       setSyncing(true);
       
       // Bidirectional sync: send our data and request their data
       await P2PSyncService.syncBidirectional(deviceId);
       
-      console.log('[DevicePairing] Bidirectional sync completed successfully');
       // Success message only on device that clicked the button
       showAlert(
         '✓ Sync Complete',
