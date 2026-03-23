@@ -344,6 +344,7 @@ export class StorageService {
         return expenses.map((expense: any) => ({
           ...expense,
           createdAt: new Date(expense.createdAt),
+          expenseDate: expense.expenseDate ? new Date(expense.expenseDate) : new Date(expense.createdAt),
         }));
       }
       return [];
@@ -439,7 +440,8 @@ export class StorageService {
           })),
           expenses: backup.expenses.map((e: any) => ({
             ...e,
-            createdAt: new Date(e.createdAt)
+            createdAt: new Date(e.createdAt),
+            expenseDate: e.expenseDate ? new Date(e.expenseDate) : new Date(e.createdAt),
           })),
           actionItems: backup.actionItems.map((a: any) => ({
             ...a,

@@ -108,7 +108,8 @@ describe('StorageService', () => {
       currency: 'USD',
       description: 'Test expense',
       category: 'food',
-      createdAt: new Date('2025-09-02T10:00:00Z')
+      createdAt: new Date('2025-09-02T10:00:00Z'),
+      expenseDate: new Date('2025-09-02T10:00:00Z'),
     };
 
     it('should get expenses from storage', async () => {

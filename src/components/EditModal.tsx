@@ -51,6 +51,7 @@ export const EditModal: React.FC<EditModalProps> = ({
   const [editAmount, setEditAmount] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editDueDate, setEditDueDate] = useState<Date | null>(null);
+  const [editExpenseDate, setEditExpenseDate] = useState<Date>(new Date());
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Track keyboard height
@@ -84,9 +85,11 @@ export const EditModal: React.FC<EditModalProps> = ({
       if (entry.type === 'expense' && expense) {
         setEditAmount(expense.amount.toString());
         setEditCategory(expense.category || "");
+        setEditExpenseDate(expense.expenseDate ? new Date(expense.expenseDate) : new Date(expense.createdAt));
       } else {
         setEditAmount("");
         setEditCategory("");
+        setEditExpenseDate(new Date());
       }
       
       // Pre-fill action item details
@@ -108,6 +111,7 @@ export const EditModal: React.FC<EditModalProps> = ({
       setEditText(expense.description);
       setEditAmount(expense.amount.toString());
       setEditCategory(expense.category || "");
+      setEditExpenseDate(expense.expenseDate ? new Date(expense.expenseDate) : new Date(expense.createdAt));
       setEditDueDate(new Date());
     }
   }, [entry, expense, actionItem]);
@@ -117,6 +121,7 @@ export const EditModal: React.FC<EditModalProps> = ({
     setEditText("");
     setEditAmount("");
     setEditCategory("");
+    setEditExpenseDate(new Date());
     setEditDueDate(null);
     onClose();
   };
@@ -168,6 +173,7 @@ export const EditModal: React.FC<EditModalProps> = ({
               amount,
               category: editCategory || existingExpense.category,
               description: editText.trim(),
+              expenseDate: editExpenseDate,
             });
           }
         } else if (!existingExpense && editAmount) {
@@ -182,6 +188,7 @@ export const EditModal: React.FC<EditModalProps> = ({
               category: editCategory || 'Other',
               description: editText.trim(),
               createdAt: new Date(),
+              expenseDate: editExpenseDate,
             };
             await StorageService.addExpense(newExpense);
           }
@@ -372,6 +379,46 @@ export const EditModal: React.FC<EditModalProps> = ({
                     placeholder="Food, Transportation, etc."
                     placeholderTextColor={theme.placeholder}
                   />
+
+                  <Text style={dynamicStyles.editLabel}>Expense Date:</Text>
+                  {Platform.OS === 'web' ? (
+                    <View style={{ marginBottom: 16 }}>
+                      <input
+                        type="date"
+                        style={{
+                          width: '100%',
+                          padding: 12,
+                          fontSize: 16,
+                          borderRadius: 8,
+                          border: `1px solid ${theme.border}`,
+                          backgroundColor: theme.input,
+                          color: theme.text,
+                          boxSizing: 'border-box' as any,
+                          minHeight: 44,
+                        }}
+                        value={format(editExpenseDate, 'yyyy-MM-dd')}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setEditExpenseDate(new Date(e.target.value + 'T00:00:00'));
+                          }
+                        }}
+                      />
+                    </View>
+                  ) : (
+                    <TextInput
+                      style={dynamicStyles.editInput}
+                      value={format(editExpenseDate, 'yyyy-MM-dd')}
+                      onChangeText={(text) => {
+                        const parsed = new Date(text + 'T00:00:00');
+                        if (!isNaN(parsed.getTime())) {
+                          setEditExpenseDate(parsed);
+                        }
+                      }}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor={theme.placeholder}
+                      keyboardType="numbers-and-punctuation"
+                    />
+                  )}
                 </>
               )}
 

@@ -1,0 +1,1309 @@
+
+> dailytracker@1.0.0 test:ci
+> jest --coverage --watchAll=false --forceExit
+
+PASS src/utils/__tests__/textAnalysis.test.ts
+PASS src/utils/__tests__/storage.test.ts
+PASS src/utils/__tests__/platform.test.ts
+PASS src/services/__tests__/LLMClassification.test.ts
+PASS src/utils/__tests__/encryption.test.ts (7.001 s)
+PASS src/contexts/__tests__/ThemeContext.test.tsx (8.813 s)
+PASS src/contexts/__tests__/AuthContext.test.tsx (8.847 s)
+  ● Console
+
+    console.error
+      An update to AuthProvider inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      114 |       }
+      115 |       
+    > 116 |       setLoading(false);
+          |       ^
+      117 |     });
+      118 |
+      119 |     return unsubscribe;
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLoading (src/contexts/AuthContext.tsx:116:7)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to AuthProvider inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      114 |       }
+      115 |       
+    > 116 |       setLoading(false);
+          |       ^
+      117 |     });
+      118 |
+      119 |     return unsubscribe;
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLoading (src/contexts/AuthContext.tsx:116:7)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/components/__tests__/MinimalEntryItem.test.tsx (9.092 s)
+PASS src/components/__tests__/MessageBubble.test.tsx (9.094 s)
+PASS src/components/__tests__/EditModal.test.tsx (9.129 s)
+  ● Console
+
+    console.error
+      An update to ThemeProvider inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      89 |       const settings = await StorageService.getSettings();
+      90 |       if (settings?.theme) {
+    > 91 |         setThemeModeState(settings.theme as ThemeMode);
+         |         ^
+      92 |       }
+      93 |     } catch (error) {
+      94 |       console.error('Error loading theme:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setThemeModeState (src/contexts/ThemeContext.tsx:91:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to ThemeProvider inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      89 |       const settings = await StorageService.getSettings();
+      90 |       if (settings?.theme) {
+    > 91 |         setThemeModeState(settings.theme as ThemeMode);
+         |         ^
+      92 |       }
+      93 |     } catch (error) {
+      94 |       console.error('Error loading theme:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setThemeModeState (src/contexts/ThemeContext.tsx:91:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to ThemeProvider inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      89 |       const settings = await StorageService.getSettings();
+      90 |       if (settings?.theme) {
+    > 91 |         setThemeModeState(settings.theme as ThemeMode);
+         |         ^
+      92 |       }
+      93 |     } catch (error) {
+      94 |       console.error('Error loading theme:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setThemeModeState (src/contexts/ThemeContext.tsx:91:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to ThemeProvider inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      89 |       const settings = await StorageService.getSettings();
+      90 |       if (settings?.theme) {
+    > 91 |         setThemeModeState(settings.theme as ThemeMode);
+         |         ^
+      92 |       }
+      93 |     } catch (error) {
+      94 |       console.error('Error loading theme:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setThemeModeState (src/contexts/ThemeContext.tsx:91:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to ThemeProvider inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      89 |       const settings = await StorageService.getSettings();
+      90 |       if (settings?.theme) {
+    > 91 |         setThemeModeState(settings.theme as ThemeMode);
+         |         ^
+      92 |       }
+      93 |     } catch (error) {
+      94 |       console.error('Error loading theme:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setThemeModeState (src/contexts/ThemeContext.tsx:91:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to ThemeProvider inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      89 |       const settings = await StorageService.getSettings();
+      90 |       if (settings?.theme) {
+    > 91 |         setThemeModeState(settings.theme as ThemeMode);
+         |         ^
+      92 |       }
+      93 |     } catch (error) {
+      94 |       console.error('Error loading theme:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setThemeModeState (src/contexts/ThemeContext.tsx:91:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to ThemeProvider inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      89 |       const settings = await StorageService.getSettings();
+      90 |       if (settings?.theme) {
+    > 91 |         setThemeModeState(settings.theme as ThemeMode);
+         |         ^
+      92 |       }
+      93 |     } catch (error) {
+      94 |       console.error('Error loading theme:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setThemeModeState (src/contexts/ThemeContext.tsx:91:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+PASS src/screens/__tests__/JournalScreen.test.tsx (9.505 s)
+  ● Console
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      306 |     });
+      307 |     
+    > 308 |     setEntries(sortedEntries);
+          |     ^
+      309 |     setFilteredEntries(sortedEntries); // Initialize filtered entries
+      310 |     // Reset scroll flag when entries are loaded so it scrolls to bottom
+      311 |     hasScrolledToBottomRef.current = false;
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setEntries (src/screens/JournalScreen.tsx:308:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      307 |     
+      308 |     setEntries(sortedEntries);
+    > 309 |     setFilteredEntries(sortedEntries); // Initialize filtered entries
+          |     ^
+      310 |     // Reset scroll flag when entries are loaded so it scrolls to bottom
+      311 |     hasScrolledToBottomRef.current = false;
+      312 |   }, []);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setFilteredEntries (src/screens/JournalScreen.tsx:309:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      419 |       const savedSettings = await StorageService.getSettings();
+      420 |       if (savedSettings) {
+    > 421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+          |         ^
+      422 |         setEnterToSend(savedSettings.enterToSend);
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setIsMarkdown (src/screens/JournalScreen.tsx:421:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      420 |       if (savedSettings) {
+      421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+    > 422 |         setEnterToSend(savedSettings.enterToSend);
+          |         ^
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+      425 |       }
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setEnterToSend (src/screens/JournalScreen.tsx:422:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+      422 |         setEnterToSend(savedSettings.enterToSend);
+    > 423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+          |         ^
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+      425 |       }
+      426 |     } catch (error) {
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLayoutStyle (src/screens/JournalScreen.tsx:423:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      422 |         setEnterToSend(savedSettings.enterToSend);
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+    > 424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+          |         ^
+      425 |       }
+      426 |     } catch (error) {
+      427 |       console.error('Error loading settings:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLocalLLMEnabled (src/screens/JournalScreen.tsx:424:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      306 |     });
+      307 |     
+    > 308 |     setEntries(sortedEntries);
+          |     ^
+      309 |     setFilteredEntries(sortedEntries); // Initialize filtered entries
+      310 |     // Reset scroll flag when entries are loaded so it scrolls to bottom
+      311 |     hasScrolledToBottomRef.current = false;
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setEntries (src/screens/JournalScreen.tsx:308:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      307 |     
+      308 |     setEntries(sortedEntries);
+    > 309 |     setFilteredEntries(sortedEntries); // Initialize filtered entries
+          |     ^
+      310 |     // Reset scroll flag when entries are loaded so it scrolls to bottom
+      311 |     hasScrolledToBottomRef.current = false;
+      312 |   }, []);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setFilteredEntries (src/screens/JournalScreen.tsx:309:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      419 |       const savedSettings = await StorageService.getSettings();
+      420 |       if (savedSettings) {
+    > 421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+          |         ^
+      422 |         setEnterToSend(savedSettings.enterToSend);
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setIsMarkdown (src/screens/JournalScreen.tsx:421:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      420 |       if (savedSettings) {
+      421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+    > 422 |         setEnterToSend(savedSettings.enterToSend);
+          |         ^
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+      425 |       }
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setEnterToSend (src/screens/JournalScreen.tsx:422:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+      422 |         setEnterToSend(savedSettings.enterToSend);
+    > 423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+          |         ^
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+      425 |       }
+      426 |     } catch (error) {
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLayoutStyle (src/screens/JournalScreen.tsx:423:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      422 |         setEnterToSend(savedSettings.enterToSend);
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+    > 424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+          |         ^
+      425 |       }
+      426 |     } catch (error) {
+      427 |       console.error('Error loading settings:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLocalLLMEnabled (src/screens/JournalScreen.tsx:424:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      306 |     });
+      307 |     
+    > 308 |     setEntries(sortedEntries);
+          |     ^
+      309 |     setFilteredEntries(sortedEntries); // Initialize filtered entries
+      310 |     // Reset scroll flag when entries are loaded so it scrolls to bottom
+      311 |     hasScrolledToBottomRef.current = false;
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setEntries (src/screens/JournalScreen.tsx:308:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      307 |     
+      308 |     setEntries(sortedEntries);
+    > 309 |     setFilteredEntries(sortedEntries); // Initialize filtered entries
+          |     ^
+      310 |     // Reset scroll flag when entries are loaded so it scrolls to bottom
+      311 |     hasScrolledToBottomRef.current = false;
+      312 |   }, []);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setFilteredEntries (src/screens/JournalScreen.tsx:309:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      419 |       const savedSettings = await StorageService.getSettings();
+      420 |       if (savedSettings) {
+    > 421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+          |         ^
+      422 |         setEnterToSend(savedSettings.enterToSend);
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setIsMarkdown (src/screens/JournalScreen.tsx:421:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      420 |       if (savedSettings) {
+      421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+    > 422 |         setEnterToSend(savedSettings.enterToSend);
+          |         ^
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+      425 |       }
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setEnterToSend (src/screens/JournalScreen.tsx:422:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+      422 |         setEnterToSend(savedSettings.enterToSend);
+    > 423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+          |         ^
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+      425 |       }
+      426 |     } catch (error) {
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLayoutStyle (src/screens/JournalScreen.tsx:423:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      422 |         setEnterToSend(savedSettings.enterToSend);
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+    > 424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+          |         ^
+      425 |       }
+      426 |     } catch (error) {
+      427 |       console.error('Error loading settings:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLocalLLMEnabled (src/screens/JournalScreen.tsx:424:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      461 |         setActionItems(updatedActionItems);
+      462 |       } else {
+    > 463 |         setActionItems(updatedActionItems);
+          |         ^
+      464 |       }
+      465 |       
+      466 |       setExpenses(uniqueExpenses);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setActionItems (src/screens/JournalScreen.tsx:463:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      464 |       }
+      465 |       
+    > 466 |       setExpenses(uniqueExpenses);
+          |       ^
+      467 |     } catch (error) {
+      468 |       console.error('Error loading expenses and action items:', error);
+      469 |     }
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setExpenses (src/screens/JournalScreen.tsx:466:7)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      461 |         setActionItems(updatedActionItems);
+      462 |       } else {
+    > 463 |         setActionItems(updatedActionItems);
+          |         ^
+      464 |       }
+      465 |       
+      466 |       setExpenses(uniqueExpenses);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setActionItems (src/screens/JournalScreen.tsx:463:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      464 |       }
+      465 |       
+    > 466 |       setExpenses(uniqueExpenses);
+          |       ^
+      467 |     } catch (error) {
+      468 |       console.error('Error loading expenses and action items:', error);
+      469 |     }
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setExpenses (src/screens/JournalScreen.tsx:466:7)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      461 |         setActionItems(updatedActionItems);
+      462 |       } else {
+    > 463 |         setActionItems(updatedActionItems);
+          |         ^
+      464 |       }
+      465 |       
+      466 |       setExpenses(uniqueExpenses);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setActionItems (src/screens/JournalScreen.tsx:463:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      464 |       }
+      465 |       
+    > 466 |       setExpenses(uniqueExpenses);
+          |       ^
+      467 |     } catch (error) {
+      468 |       console.error('Error loading expenses and action items:', error);
+      469 |     }
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setExpenses (src/screens/JournalScreen.tsx:466:7)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      306 |     });
+      307 |     
+    > 308 |     setEntries(sortedEntries);
+          |     ^
+      309 |     setFilteredEntries(sortedEntries); // Initialize filtered entries
+      310 |     // Reset scroll flag when entries are loaded so it scrolls to bottom
+      311 |     hasScrolledToBottomRef.current = false;
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setEntries (src/screens/JournalScreen.tsx:308:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      307 |     
+      308 |     setEntries(sortedEntries);
+    > 309 |     setFilteredEntries(sortedEntries); // Initialize filtered entries
+          |     ^
+      310 |     // Reset scroll flag when entries are loaded so it scrolls to bottom
+      311 |     hasScrolledToBottomRef.current = false;
+      312 |   }, []);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setFilteredEntries (src/screens/JournalScreen.tsx:309:5)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      419 |       const savedSettings = await StorageService.getSettings();
+      420 |       if (savedSettings) {
+    > 421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+          |         ^
+      422 |         setEnterToSend(savedSettings.enterToSend);
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setIsMarkdown (src/screens/JournalScreen.tsx:421:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      420 |       if (savedSettings) {
+      421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+    > 422 |         setEnterToSend(savedSettings.enterToSend);
+          |         ^
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+      425 |       }
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setEnterToSend (src/screens/JournalScreen.tsx:422:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      421 |         setIsMarkdown(savedSettings.isMarkdownEnabled);
+      422 |         setEnterToSend(savedSettings.enterToSend);
+    > 423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+          |         ^
+      424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+      425 |       }
+      426 |     } catch (error) {
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLayoutStyle (src/screens/JournalScreen.tsx:423:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      422 |         setEnterToSend(savedSettings.enterToSend);
+      423 |         setLayoutStyle(savedSettings.layoutStyle || 'chat');
+    > 424 |         setLocalLLMEnabled(savedSettings.localLLMEnabled !== false);
+          |         ^
+      425 |       }
+      426 |     } catch (error) {
+      427 |       console.error('Error loading settings:', error);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setLocalLLMEnabled (src/screens/JournalScreen.tsx:424:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      461 |         setActionItems(updatedActionItems);
+      462 |       } else {
+    > 463 |         setActionItems(updatedActionItems);
+          |         ^
+      464 |       }
+      465 |       
+      466 |       setExpenses(uniqueExpenses);
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setActionItems (src/screens/JournalScreen.tsx:463:9)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+    console.error
+      An update to JournalScreen inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React state updates should be wrapped into act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+      464 |       }
+      465 |       
+    > 466 |       setExpenses(uniqueExpenses);
+          |       ^
+      467 |     } catch (error) {
+      468 |       console.error('Error loading expenses and action items:', error);
+      469 |     }
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11801:19
+      at runWithFiberInDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:1574:13)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11800:9)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at setExpenses (src/screens/JournalScreen.tsx:466:7)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+
+-------------------------------|---------|----------|---------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+File                           | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                                                                                                                                                                                                                                                                                                                       
+-------------------------------|---------|----------|---------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+All files                      |   19.56 |     15.9 |   12.98 |   19.77 |                                                                                                                                                                                                                                                                                                                                         
+ src                           |       0 |        0 |       0 |       0 |                                                                                                                                                                                                                                                                                                                                         
+  serviceWorkerRegistration.ts |       0 |        0 |       0 |       0 | 3-50                                                                                                                                                                                                                                                                                                                                    
+ src/components                |   25.34 |    31.06 |   17.07 |   25.29 |                                                                                                                                                                                                                                                                                                                                         
+  CreateActionItemModal.tsx    |       0 |        0 |       0 |       0 | 26-214                                                                                                                                                                                                                                                                                                                                  
+  CreateExpenseModal.tsx       |       0 |        0 |       0 |       0 | 26-227                                                                                                                                                                                                                                                                                                                                  
+  CustomTabNavigator.tsx       |       0 |        0 |       0 |       0 | 7-62                                                                                                                                                                                                                                                                                                                                    
+  EditModal.tsx                |   33.33 |    28.45 |   28.57 |    33.6 | 33-35,61,67,100-111,125-129,134-224,229-239,278-396                                                                                                                                                                                                                                                                                     
+  HighlightedText.tsx          |    3.33 |        0 |       0 |    3.44 | 17-79                                                                                                                                                                                                                                                                                                                                   
+  MessageBubble.tsx            |    61.9 |    59.52 |      35 |   61.66 | 42-61,105,114-126,164-185,250-251,271-272                                                                                                                                                                                                                                                                                               
+  MinimalEntryItem.tsx         |      25 |    47.61 |    7.69 |      25 | 39-58,80-159                                                                                                                                                                                                                                                                                                                            
+ src/config                    |       0 |        0 |     100 |       0 |                                                                                                                                                                                                                                                                                                                                         
+  firebase.ts                  |       0 |        0 |     100 |       0 | 14-54                                                                                                                                                                                                                                                                                                                                   
+ src/contexts                  |   40.71 |       22 |   43.47 |   40.71 |                                                                                                                                                                                                                                                                                                                                         
+  AuthContext.tsx              |   28.97 |     12.5 |   29.41 |   28.97 | 35-48,54,82-86,107-109,123-155,160-183,188-194,199-245,250-254                                                                                                                                                                                                                                                                          
+  ThemeContext.tsx             |   78.78 |    38.88 |   83.33 |   78.78 | 94,99-110,135                                                                                                                                                                                                                                                                                                                           
+ src/screens                   |    9.52 |      4.9 |    4.14 |    9.93 |                                                                                                                                                                                                                                                                                                                                         
+  ActionItemsScreen.tsx        |       0 |        0 |       0 |       0 | 38-485                                                                                                                                                                                                                                                                                                                                  
+  AnalyticsScreen.tsx          |       0 |        0 |       0 |       0 | 40-363                                                                                                                                                                                                                                                                                                                                  
+  AuthScreen.tsx               |    3.12 |        0 |       0 |    3.12 | 26-299,322                                                                                                                                                                                                                                                                                                                              
+  DevicePairingScreen.tsx      |       0 |        0 |       0 |       0 | 22-569                                                                                                                                                                                                                                                                                                                                  
+  ExpensesScreen.tsx           |       0 |        0 |       0 |       0 | 34-403                                                                                                                                                                                                                                                                                                                                  
+  JournalScreen.tsx            |   17.99 |     9.79 |   10.34 |   19.07 | 42-47,88-101,262-281,287,292,298-305,319-344,358-395,402-410,427,440,445,451-455,460-461,468,480-485,491-492,500-542,564,570,574-697,702-706,710-751,755-765,773-795,799-819,824-857,876,880-881,885-899,905-967,972-1010,1015-1135,1140-1156,1161-1192,1197,1211,1227,1243,1265,1281,1296-1309,1320-1358,1388-1558,1568-1576,1600-1818 
+  LayoutSelectionScreen.tsx    |       0 |        0 |       0 |       0 | 20-179                                                                                                                                                                                                                                                                                                                                  
+  SettingsScreen.tsx           |    4.76 |        0 |       0 |       5 | 79-809                                                                                                                                                                                                                                                                                                                                  
+  TestScreen.tsx               |       0 |      100 |       0 |       0 | 5                                                                                                                                                                                                                                                                                                                                       
+  index.ts                     |       0 |        0 |       0 |       0 |                                                                                                                                                                                                                                                                                                                                         
+ src/services                  |   17.13 |    17.72 |     5.4 |   16.99 |                                                                                                                                                                                                                                                                                                                                         
+  LLMClassificationService.ts  |   75.82 |     62.9 |   57.14 |   78.57 | 126,138,143,160,194-199,227-229,231,233-235,272                                                                                                                                                                                                                                                                                         
+  P2PSyncService.ts            |    3.54 |        0 |       0 |    3.63 | 48-853                                                                                                                                                                                                                                                                                                                                  
+  SyncService.ts               |       0 |        0 |       0 |       0 | 24-241                                                                                                                                                                                                                                                                                                                                  
+ src/types                     |       0 |        0 |       0 |       0 |                                                                                                                                                                                                                                                                                                                                         
+  index.ts                     |       0 |        0 |       0 |       0 |                                                                                                                                                                                                                                                                                                                                         
+ src/utils                     |   38.33 |    31.86 |   45.45 |    38.1 |                                                                                                                                                                                                                                                                                                                                         
+  encryption.ts                |   80.23 |    77.27 |     100 |      80 | 50,80-84,90,109-110,136-140,155                                                                                                                                                                                                                                                                                                         
+  notifications.native.ts      |       0 |        0 |       0 |       0 | 3-7                                                                                                                                                                                                                                                                                                                                     
+  notifications.ts             |       0 |      100 |       0 |       0 | 3-6                                                                                                                                                                                                                                                                                                                                     
+  notifications.web.ts         |       0 |        0 |       0 |       0 | 4-30                                                                                                                                                                                                                                                                                                                                    
+  platform.ts                  |     100 |       90 |     100 |     100 | 10                                                                                                                                                                                                                                                                                                                                      
+  storage.ts                   |   27.88 |     25.6 |   35.55 |   27.84 | 16-30,38-56,67-68,79-84,96,104-179,189-190,205-211,215-218,227,237,249-251,255-262,271-274,283-293,306-316,328-330,334-341,349-352,361-394,404-501                                                                                                                                                                                      
+  textAnalysis.ts              |    34.9 |    26.49 |    40.9 |   35.71 | 70,75,84-120,147,169-171,176-178,185-189,195-199,207-213,233-240,249-252,282-461                                                                                                                                                                                                                                                        
+-------------------------------|---------|----------|---------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Test Suites: 11 passed, 11 total
+Tests:       95 passed, 95 total
+Snapshots:   0 total
+Time:        12.137 s
+Ran all test suites.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✅  ALL TESTS PASSED  (18s)
+  ✔   Commit 7521005 is safe to keep.
+  📄  Report: .test-report-20260317-101302.txt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

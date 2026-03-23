@@ -90,6 +90,7 @@ describe('MinimalEntryItem', () => {
       description: 'lunch',
       category: 'food',
       createdAt: new Date(),
+      expenseDate: new Date(),
       autoDetected: true
     };
 

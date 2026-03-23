@@ -70,7 +70,7 @@ const ExpenseCard: React.FC<ExpenseCardProps> = ({ expense, onEdit, onDelete, th
       </Text>
 
       <Text style={dynamicStyles.expenseDate}>
-        {format(expense.createdAt, 'MMM d, yyyy HH:mm')}
+        {format(expense.expenseDate || expense.createdAt, 'MMM d, yyyy')}
       </Text>
     </View>
   );
@@ -90,7 +90,7 @@ export const ExpensesScreen: React.FC = () => {
   const loadExpenses = useCallback(async () => {
     const expenseList = await StorageService.getExpenses();
     const allEntries = await StorageService.getEntries();
-    setExpenses(expenseList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
+    setExpenses(expenseList.sort((a, b) => (b.expenseDate || b.createdAt).getTime() - (a.expenseDate || a.createdAt).getTime()));
     setEntries(allEntries);
   }, []);
 
@@ -108,12 +108,12 @@ export const ExpensesScreen: React.FC = () => {
 
   const filteredExpenses = expenses.filter(expense => {
     if (!selectedMonth) return true;
-    return format(expense.createdAt, 'yyyy-MM') === selectedMonth;
+    return format(expense.expenseDate || expense.createdAt, 'yyyy-MM') === selectedMonth;
   });
 
   const getAvailableMonths = () => {
     const monthSet = new Set<string>();
-    expenses.forEach(e => monthSet.add(format(e.createdAt, 'yyyy-MM')));
+    expenses.forEach(e => monthSet.add(format(e.expenseDate || e.createdAt, 'yyyy-MM')));
     return Array.from(monthSet).sort().reverse();
   };
 
@@ -171,7 +171,7 @@ export const ExpensesScreen: React.FC = () => {
     const monthlyData: Record<string, { amount: number; count: number }> = {};
     
     expenses.forEach(expense => {
-      const monthKey = format(expense.createdAt, 'MMM yyyy');
+      const monthKey = format(expense.expenseDate || expense.createdAt, 'MMM yyyy');
       if (!monthlyData[monthKey]) {
         monthlyData[monthKey] = { amount: 0, count: 0 };
       }

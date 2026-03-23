@@ -628,6 +628,7 @@ export const JournalScreen: React.FC<{}> = () => {
           const expenseInfo = await TextAnalyzer.extractExpenseInfoAsync(trimmedInput, entry.id);
           if (expenseInfo) {
             expenseInfo.autoDetected = autoDetectedExpense && !forceExpense;
+            expenseInfo.expenseDate = entry.timestamp;
             await StorageService.addExpense(expenseInfo);
             entryType = 'expense';
             

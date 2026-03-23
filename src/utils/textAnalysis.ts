@@ -270,7 +270,8 @@ export class TextAnalyzer {
         currency: result.extractedData.currency || this.getSystemCurrency(),
         description: text.trim(),
         category: result.extractedData.category || 'Other',
-        createdAt: new Date()
+        createdAt: new Date(),
+        expenseDate: new Date(),
       };
     }
     

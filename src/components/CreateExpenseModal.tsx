@@ -11,6 +11,7 @@ import {
   ScrollView,
   Keyboard,
 } from 'react-native';
+import { format } from 'date-fns';
 import { useTheme } from '../contexts/ThemeContext';
 import { StorageService } from '../utils/storage';
 import { Expense } from '../types';
@@ -42,6 +43,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [currency, setCurrency] = useState('USD');
+  const [expenseDate, setExpenseDate] = useState(new Date());
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Track keyboard height
@@ -84,6 +86,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       setAmount('');
       setDescription('');
       setCategory('');
+      setExpenseDate(new Date());
     }
   }, [visible]);
 
@@ -112,6 +115,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         description: description.trim(),
         category: category.trim() || undefined,
         createdAt: new Date(),
+        expenseDate: expenseDate,
         autoDetected: false,
       };
 
@@ -199,6 +203,45 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 value={category}
                 onChangeText={setCategory}
               />
+            </View>
+
+            <View style={dynamicStyles.inputGroup}>
+              <Text style={dynamicStyles.label}>Expense Date</Text>
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  style={{
+                    width: '100%',
+                    padding: 12,
+                    fontSize: 16,
+                    borderRadius: 8,
+                    border: `1px solid ${theme.border}`,
+                    backgroundColor: theme.input,
+                    color: theme.text,
+                    boxSizing: 'border-box' as any,
+                  }}
+                  value={format(expenseDate, 'yyyy-MM-dd')}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setExpenseDate(new Date(e.target.value + 'T00:00:00'));
+                    }
+                  }}
+                />
+              ) : (
+                <TextInput
+                  style={dynamicStyles.input}
+                  value={format(expenseDate, 'yyyy-MM-dd')}
+                  onChangeText={(text) => {
+                    const parsed = new Date(text + 'T00:00:00');
+                    if (!isNaN(parsed.getTime())) {
+                      setExpenseDate(parsed);
+                    }
+                  }}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={theme.placeholder}
+                  keyboardType="numbers-and-punctuation"
+                />
+              )}
             </View>
           </ScrollView>
 

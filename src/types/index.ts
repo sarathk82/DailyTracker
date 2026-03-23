@@ -25,6 +25,7 @@ export interface Expense {
   description: string;
   category?: string;
   createdAt: Date;
+  expenseDate: Date;
   autoDetected?: boolean;
 }
 
