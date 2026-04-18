@@ -47,6 +47,7 @@
     "indexes": "firestore.indexes.json"
   },
   "database": {
-    "rules": "database.rules.json"
+    "rules": "database.rules.json",
+    "target": "smpl-journal-default-rtdb"
   }
 }

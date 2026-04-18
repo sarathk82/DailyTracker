@@ -19,6 +19,11 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "/tmp/google-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }

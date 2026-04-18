@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "smpl-journal"
-  }
+  },
+  "targets": {
+    "smpl-journal": {
+      "database": {
+        "smpl-journal-default-rtdb": [
+          "smpl-journal-default-rtdb"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

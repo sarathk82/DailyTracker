@@ -53,3 +53,4 @@ coverage/
 # Privacy policy (hosted elsewhere)
 privacy-policy.html
 PRIVACY_POLICY.md
+android/app/release.keystore
